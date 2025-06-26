@@ -55,7 +55,10 @@ class Attendee(models.Model):
     messenger = models.CharField(max_length=250, blank=True)
     #photo =    ->    # to be added later (I need to rethink)
     shirt_size = models.CharField(max_length=4, choices=SHIRT_SIZES)
-    additional_attendee_notes = models.TextField()
+    additional_attendee_notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} {self.instrument}"
 
 class Songs(models.Model):
     # choices within Songs class:
@@ -68,14 +71,14 @@ class Songs(models.Model):
     ]
 
     # model fields:
-    title =  models.CharField(max_length=250)
-    composer =  models.CharField(max_length=250)
-    author = models.CharField(max_length=250)
-    genre =  models.CharField(max_length=250)
+    song_title =  models.CharField(max_length=250)
+    song_composer =  models.CharField(max_length=250)
+    song_author = models.CharField(max_length=250)
+    song_genre =  models.CharField(max_length=250)
     number_of_copies = models.CharField(max_length=4)
     number_of_pages = models.CharField(max_length=4)
     number_of_voices = models.CharField(max_length=4)
-    difficulty_level =  models.CharField(max_length=1, choices=DIFFICULTY_LEVEL)
+    song_difficulty_level =  models.CharField(max_length=1, choices=DIFFICULTY_LEVEL)
     transcript = models.TextField()
     translation = models.TextField()
     speech_articulation = models.TextField()
@@ -83,12 +86,18 @@ class Songs(models.Model):
     date_of_concert = models.DateField("date of concert")
     additional_songs_notes = models.TextField()
 
+    def __str__(self):
+        return f"{self.song_title} {self.song_composer}"
+
 
 class RehearsalDates(models.Model):
     rehearsal_subtitle = models.CharField(max_length=250)
     rehearsal_location = models.CharField(max_length=250)
     rehearsal_calendar_specific = models.DateField("rehearsal specific date")
-    additional_rehearsal_notes = models.TextField()
+    additional_rehearsal_notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.rehearsal_calendar_specific
 
 
 
@@ -104,5 +113,10 @@ class CurrentRehearsal(models.Model):
     attendance = models.IntegerField(choices=Attendance)
     songs = models.ForeignKey(Songs, on_delete=models.PROTECT)
     attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return self.attendance
+
+
 
 
