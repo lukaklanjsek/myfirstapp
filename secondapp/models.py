@@ -16,7 +16,7 @@ class Attendee(models.Model):
         ('XL', 'Extra Large'),
         ('XXL', '2x Extra Large'),
         ('XXXL', '3x Extra Large'),
-    ],
+    ]
 
     VOICE_TYPES = [
         ('S1', 'Soprano'),
@@ -30,7 +30,7 @@ class Attendee(models.Model):
         ('B1', 'Baritone'),
         ('B2', 'Bass'),
         ('CB', 'Contra-Bass'),
-    ],
+    ]
 
     SKILL_LEVEL = [
         ("1", "Beginner"),
@@ -38,7 +38,7 @@ class Attendee(models.Model):
         ("3", "Experienced"),
         ("4", "Schooled"),
         ("5", "Professional"),
-    ],
+    ]
 
 
 
@@ -51,11 +51,11 @@ class Attendee(models.Model):
     phone_number = models.CharField(max_length=17, blank=True)
     email = models.EmailField(blank=True)
     address = models.CharField(max_length=250, blank=True)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField("birthday")
     messenger = models.CharField(max_length=250, blank=True)
     #photo =    ->    # to be added later (I need to rethink)
     shirt_size = models.CharField(max_length=4, choices=SHIRT_SIZES)
-    additional_notes = models.TextField()
+    additional_attendee_notes = models.TextField()
 
 class Songs(models.Model):
     # choices within Songs class:
@@ -65,7 +65,7 @@ class Songs(models.Model):
         ("3", "Experienced"),
         ("4", "Schooled"),
         ("5", "Professional"),
-    ],
+    ]
 
     # model fields:
     title =  models.CharField(max_length=250)
@@ -79,9 +79,30 @@ class Songs(models.Model):
     transcript = models.TextField()
     translation = models.TextField()
     speech_articulation = models.TextField()
-    date_of_rehersal = models.DateField()
-    date_of_concert = models.DateField()
-    additional_notes = models.TextField()
+    # date_of_rehearsal = models.DateField("date of rehearsal")
+    date_of_concert = models.DateField("date of concert")
+    additional_songs_notes = models.TextField()
 
 
-class CurrentRehersal(models.Model):
+class RehearsalDates(models.Model):
+    rehearsal_subtitle = models.CharField(max_length=250)
+    rehearsal_location = models.CharField(max_length=250)
+    rehearsal_calendar_specific = models.DateField("rehearsal specific date")
+    additional_rehearsal_notes = models.TextField()
+
+
+
+
+
+class CurrentRehearsal(models.Model):
+    class Attendance(models.IntegerChoices):
+        Present = 1, "present"
+        Absent = 2, "absent"
+        Late = 3, "late"
+
+    date_of_rehearsal = models.ForeignKey(RehearsalDates, on_delete=models.CASCADE)
+    attendance = models.IntegerField(choices=Attendance)
+    songs = models.ForeignKey(Songs, on_delete=models.PROTECT)
+    attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT)
+
+
