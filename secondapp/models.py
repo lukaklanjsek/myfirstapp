@@ -60,7 +60,7 @@ class Attendee(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name} {self.instrument}"
 
-class Songs(models.Model):
+class Song(models.Model):
     # choices within Songs class:
     DIFFICULTY_LEVEL = [
         ("1", "Beginner"),
@@ -111,7 +111,7 @@ class CurrentRehearsal(models.Model):
 
     date_of_rehearsal = models.ForeignKey(RehearsalDates, on_delete=models.CASCADE)
     attendance = models.IntegerField(choices=Attendance)
-    songs = models.ForeignKey(Songs, on_delete=models.PROTECT)
+    song = models.ForeignKey(Song, on_delete=models.PROTECT)
     attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT)
 
     def __str__(self):
