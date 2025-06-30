@@ -1,4 +1,5 @@
 from django.db import models
+import datetime
 
 
 # Create your models here.
@@ -80,11 +81,11 @@ class Song(models.Model):
     number_of_voices = models.CharField(max_length=4)
     song_difficulty_level =  models.CharField(max_length=1, choices=DIFFICULTY_LEVEL)
     transcript = models.TextField()
-    translation = models.TextField()
-    speech_articulation = models.TextField()
+    translation = models.TextField(blank=True)
+    speech_articulation = models.TextField(blank=True)
     # date_of_rehearsal = models.DateField("date of rehearsal")
-    date_of_concert = models.DateField("date of concert")
-    additional_songs_notes = models.TextField()
+    date_of_concert = models.DateField("date of concert", blank=True)
+    additional_songs_notes = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.song_title} {self.song_composer}"
@@ -109,6 +110,7 @@ class CurrentRehearsal(models.Model):
         Absent = 2, "absent"
         Late = 3, "late"
 
+    rehearsal_subtitle = models.CharField(max_length=250, blank=True)
     date_of_rehearsal = models.ForeignKey(RehearsalDates, on_delete=models.CASCADE)
     attendance = models.IntegerField(choices=Attendance)
     song = models.ForeignKey(Song, on_delete=models.PROTECT)
@@ -116,6 +118,9 @@ class CurrentRehearsal(models.Model):
 
     def __str__(self):
         return self.attendance
+
+    def date_of_rehearsal(self):
+        return self.date_of_rehearsal
 
 
 
