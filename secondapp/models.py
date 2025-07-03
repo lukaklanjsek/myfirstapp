@@ -2,6 +2,7 @@ from django.db import models
 from datetime import date
 from enum import Enum
 from django.utils import timezone
+from django.core.validators import MinValueValidator
 
 
 
@@ -55,40 +56,14 @@ class Attendee(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name} {self.get_instrument_display()}"
 
-class Song(models.Model):
-    # choices within Songs class:
-    #DIFFICULTY_LEVEL = [
-    #    ("1", "Beginner"),
-    #    ("2", "Enthusiast"),
-    #    ("3", "Experienced"),
-    #    ("4", "Schooled"),
-    #    ("5", "Professional"),
-    #]
-    song_title =  models.CharField(max_length=250)
-    song_composer =  models.CharField(max_length=250)
-    song_author = models.CharField(max_length=250)
-    song_genre =  models.CharField(max_length=250)
-    number_of_copies = models.CharField(max_length=4)
-    number_of_pages = models.CharField(max_length=4)
-    number_of_voices = models.CharField(max_length=4)
-    song_difficulty_level =  models.CharField(max_length=20, choices=SkillLevel.choices, default=SkillLevel.EXPERIENCED)
-    transcript = models.TextField()
-    translation = models.TextField(blank=True)
-    speech_articulation = models.TextField(blank=True)
-    # date_of_rehearsal = models.DateField("date of rehearsal")
-    date_of_concert = models.DateField("date of concert", blank=True)
-    date_added = models.DateField("added to archive", default=date.today)
-    additional_songs_notes = models.TextField(blank=True)
 
-    def __str__(self):
-        return f"{self.song_title} {self.song_composer}"
 
 
 class RehearsalDate(models.Model):
     rehearsal_subtitle = models.CharField(max_length=250)
     rehearsal_location = models.CharField(max_length=250)
-    rehearsal_location_parking = models.CharField(max_length=250, blank=True)
-    rehearsal_calendar = models.DateTimeField(unique=True, null=True)
+    rehearsal_location_parking = models.CharField(max_length=250, blank=True, null=True)
+    rehearsal_calendar = models.DateTimeField(blank=True, null=True, unique=True)
     additional_rehearsal_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
@@ -103,7 +78,33 @@ class RehearsalDate(models.Model):
     #def formatted_rehearsal_subtitle(self):
     #    return f"{self.rehearsal_subtitle}"
 
+class Song(models.Model):
+    # choices within Songs class:
+    #DIFFICULTY_LEVEL = [
+    #    ("1", "Beginner"),
+    #    ("2", "Enthusiast"),
+    #    ("3", "Experienced"),
+    #    ("4", "Schooled"),
+    #    ("5", "Professional"),
+    #]
+    song_title =  models.CharField(max_length=250)
+    song_composer =  models.CharField(max_length=250)
+    song_author = models.CharField(max_length=250)
+    song_genre =  models.CharField(max_length=250)
+    number_of_copies = models.IntegerField(validators=[MinValueValidator(1)])
+    number_of_pages = models.IntegerField(validators=[MinValueValidator(1)])
+    number_of_voices = models.IntegerField(validators=[MinValueValidator(1)])
+    song_difficulty_level =  models.CharField(max_length=20, choices=SkillLevel.choices, default=SkillLevel.EXPERIENCED)
+    transcript = models.TextField()
+    translation = models.TextField(blank=True)
+    speech_articulation = models.TextField(blank=True)
+    # date_of_rehearsal = models.DateField("date of rehearsal")
+    date_of_concert = models.ForeignKey(RehearsalDate, on_delete=models.PROTECT, related_name='song', blank=True, null=True) #, default=1 #
+    date_added = models.DateField("added to archive", default=date.today)
+    additional_songs_notes = models.TextField(blank=True)
 
+    def __str__(self):
+        return f"{self.song_title} {self.song_composer}"
 
 
 
@@ -114,11 +115,11 @@ class CurrentRehearsal(models.Model):
         Late = "late", "late"
 
     rehearsal = models.ForeignKey(RehearsalDate, on_delete=models.CASCADE, related_name='current_rehearsals', default=1)  # Default to the default_rehearsal
-    attendance = models.IntegerField(choices=Attendance.choices)
+    attendance = models.CharField(max_length=9, choices=Attendance.choices)
     song = models.ForeignKey(Song, on_delete=models.PROTECT, related_name='current_rehearsals')
     attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT, related_name='current_rehearsals')
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.rehearsal_id:
             default_rehearsal = RehearsalDate.objects.create(
                 rehearsal_subtitle = "DefaultRehearsal",

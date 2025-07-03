@@ -9,9 +9,9 @@ from .models import RehearsalDate
 
 # classes
 class AttendeeAdmin(admin.StackedInline):
-    model = Attendee
-    fields = ["first_name", "last_name", "instrument"]
-    #pass
+    #model = Attendee
+    #fields = ["first_name", "last_name", "instrument"]
+    pass
 
 
 class SongAdmin(admin.ModelAdmin):
