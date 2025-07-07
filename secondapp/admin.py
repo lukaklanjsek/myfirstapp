@@ -30,13 +30,20 @@ class AttendeeAdmin(admin.ModelAdmin):
     #pass
 
 class AttendanceRecordAdmin(admin.ModelAdmin):
-    list_display = ("attendee", "attendance")
-    list_filter = ("attendance",)
-    search_fields = ("attendee__first_name", "attendee__last_name")
+    #list_display = ("date_record", "get_attendees", "attendance")   # (—> temporary out)     # bug hunting
+    #list_filter = ("attendance",)
+    #search_fields = ("attendees__first_name", "attendees__last_name")
+    #filter_vertical = ("attendees",)
+
+    def get_attendees(self, obj):
+        return ", ".join([a.first_name for a in obj.attendees.all()])
+    get_attendees.short_description = "Attendees"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(attendee__is_active=True)
+        return qs.filter(attendees__is_active=True)
+
+    pass
 
 
 class SongAdmin(admin.ModelAdmin):
@@ -50,10 +57,11 @@ class RehearsalDateAdmin(admin.ModelAdmin):
         ("Location", {"fields": ["rehearsal_location"]}),
         (None, {"fields": ["rehearsal_location_parking"]}),
     ]
+    pass
 
-    def save_model(self, request, obj, form, change):
-        timezone.activate(timezone.get_current_timezone())
-        super().save_model(request, obj, form, change)
+    #def save_model(self, request, obj, form, change):
+    #    timezone.activate(timezone.get_current_timezone())
+    #    super().save_model(request, obj, form, change)
 
 
     #pass
@@ -62,7 +70,7 @@ class CurrentRehearsalAdmin(admin.ModelAdmin):
     #list_display = ("rehearsal", "song",) #"attendee", "attendance"
     #list_editable = ("attendance",)
     #list_filter = ("rehearsal", "song",) #"attendee", "attendance",
-    #search_fields = ("rehearsal__rehearsal_subtitle", "song__song_title", "attendee__first_name", "attendee__last_name",)
+    #search_fields = ("rehearsal__rehearsal_subtitle", "song__song_title", "attendee__first_name", "attendee__last_name",),
 
     #fieldsets = [
     #    (None, {"fields": ["rehearsal_subtitle"]}),
@@ -79,6 +87,7 @@ class CurrentRehearsalAdmin(admin.ModelAdmin):
 
 admin.site.register(Attendee, AttendeeAdmin)
 admin.site.register(AttendanceRecord, AttendanceRecordAdmin)
+#admin.site.register(AttendanceDetail, AttendanceDetailAdmin)    # —> experimentation, currently out
 admin.site.register(Song, SongAdmin)
 admin.site.register(CurrentRehearsal, CurrentRehearsalAdmin)
 admin.site.register(RehearsalDate, RehearsalDateAdmin)

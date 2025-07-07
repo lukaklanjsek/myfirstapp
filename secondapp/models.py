@@ -40,9 +40,9 @@ class SkillLevel(models.TextChoices):
     SCHOOLED = "Schooled", "Schooled"
     PROFESSIONAL = "Professional", "Professional"
 
-class Attendance(models.TextChoices):
-    PRESENT = "Present", "Present"
-    ABSENT = "Absent", "Absent"
+#class Attendance(models.TextChoices):
+#    PRESENT = "Present", "Present"
+#    ABSENT = "Absent", "Absent"
     #LATE = "Late", "Late"
 
 
@@ -63,18 +63,11 @@ class Attendee(models.Model):
     date_of_joining = models.DateField("joined",default=date.today)
     additional_attendee_notes = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ["instrument"]
+
     def __str__(self):
-        return f"{self.first_name} {self.last_name} {self.instrument}" #get_instrument_display()}"
-
-class AttendanceRecord(models.Model):
-    attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT,related_name="attendance_records")
-    attendance = models.CharField(choices=[(status.name, status.value) for status in Attendance])
-
-
-
-
-
-
+        return f"{self.first_name}, {self.last_name} - {self.instrument}" #get_instrument_display()}"
 
 
 class RehearsalDate(models.Model):
@@ -85,13 +78,41 @@ class RehearsalDate(models.Model):
     additional_rehearsal_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.rehearsal_calendar} {self.rehearsal_subtitle} {self.rehearsal_location}"
+        return f"{self.rehearsal_calendar} - {self.rehearsal_subtitle}"
 
-    def formatted_rehearsal_date(self):
-        return self.rehearsal_calendar
+    def generate_date_url(self):
+        return format(self.rehearsal_calendar, "Y-m-d")
 
-    def formatted_rehearsal_location(self):
-        return f"{self.rehearsal_location},{self.rehearsal_location_parking}"
+
+class AttendanceRecord(models.Model):
+    present = models.BooleanField()    # -> this one has to be tested again
+    date_record = models.ForeignKey(RehearsalDate, on_delete=models.CASCADE,related_name="attendance_records")
+    attendees = models.ManyToManyField(Attendee,through="AttendanceDetail")
+
+    class Meta:
+        ordering = ["date_record"]
+
+    def __str__(self):
+        return f"Attendance on {self.date_record}"
+
+
+class AttendanceDetail(models.Model):
+    attendee = models.ForeignKey(Attendee, on_delete=models.PROTECT, related_name="attendance_detail")
+    attendance_record = models.ForeignKey(AttendanceRecord, on_delete=models.CASCADE, related_name="attendance_detail")
+    additional_attendance_notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.attendee} - {self.attendance_record}"
+
+
+
+    # "{self.rehearsal_location}"
+
+    #def formatted_rehearsal_date(self):
+    #    return self.rehearsal_calendar
+
+    #def formatted_rehearsal_location(self):
+    #    return f"{self.rehearsal_location},{self.rehearsal_location_parking}"
 
     #def formatted_rehearsal_subtitle(self):
     #    return f"{self.rehearsal_subtitle}"
@@ -114,11 +135,11 @@ class Song(models.Model):
     additional_songs_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.song_title} {self.song_composer}"
+        return f"{self.song_title} - {self.song_composer}"
 
 
 
-class CurrentRehearsal(models.Model):
+class CurrentRehearsal(models.Model):    # -> this is temporary out - to be remade later
 
     rehearsal = models.ForeignKey(RehearsalDate, on_delete=models.CASCADE, related_name='current_rehearsals', default=1)  # Default to the default_rehearsal
     #attendance = models.CharField(max_length=9, choices=Attendance.choices)    # temporary out!
@@ -138,4 +159,4 @@ class CurrentRehearsal(models.Model):
     #    super().save()
 
     def __str__(self):
-        return f"{self.rehearsal}" #{self.attendee} {self.get_attendance_display()}"  # —> for a test I comment this out
+        return f"{self.rehearsal}"# - {self.attendee} - {self.get_attendance_display()}"  # —> for a test I comment this out

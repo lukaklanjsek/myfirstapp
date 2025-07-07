@@ -1,0 +1,10 @@
+<h1>{{ rehearsaldate.rehearsal_subtitle }}</h1>
+
+<ul>
+{% for attendance in attendancerecord.attendance.all %}
+    <li>{{ attendancerecord.attendance }} -- {{ attendancerecord.attendance }} vote{{ choice.votes|pluralize }}</li>
+{% endfor %}
+</ul>
+
+<a href="{% url 'polls:detail' question.id %}">Vote again?</a>
+
