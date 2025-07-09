@@ -3,60 +3,50 @@ from django.utils import timezone
 
 # Register your models here.
 
-from .models import Attendee
+from .models import Member
 from .models import Song
-from .models import CurrentRehearsal
-from .models import RehearsalDate
-from .models import AttendanceRecord
+#from .models import CurrentRehearsal
+from .models import Rehearsal
+from .models import MemberRehearsal
 
 # classes
-class AttendeeAdmin(admin.ModelAdmin):
-    model = Attendee
-    fieldsets = [
-        ("Basic info", {"fields": ["first_name"]}),
-        (None, {"fields": ["last_name"]}),
-        (None, {"fields": ["instrument"]}),
-        (None, {"fields": ["is_active"]}),
-        (None, {"fields": ["skill_level"]}),
-        ("Bio", {"fields": ["phone_number"]}),
-        (None, {"fields":["email"]}),
-        (None, {"fields": ["address"]}),
-        (None, {"fields": ["date_of_birth"]}),
-        (None, {"fields": ["messenger"]}),
-        ("Other", {"fields": ["shirt_size"]}),
-        (None, {"fields": ["date_of_joining"]}),
-        (None, {"fields": ["additional_attendee_notes"]})
-    ]
+class MemberAdmin(admin.ModelAdmin):
+    model = Member
+    #fieldsets = [
+    #    ("Basic info", {"fields": ["first_name"]}),
+    #    (None, {"fields": ["last_name"]}),
+    #    (None, {"fields": ["instrument"]}),
+    #    (None, {"fields": ["is_active"]}),
+    #    (None, {"fields": ["skill_level"]}),
+    #    ("Bio", {"fields": ["phone_number"]}),
+    #    (None, {"fields":["email"]}),
+    #    (None, {"fields": ["address"]}),
+    #    (None, {"fields": ["date_of_birth"]}),
+    #    (None, {"fields": ["messenger"]}),
+    #    ("Other", {"fields": ["shirt_size"]}),
+    #    (None, {"fields": ["date_of_joining"]}),
+    #    (None, {"fields": ["additional_attendee_notes"]})
+    #]
     #pass
 
-class AttendanceRecordAdmin(admin.ModelAdmin):
-    #list_display = ("date_record", "get_attendees", "attendance")   # (—> temporary out)     # bug hunting
-    #list_filter = ("attendance",)
-    #search_fields = ("attendees__first_name", "attendees__last_name")
-    #filter_vertical = ("attendees",)
-
-    def get_attendees(self, obj):
-        return ", ".join([a.first_name for a in obj.attendees.all()])
-    get_attendees.short_description = "Attendees"
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.filter(attendees__is_active=True)
+class MemberRehearsalAdmin(admin.ModelAdmin):
+    model = MemberRehearsal
 
     pass
 
 
 class SongAdmin(admin.ModelAdmin):
-
+    model = Song
     pass
 
-class RehearsalDateAdmin(admin.ModelAdmin):
-    fieldsets = [
-        (None, {"fields": ["rehearsal_calendar"]}),
-        (None, {"fields": ["rehearsal_subtitle"]}),
-        ("Location", {"fields": ["rehearsal_location"]}),
-        (None, {"fields": ["rehearsal_location_parking"]}),
-    ]
+class RehearsalAdmin(admin.ModelAdmin):
+    model = Rehearsal
+    #fieldsets = [
+    #    (None, {"fields": ["rehearsal_calendar"]}),
+    #    (None, {"fields": ["rehearsal_subtitle"]}),
+    #    ("Location", {"fields": ["rehearsal_location"]}),
+    #    (None, {"fields": ["rehearsal_location_parking"]}),
+    #]
     pass
 
     #def save_model(self, request, obj, form, change):
@@ -66,7 +56,8 @@ class RehearsalDateAdmin(admin.ModelAdmin):
 
     #pass
 
-class CurrentRehearsalAdmin(admin.ModelAdmin):
+#class CurrentRehearsalAdmin(admin.ModelAdmin):
+#    model = CurrentRehearsal
     #list_display = ("rehearsal", "song",) #"attendee", "attendance"
     #list_editable = ("attendance",)
     #list_filter = ("rehearsal", "song",) #"attendee", "attendance",
@@ -79,17 +70,17 @@ class CurrentRehearsalAdmin(admin.ModelAdmin):
     #    ("List of songs:", {"fields": ["song"]}),
     #]
     #inlines = [AttendeeAdmin]
-    pass
+#    pass
 
 
 
 
 
-admin.site.register(Attendee, AttendeeAdmin)
-admin.site.register(AttendanceRecord, AttendanceRecordAdmin)
+admin.site.register(Member, MemberAdmin)
+admin.site.register(MemberRehearsal, MemberRehearsalAdmin)
 #admin.site.register(AttendanceDetail, AttendanceDetailAdmin)    # —> experimentation, currently out
 admin.site.register(Song, SongAdmin)
-admin.site.register(CurrentRehearsal, CurrentRehearsalAdmin)
-admin.site.register(RehearsalDate, RehearsalDateAdmin)
+#admin.site.register(CurrentRehearsal, CurrentRehearsalAdmin)
+admin.site.register(Rehearsal, RehearsalAdmin)
 
 
