@@ -1,12 +1,11 @@
 from random import choices
 
 from django.db import models
-import datetime
+#import datetime
 from datetime import date
 from enum import Enum
-from django.utils import timezone
-
-
+#from django.utils import timezone
+#from django.forms import ModelMultipleChoiceField
 
 
 class ShirtSize(Enum):
@@ -36,8 +35,6 @@ class SkillLevel(Enum):
 
 
 
-
-
 class Member(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -61,47 +58,32 @@ class Member(models.Model):
         return f"{self.first_name}, {self.last_name} - {self.voice}"
 
 
-class Rehearsal(models.Model):
-    title = models.CharField(max_length=250)
-    location = models.CharField(max_length=250)
-    parking = models.CharField(max_length=250, blank=True, null=True)
-    calendar = models.DateTimeField(blank=True, null=True, unique=True)
-    additional_notes = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.calendar} - {self.title}"
-
-
-
-
-class MemberRehearsal(models.Model):
-    date_record = models.ForeignKey(Rehearsal, on_delete=models.CASCADE,related_name="member_rehearsal")
-    members = models.ManyToManyField(Member,through="MemberRehearsalDetail")
-    rehearsal = models.ForeignKey(Rehearsal, on_delete=models.CASCADE)
-    additional_notes = models.CharField(max_length=200, blank=True, null=True)
-
-    class Meta:
-        ordering = ["date_record"]
-
-    def __str__(self):
-        return f"Attendance on {self.date_record}"
-
-
-class MemberRehearsalDetail(models.Model):
-    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="member_rehearsal_detail")
-    member_rehearsal = models.ForeignKey(MemberRehearsal, on_delete=models.PROTECT, related_name="member_rehearsal_detail")
-    detail_notes = models.CharField(max_length=200, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.member} - {self.member_rehearsal}"
-
-
-
 class Song(models.Model):
     title =  models.CharField(max_length=250)
     composer =  models.CharField(max_length=250)
     arranger = models.CharField(max_length=250)
     poet = models.CharField(max_length=250)
+
+    class Meta:
+        ordering = ["composer"]
+
+    def __str__(self):
+        return f"{self.title} - {self.composer}"
+
+
+class Rehearsal(models.Model):
+    subtitle = models.CharField(max_length=250)
+    location = models.CharField(max_length=250)
+    parking = models.CharField(max_length=250, blank=True, null=True)
+    calendar = models.DateTimeField(blank=True, null=True, unique=True)
+    additional_notes = models.TextField(blank=True, null=True)
+    members = models.ManyToManyField(Member)
+    songs = models.ManyToManyField(Song)
+
+    def __str__(self):
+        return f"{self.calendar} - {self.subtitle}"
+
+    # Song
     #  -> temporary out:
     #genre =  models.CharField(max_length=250)
     #number_of_copies = models.IntegerField(validators=[MinValueValidator(1)])
@@ -115,18 +97,3 @@ class Song(models.Model):
     #date_of_concert = models.ForeignKey(RehearsalDate, on_delete=models.PROTECT, related_name='song', blank=True, null=True) #, default=1 # -> for later implementation
     #date_added = models.DateField("added to archive", default=date.today)
     #additional_songs_notes = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.title} - {self.composer}"
-
-
-
-#class CurrentRehearsal(models.Model):    # -> this is temporary out - to be remade later
-
-#    rehearsal = models.ForeignKey(Rehearsal, on_delete=models.CASCADE, related_name='current_rehearsals', default=1)  # Default to the default_rehearsal
-    #attendance = models.CharField(max_length=9, choices=Attendance.choices)    # temporary out!
-    #song = models.ForeignKey(Song, on_delete=models.PROTECT, related_name='current_rehearsals')
-    #member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name='current_rehearsals')    # temporary out!
-
-#    def __str__(self):
-#        return f"{self.rehearsal}"
