@@ -1,7 +1,7 @@
 {% if latest_rehearsal_list %}
     <ul>
     {% for rehearsal in latest_rehearsal_list %}
-        <li><a href="rehearsal/{{ rehearsal.id }}/">{{ rehearsal.rehearsal_subtitle }}</a></li>
+        <li><a href="{% url 'rehearsal_detail' rehearsal.id %}">{{ rehearsal.rehearsal_subtitle }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

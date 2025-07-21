@@ -24,7 +24,7 @@ class IndexView(generic.ListView):
 
 class DetailView(generic.DetailView):
     model = Question
-    template_name = "polls/detail.html"
+    template_name = "polls/rehearsal_detail.html"
 
     def get_queryset(self):
         """
@@ -47,7 +47,7 @@ def vote(request, question_id):
         # Redisplay the question voting form.
         return render(
             request,
-            "polls/detail.html",
+            "polls/rehearsal_detail.html",
             {
                 "question": question,
                 "error_message": "You didn't select a choice.",

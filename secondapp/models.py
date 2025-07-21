@@ -71,7 +71,7 @@ class Person(models.Model):
     influenced_by = models.TextField(blank=True, null=True)
     awards = models.TextField(blank=True, null=True)
     website = models.TextField(blank=True, null=True)
-    tags = models.ManyToManyField(Tag, blank=True)
+    tags = models.ManyToManyField(Tag, help_text="max singers 5, others 3", blank=True)
     additional_notes = models.TextField(blank=True, null=True)
     # portrait =    ->    # TODO
     updated_at = models.DateTimeField(auto_now=True)
@@ -96,8 +96,14 @@ class Singer(Person):
         self.role = Role.SINGER.name
         super().save(*args, **kwargs)
 
+#    def is_active(self):
+#        return self.is_active
+
     def __str__(self):
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.voice}"
+        max_tags = 5
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.voice} - {tag_names}"
 
 
 class Composer(Person):
@@ -110,7 +116,10 @@ class Composer(Person):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.musical_era}"
+        max_tags = 3
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.musical_era} {tag_names}"
 
 
 class Poet(Person):
@@ -122,7 +131,10 @@ class Poet(Person):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.first_name}, {self.last_name} {self.third_name}"
+        max_tags = 3
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.first_name}, {self.last_name} {self.third_name} - {tag_names}"
 
 
 class Arranger(Person):
@@ -134,7 +146,10 @@ class Arranger(Person):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.style}"
+        max_tags = 3
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.style} - {tag_names}"
 
 
 class Musician(Person):
@@ -148,7 +163,10 @@ class Musician(Person):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.instrument}"
+        max_tags = 3
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.instrument} - {tag_names}"
 
 
 class Song(models.Model):
@@ -156,13 +174,17 @@ class Song(models.Model):
     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT, related_name="song")
     arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT, related_name="song")
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT, related_name="song")
-    tags = models.ManyToManyField(Tag, blank=True)
+    tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
 
 #    class Meta:
 #        ordering = ["composer"]    # temporary out to see if we still need it
 
+
     def __str__(self):
-        return f"{self.title} - {self.composer}"
+        max_tags = 5
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.title} - {self.composer} - {tag_names}"
 
 
 class Rehearsal(models.Model):
@@ -173,10 +195,16 @@ class Rehearsal(models.Model):
     additional_notes = models.TextField(blank=True, null=True)
     singers = models.ManyToManyField(Singer)
     songs = models.ManyToManyField(Song)
-    tags = models.ManyToManyField(Tag, blank=True)
+    tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
+
+    def recent(self):
+        return self.calendar >= timezone.now() - datetime.timedelta(months=8)
 
     def __str__(self):
-        return f"{self.calendar} - {self.subtitle}"
+        max_tags = 5
+        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+
+        return f"{self.calendar} - {self.subtitle} - {tag_names}"
 
     # Song
     #  -> temporary out:

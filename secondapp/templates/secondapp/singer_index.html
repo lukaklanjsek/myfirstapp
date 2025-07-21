@@ -1,7 +1,7 @@
 {% if active_singers_list %}
     <ul>
     {% for singer in active_singers_list %}
-        <li><a href="singer/{{ singer.id }}/">{{ singer }}</a></li>
+        <li><a href="{% url 'singer_detail'  singer.id %}">{{ singer.first_name singer.second_name singer.voice }}</a></li>
     {% endfor %}
     </ul>
 {% else %}
