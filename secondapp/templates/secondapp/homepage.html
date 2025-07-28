@@ -1,10 +1,1 @@
-{% if latest_rehearsal_list %}
-    <ul>
-    {% for rehearsal in latest_rehearsal_list %}
-        <li><a href="{% url 'secondapp:rehearsal' %}">{{ rehearsal }}</a></li>
-        <li><a href="{% url 'secondapp:singer' %}">{{ singer }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No rehearsals nor singers are available.</p>
-{% endif %}
+{{ homepage }}

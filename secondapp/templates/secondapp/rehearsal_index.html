@@ -1,9 +1,2 @@
-{% if latest_rehearsal_list %}
-    <ul>
-    {% for rehearsal in latest_rehearsal_list %}
-        <li><a href="{% url 'rehearsal_detail' rehearsal.id %}">{{ rehearsal.rehearsal_subtitle }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No rehearsal is available.</p>
-{% endif %}
+<a href="{% url 'secondapp:index' %}">Home</a>
+<p>No rehearsal is available.</p>

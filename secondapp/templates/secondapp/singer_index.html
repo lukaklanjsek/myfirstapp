@@ -1,9 +1,2 @@
-{% if active_singers_list %}
-    <ul>
-    {% for singer in active_singers_list %}
-        <li><a href="{% url 'singer_detail'  singer.id %}">{{ singer.first_name singer.second_name singer.voice }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No singer is available.</p>
-{% endif %}
+<a href="{% url 'secondapp:index' %}">Home</a>
+<p>No singer is available.</p>
