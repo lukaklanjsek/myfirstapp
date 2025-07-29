@@ -30,7 +30,7 @@ class IndexRehearsalView(generic.ListView):
     context_object_name = "latest_rehearsal_list"
 
     def get_queryset(self):
-        """Return the last ten rehearsals."""
+        """Return the last 45 rehearsals."""
         return Rehearsal.objects.order_by("-calendar")[:45]
 
 
