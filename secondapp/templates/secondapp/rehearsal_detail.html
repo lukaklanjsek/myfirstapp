@@ -5,10 +5,14 @@
 </head>
 
 <body>
+<a href="{% url 'secondapp:index' %}">Home</a><br>
+<a href="{% url 'secondapp:rehearsal_index' %}">Rehearsal (BACK)</a>
 
 <h1> detail of rehearsal {{rehearsal.id}} </h1>
 
-
+<p>
+    This is posted from templates. Follow me for more cooking recipes.
+</p>
 </body>
 
 </html>

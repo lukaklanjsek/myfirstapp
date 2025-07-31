@@ -8,11 +8,11 @@
 
 
 <a href="{% url 'secondapp:index' %}">Home</a>
-<p>No rehearsal is available.</p>
+<p>Following rehearsals are available:</p>
 
-
-    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">{{ rehearsal.rehearsal_subtitle }}</a>
-
+{% for rehearsal in rehearsal_list %}
+    <li><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">{{ rehearsal }}</a></li>
+{% endfor %}
 
 
 </body>

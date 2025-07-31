@@ -6,10 +6,21 @@
 
 <body>
 
+ <a href="{% url 'secondapp:index' %}">Home</a>
 
-<a href="{% url 'secondapp:index' %}">Home</a>
-<p>No singer is available.</p>
+ <p>The following singers are available:</p>
 
+
+{% for singer in singer_list %}
+    <li><a href="{% url 'secondapp:singer_detail' singer.pk %}">{{ singer }}</a></li>
+{% endfor %}
+
+
+ <p>The following singers are NOT available:</p>
+
+    {% for singer in singer_list %}
+        <li><a href="{% url 'secondapp:singer_detail' singer.pk %}">{{ singer }}</a></li>
+    {% endfor %}
 
 </body>
 

@@ -18,20 +18,19 @@ class IndexView(generic.ListView):
     #return render(request, "secondapp/homepage.html", context=context)
     #return HttpResponse("Hello, world. You're at the homepage home page.")
     template_name = "secondapp/index.html"
-    context_object_name = "latest_rehearsal_list"
+    #context_object_name = "latest_rehearsal_list"
 
     def get_queryset(self):
         """Return the last ten rehearsals."""
-        return Rehearsal.objects.order_by("-calendar")[:10]
+        return #Singer.objects.filter(is_active=False)
 
 
 class IndexRehearsalView(generic.ListView):
     template_name = "secondapp/rehearsal_index.html"
-    context_object_name = "latest_rehearsal_list"
+#    context_object_name = "latest_rehearsal_list"
 
     def get_queryset(self):
-        """Return the last 45 rehearsals."""
-        return Rehearsal.objects.order_by("-calendar")[:45]
+        return Rehearsal.objects.all()#order_by("-calendar")[:45]
 
 
 class DetailRehearsalView(generic.DetailView):
@@ -41,24 +40,14 @@ class DetailRehearsalView(generic.DetailView):
 
 class IndexSingerView(generic.ListView):
     template_name = "secondapp/singer_index.html"
-    context_object_name = "active_singers_list"
 
     def get_queryset(self):
-        """Return all active singers."""
-        return Singer.objects.filter(is_active=True)
-
-
-#def index_singers_inactive(request):
-#    inactive_singers_list = Singer.objects.filter(is_active=False)
-#    context = {"inactive_singers_list": inactive_singers_list}
-#    return render(request, "secondapp/singer_index.html", context)
+        """Return all singers."""
+        return Singer.objects.all()
 
 
 class DetailSingerView(generic.DetailView):
     model = Singer
-    template_name = "secondapp/singer_detail.html"
-
-#    return render(request, template_name="secondapp/singer_detail.html", context={"singer": singer})
 
 
 #def index_songs(request):
