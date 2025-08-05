@@ -1,9 +1,10 @@
+#from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, get_object_or_404
 # Create your views here.
-from django.http import HttpResponse, HttpResponseRedirect
+#from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
-from django.views.generic import ListView
-from django.db.models import F
+#from django.views.generic import ListView
+#from django.db.models import F
 
 from .models import Rehearsal, Singer, Song
 
@@ -21,8 +22,7 @@ class IndexView(generic.ListView):
     #context_object_name = "latest_rehearsal_list"
 
     def get_queryset(self):
-        """Return the last ten rehearsals."""
-        return #Singer.objects.filter(is_active=False)
+        return Rehearsal.objects.order_by("-calendar")[:5] #Singer.objects.filter(is_active=True)#
 
 
 class IndexRehearsalView(generic.ListView):
@@ -40,19 +40,33 @@ class DetailRehearsalView(generic.DetailView):
 
 class IndexSingerView(generic.ListView):
     template_name = "secondapp/singer_index.html"
+    context_object_name = "singers"
 
     def get_queryset(self):
-        """Return all singers."""
+        #trying to get all singers to show up first
         return Singer.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        #seperating activity of singer
+        active_singers = Singer.objects.filter(is_active=True)
+        inactive_singers = Singer.objects.filter(is_active=False)
+        context['active_singers'] = active_singers
+        context['inactive_singers'] = inactive_singers
+
+        return context
 
 
 class DetailSingerView(generic.DetailView):
     model = Singer
 
 
-#def index_songs(request):
-#    return HttpResponse(request, "Hello, world. You're at the songs index.")
+class IndexSongView(generic.ListView):
+    template_name = "secondapp/song_index.html"
 
-#def detail_song(request):
-#    song = get_object_or_404(Song, pk=song_id)
-#    return render(request, template_name="secondapp/song_detail.html", context={"song": song})
+    def get_queryset(self):
+        return Song.objects.all()
+
+
+class DetailSongView(generic.DetailView):
+    model = Song

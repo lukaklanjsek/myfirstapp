@@ -1,0 +1,31 @@
+<html>
+
+<head>
+    <title> Songs </title>
+</head>
+
+<body>
+
+
+<a href="{% url 'secondapp:index' %}">Home</a>
+<p>Here is a list of all songs:</p>
+<table>
+ <tr>
+    <th> title </th>
+    <th> composer </th>
+    <th> genre </th>
+    <th> link </th>
+ </tr>
+{% for song in song_list %}
+    <tr>
+        <td> {{ song.title }} </td>
+        <td> {{ song.composer }} </td>
+        <td> {{ song.genre }} </td>
+        <td><a href="{% url 'secondapp:song_detail' song.pk %}"> Link </a></td>
+    </tr>
+{% endfor %}
+</table>
+
+</body>
+
+</html>

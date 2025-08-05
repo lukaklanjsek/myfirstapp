@@ -108,7 +108,7 @@ class Singer(Person):
 
 class Composer(Person):
     work_style = models.CharField(max_length=250)
-    musical_era = models.CharField(max_length=250)
+    musical_era = models.CharField(max_length=250, blank=True, null=True)
     instruments = models.CharField("favorite instruments", max_length=250)
 
     def save(self, *args, **kwargs):
@@ -174,6 +174,7 @@ class Song(models.Model):
     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT, related_name="song")
     arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT, related_name="song")
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT, related_name="song")
+    genre = models.CharField(max_length=200, blank=True, null=True)
     tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
 
 #    class Meta:
@@ -184,7 +185,7 @@ class Song(models.Model):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
 
-        return f"{self.title} - {self.composer} - {tag_names}"
+        return f"{self.title} - {self.composer} - {self.genre} - {tag_names}"
 
 
 class Rehearsal(models.Model):
@@ -208,7 +209,6 @@ class Rehearsal(models.Model):
 
     # Song
     #  -> temporary out:
-    #genre =  models.CharField(max_length=250)
     #number_of_copies = models.IntegerField(validators=[MinValueValidator(1)])
     #number_of_pages = models.IntegerField(validators=[MinValueValidator(1)])
     #number_of_voices = models.IntegerField(validators=[MinValueValidator(1)])

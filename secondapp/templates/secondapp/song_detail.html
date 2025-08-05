@@ -1,0 +1,17 @@
+<html>
+
+<head>
+    <title> {{ song.id }} </title>
+</head>
+
+<body>
+<a href="{% url 'secondapp:index' %}">Home</a><br>
+<a href="{% url 'secondapp:song_index' %}">Songs - Back</a>
+
+
+<h1> detail of {{ song }}</h1>
+<p> rendered from a template </p>
+
+</body>
+
+</html>

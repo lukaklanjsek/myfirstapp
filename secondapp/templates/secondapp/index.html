@@ -12,10 +12,13 @@
 <a href="{% url 'secondapp:rehearsal_index' %}">Rehearsal</a> <br>
 <a href="{% url 'secondapp:singer_index' %}">Singer</a>
 
-
-    {% for singer in singer_list %}
-        <li><a href="{% url 'secondapp:singer_detail' singer.pk %}">{{ singer }}</a></li>
+<p>latest rehearsals:</p>
+    {% for rehearsal in rehearsal_list %}
+        <li><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">{{ rehearsal }}</a></li>
     {% endfor %}
+
+ <br>
+<a href="{% url 'secondapp:song_index' %}">SONGS ARCHIVE</a>
 
 
 </body>

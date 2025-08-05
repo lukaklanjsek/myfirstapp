@@ -14,4 +14,7 @@ urlpatterns = [
      path("singer/", views.IndexSingerView.as_view(), name="singer_index"),
      path("singer/<int:pk>", views.DetailSingerView.as_view(), name="singer_detail"),
 
+     path("song/", views.IndexSongView.as_view(), name="song_index"),
+     path("song/<int:pk>", views.DetailSongView.as_view(), name="song_detail"),
+
 ]
