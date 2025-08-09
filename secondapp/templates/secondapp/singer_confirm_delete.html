@@ -1,0 +1,13 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{singer.pk}}confirm{% endblock %}
+{% block content %}
+
+<h1>Are you sure you want to delete "{{singer.first_name}} {{singer.last_name}} - {{singer.pk}}"?</h1>
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+</form>
+<a href="{% url 'singer_detail' singer.pk %}">Cancel</a>
+
+
+{% endblock %}

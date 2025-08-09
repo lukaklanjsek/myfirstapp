@@ -1,51 +1,42 @@
-<html>
+{% extends "secondapp/base.html" %}
+{% block title %}Singers{% endblock %}
+{% block content %}
 
-<head>
-    <title> singers </title>
-</head>
+<h1>Hi to the singers' list.</h1>
+<a href="{% url 'secondapp:singer_form.html' %}">Add New Singer</a>
 
-<body>
-
- <a href="{% url 'secondapp:index' %}">Home</a>
-
- <p>The following singers are available:</p>
-
+<p>The following singers are available:</p>
 <table>
 <tr>
+    <th> voice </th>
     <th> first name </th>
     <th> last name </th>
-    <th> voice </th>
     <th> link </th>
 </tr>
 {% for singer in active_singers %}
     <tr>
+        <td> {{ singer.voice }} </td>
         <td> {{ singer.first_name }} </td>
         <td> {{ singer.last_name }} </td>
-        <td> {{ singer.voice }} </td>
         <td><a href="{% url 'secondapp:singer_detail' singer.pk %}"> Link </a></td>
     </tr>
 {% endfor %}
-
 </table>
-
  <p>The following singers are NOT available:</p>
 <table>
     <tr>
+    <th> voice </th>
     <th> first name </th>
     <th> last name </th>
-    <th> voice </th>
     <th> link </th>
 </tr>
  {% for singer in inactive_singers %}
     <tr>
+        <td>{{ singer.voice }}</td>
         <td>{{ singer.first_name }}</td>
         <td>{{ singer.last_name }}</td>
-        <td>{{ singer.voice }}</td>
         <td><a href="{% url 'secondapp:singer_detail' singer.pk %}">Link</a></td>
     </tr>
  {% endfor %}
 </table>
-
-</body>
-
-</html>
+{% endblock %}

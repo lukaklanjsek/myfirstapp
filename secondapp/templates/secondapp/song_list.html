@@ -1,13 +1,7 @@
-<html>
-
-<head>
-    <title> Songs </title>
-</head>
-
-<body>
-
-
-<a href="{% url 'secondapp:index' %}">Home</a>
+{% extends "secondapp/base.html" %}
+{% block title %}Songs{% endblock %}
+{% block content %}
+<a href="{% url 'secondapp:song_form.html' %}">Add New Song</a>
 <p>Here is a list of all songs:</p>
 <table>
  <tr>
@@ -25,7 +19,4 @@
     </tr>
 {% endfor %}
 </table>
-
-</body>
-
-</html>
+{% endblock %}

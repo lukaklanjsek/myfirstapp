@@ -1,20 +1,14 @@
-<html>
+{% extends "secondapp/base.html" %}
 
-<head>
-    <title> rehearsals </title>
-</head>
+{% block title %}Rehearsals{% endblock %}
 
-<body>
-
-
-<a href="{% url 'secondapp:index' %}">Home</a>
-<p>Following rehearsals are available:</p>
+{% block content %}
+<h1>Rehearsals</h1>
 
 {% for rehearsal in rehearsal_list %}
-    <li><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">{{ rehearsal }}</a></li>
+    <p>Title: {{ rehearsal.subtitle }}<br>
+    By: {{ rehearsal.location }}<br>
+    Date - {{ rehearsal.calendar }}<br>
+    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Link to {{ rehearsal.pk }}</a></p>
 {% endfor %}
-
-
-</body>
-
-</html>
+{% endblock %}

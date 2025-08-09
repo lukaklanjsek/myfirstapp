@@ -1,17 +1,31 @@
-<html>
-
-<head>
-    <title> {{singer.id}} singer </title>
-</head>
-
-<body>
-<a href="{% url 'secondapp:index' %}">Home</a><br>
-<a href="{% url 'secondapp:singer_index' %}">Singer - Back</a>
-
-
+{% extends "secondapp/base.html" %}
+{% block title %}{{singer.pk}}Singer{% endblock %}
+{% block content %}
+<a href="{% url 'secondapp:singer_list' %}">Singers list - Back</a>
 <h1>detail of {{ singer }}</h1>
 <p>rendered from a template </p>
 
-</body>
+<a href="{% url 'secondapp:singer_update' singer.pk %}">UPDATE - EDIT</a><br>
+<a href="{% url 'secondapp:singer_delete' singer.pk %}">Delete</a><br>
 
-</html>
+  <h2>{{ singer.first_name }} {{ singer.last_name }} {{ singer.third_name }}</h2>
+  <p><strong>Voice:</strong> {{ singer.voice }}</p>
+  <p><strong>Skill Level:</strong> {{ singer.skill_level }}</p>
+  <p><strong>Is Active:</strong> {% if singer.is_active %}✓{% else %}✗{% endif %}</p>
+  <p><strong>Date Joined:</strong> {{ singer.date_joined }}</p>
+  <p><strong>Shirt Size:</strong> {{ singer.shirt_size }}</p>
+  <p><strong>Messenger:</strong> {{ singer.messenger }}</p>
+  <p><strong>Biography:</strong> {{ singer.biography }}</p>
+  <p><strong>Favorite Works:</strong> {{ singer.favorite_works }}</p>
+  <p><strong>Influenced By:</strong> {{ singer.influenced_by }}</p>
+  <p><strong>Awards:</strong> {{ singer.awards }}</p>
+  <p><strong>Website:</strong> <a href="{{ singer.website }}">{{ singer.website }}</a></p>
+  <p><strong>Tags:</strong> {{ singer.tags.all|join:", " }}</p>
+  <p><strong>Additional Notes:</strong> {{ singer.additional_notes }}</p>
+
+
+<a href="{% url 'secondapp:singer_update' singer.pk %}">UPDATE - EDIT</a><br>
+<a href="{% url 'secondapp:singer_delete' singer.pk %}">Delete</a>
+{% endblock %}
+
+

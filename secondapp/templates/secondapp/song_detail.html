@@ -1,17 +1,16 @@
-<html>
-
-<head>
-    <title> {{ song.id }} </title>
-</head>
-
-<body>
-<a href="{% url 'secondapp:index' %}">Home</a><br>
+{% extends "secondapp/base.html" %}
+{% block title %}{{song.pk}}Song{% endblock %}
+{% block content %}
 <a href="{% url 'secondapp:song_index' %}">Songs - Back</a>
-
-
 <h1> detail of {{ song }}</h1>
 <p> rendered from a template </p>
+<h1>{{ song.title }}</h1>
+<p>Composer: {{ song.composer }}</p>
+<p>Arranger: {{ song.arranger }}</p>
+<p>Poet: {{ song.poet }}</p>
+<p>Genre: {{ song.genre }}</p>
+<p>Tags: {{ song.tags.all|join:", " }}</p>
 
-</body>
-
-</html>
+<a href="{% url 'secondapp:song_update' song.pk %}">UPDATE EDIT</a><br>
+<a href="{% url 'secondapp:song_delete' song.pk %}">Delete</a>
+{% endblock %}

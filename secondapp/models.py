@@ -96,8 +96,6 @@ class Singer(Person):
         self.role = Role.SINGER.name
         super().save(*args, **kwargs)
 
-#    def is_active(self):
-#        return self.is_active
 
     def __str__(self):
         max_tags = 5
@@ -176,9 +174,6 @@ class Song(models.Model):
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT, related_name="song")
     genre = models.CharField(max_length=200, blank=True, null=True)
     tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
-
-#    class Meta:
-#        ordering = ["composer"]    # temporary out to see if we still need it
 
 
     def __str__(self):

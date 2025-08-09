@@ -1,0 +1,11 @@
+{% load static %}
+<html lang="en">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    <img src="{% static 'secondapp/images/sitelogo.png' %}" alt="Logo" width="34" height="34">
+<a href="{% url 'secondapp:index' %}">Home</a>
+    {% block content %}{% endblock %}
+</body>
+</html>
