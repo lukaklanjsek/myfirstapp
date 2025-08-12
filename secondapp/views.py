@@ -23,7 +23,7 @@ class IndexView(generic.ListView):
 
 class RehearsalListView(generic.ListView):
     template_name = "secondapp/rehearsal_list.html"
-    context_object_name = "rehearsals"
+    context_object_name = "rehearsal_list"
 
     def get_queryset(self):
         return Rehearsal.objects.order_by("-calendar")
@@ -37,6 +37,7 @@ class RehearsalDetailView(generic.DetailView):
 class RehearsalCreateView(generic.CreateView):
     model = Rehearsal
     template_name = "secondapp/rehearsal_form.html"
+    fields = "__all__"
     success_url = reverse_lazy("secondapp:rehearsal_detail")
 
 
@@ -44,7 +45,7 @@ class RehearsalUpdateView(generic.UpdateView):
     model = Rehearsal
     form_class = RehearsalForm
     template_name = "secondapp/rehearsal_form.html"
-    success_url = "secondapp/rehearsal_detail.html"
+    success_url = ("secondapp:rehearsal_detail")
 
 
 class RehearsalDeleteView(generic.DeleteView):

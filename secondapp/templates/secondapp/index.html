@@ -5,8 +5,8 @@
 {% block content %}
 <h1> This is index.html from templates. </h1>
 <p>Here are links to rehearsals and singers:</p>
-<a href="{% url 'secondapp:rehearsal_index' %}">Rehearsals</a> <br>
-<a href="{% url 'secondapp:singer_index' %}">Singers</a>
+<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
+<a href="{% url 'secondapp:singer_list' %}">Singers</a>
 
 <p>last 5 rehearsals:</p>
 <table>
@@ -27,6 +27,6 @@
 </table>
 
  <br>
-<a href="{% url 'secondapp:song_index' %}">SONGS ARCHIVE</a>
+<a href="{% url 'secondapp:song_list' %}">SONGS ARCHIVE</a>
 
 {% endblock %}

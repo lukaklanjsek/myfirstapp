@@ -1,0 +1,12 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{rehearsal.pk}}confirm{% endblock %}
+{% block content %}
+
+<h1>Are you sure you want to delete "{{ rehearsal.subtitle }} - {{ rehearsal.calendar }}"?</h1>
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+</form>
+<a href="{% url 'rehearsal_detail' rehearsal.pk %}">Cancel</a>
+
+{% endblock %}

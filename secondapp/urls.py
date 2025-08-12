@@ -8,14 +8,24 @@ urlpatterns = [
 
      path("", views.IndexView.as_view(), name="index"),
 
-     path("rehearsal/", views.IndexRehearsalView.as_view(), name="rehearsal_index"),
-     path("rehearsal/<int:pk>/", views.DetailRehearsalView.as_view(), name="rehearsal_detail"),
-     path("rehearsal/<int:pk>/", views.ResultsRehearsalView.as_view(), name="rehearsal_results"),
+     path("rehearsal/", views.RehearsalListView.as_view(), name="rehearsal_list"),
+     path("rehearsal/<int:pk>/", views.RehearsalDetailView.as_view(), name="rehearsal_detail"),
+     path("rehearsal/create/", views.RehearsalCreateView.as_view(), name="rehearsal_form"),
+     path("rehearsal/<int:pk>/update/", views.RehearsalUpdateView.as_view(), name="rehearsal_form"),
+     path("rehearsal/<int:pk>/delete/", views.RehearsalDeleteView.as_view(), name="rehearsal_confirm_delete"),
 
-     path("singer/", views.IndexSingerView.as_view(), name="singer_index"),
-     path("singer/<int:pk>", views.DetailSingerView.as_view(), name="singer_detail"),
+     path("singer/", views.SingerListView.as_view(), name="singer_list"),
+     path("singer/<int:pk>", views.SingerDetailView.as_view(), name="singer_detail"),
+     path("singer/create/", views.SingerCreateView.as_view(), name="singer_form"),
+     path("singer/<int:pk>/update/", views.SingerUpdateView.as_view(), name="singer_form"),
+     path("singer/<int:pk>/delete/", views.SingerDeleteView.as_view(), name="singer_confirm_delete"),
 
-     path("song/", views.IndexSongView.as_view(), name="song_index"),
-     path("song/<int:pk>", views.DetailSongView.as_view(), name="song_detail"),
+     path("song/", views.SongListView.as_view(), name="song_list"),
+     path("song/<int:pk>", views.SongDetailView.as_view(), name="song_detail"),
+     path("song/create/", views.SongCreateView.as_view(), name="song_form"),
+     path("song/<int:pk>/update/", views.SongUpdateView.as_view(), name="song_form"),
+     path("song/<int:pk>/delete/", views.SongDeleteView.as_view(), name="song_confirm_delete"),
+
+
 
 ]

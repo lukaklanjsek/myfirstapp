@@ -3,7 +3,7 @@
 {% block title %}{{rehearsal.pk}}Rehearsal{% endblock %}
 
 {% block content %}
-<a href="{% url 'secondapp:rehearsal_index' %}">Rehearsal (BACK)</a>
+<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsal (BACK)</a>
 
 <h1> detail of rehearsal {{rehearsal.id}} </h1>
 <p>
@@ -32,7 +32,7 @@
         <li>{{ tag.name }}</li>
     {% endfor %}
 </ul>
-
-<p> PLACEHOLDER FOR  YEET AND EDIT BUTTONS </p>
+<a href="{% url 'secondapp:rehearsal_form' rehearsal.pk %}">UPDATE - EDIT</a><br>
+<a href="{% url 'secondapp:rehearsal_confirm_delete' rehearsal.pk %}">Delete</a>
 
 {% endblock %}

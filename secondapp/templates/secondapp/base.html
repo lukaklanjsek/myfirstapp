@@ -1,11 +1,20 @@
 {% load static %}
 <html lang="en">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
 </head>
 <body>
     <img src="{% static 'secondapp/images/sitelogo.png' %}" alt="Logo" width="34" height="34">
 <a href="{% url 'secondapp:index' %}">Home</a>
-    {% block content %}{% endblock %}
+    {% block content %}
+    <!-- content goes here -->
+    {% endblock %}
+
+    <footer>
+        <p> 2025 My Django App</p>
+    </footer>
 </body>
 </html>
