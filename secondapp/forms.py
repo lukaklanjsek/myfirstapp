@@ -1,5 +1,5 @@
 from django import forms
-from .models import Rehearsal, Song, Person, Singer, Composer, Musician, Arranger, Poet
+from .models import Rehearsal, Song, Person, Singer, Composer, Musician, Arranger, Poet, Tag
 
 
 class PersonForm(forms.ModelForm):
@@ -71,4 +71,10 @@ class SongForm(forms.ModelForm):
 class RehearsalForm(forms.ModelForm):
     class Meta:
         model = Rehearsal
+        fields = "__all__"
+
+
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
         fields = "__all__"

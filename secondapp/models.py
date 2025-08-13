@@ -46,6 +46,7 @@ class Role(Enum):
 
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    date_added = models.DateField(auto_now=True)
 
     class Meta:
         ordering = ["name"]

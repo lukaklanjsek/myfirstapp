@@ -36,22 +36,29 @@ class RehearsalDetailView(generic.DetailView):
 
 class RehearsalCreateView(generic.CreateView):
     model = Rehearsal
+    form_class = RehearsalForm
     template_name = "secondapp/rehearsal_form.html"
-    fields = "__all__"
-    success_url = reverse_lazy("secondapp:rehearsal_detail")
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:rehearsal_detail", kwargs={"pk": self.object.pk})
+
 
 
 class RehearsalUpdateView(generic.UpdateView):
     model = Rehearsal
     form_class = RehearsalForm
     template_name = "secondapp/rehearsal_form.html"
-    success_url = ("secondapp:rehearsal_detail")
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:rehearsal_detail", kwargs={"pk": self.object.pk})
 
 
 class RehearsalDeleteView(generic.DeleteView):
     model = Rehearsal
-    template_name = "secondapp/rehearsal_confirm_delete.html"
-    success_url = "secondapp/rehearsal_list.html"
+    template_name = "secondapp/rehearsal_confirm.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:rehearsal_list")
 
 
 class SingerListView(generic.ListView):
@@ -83,29 +90,37 @@ class SingerCreateView(generic.CreateView):
     model = Singer
     form_class = SingerForm
     template_name = "secondapp/singer_form.html"
-    success_url = reverse_lazy("secondapp:singer_detail")
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:singer_detail", kwargs={"pk": self.object.pk})
+
 
 
 class SingerUpdateView(generic.UpdateView):
     model = Singer
     form_class = SingerForm
     template_name = "secondapp/singer_form.html"
-    success_url = "secondapp/singer_detail.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:singer_detail", kwargs={"pk": self.object.pk})
+
 
 
 class SingerDeleteView(generic.DeleteView):
     model = Singer
     template_name = "secondapp/singer_confirm_delete.html"
-    success_url = "secondapp/singer_list.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:singer_list")
 
 
 class SongListView(generic.ListView):
     model = Song
     template_name = "secondapp/song_list.html"
-    context_object_name = "songs"
+    context_object_name = "song_list"
 
-#    def get_queryset(self):
-#        return Song.objects.all()
+    def get_queryset(self):
+        return Song.objects.all()
 
 
 class SongDetailView(generic.DetailView):
@@ -118,22 +133,28 @@ class SongCreateView(generic.CreateView):
     model = Song
     form_class = SongForm
     template_name = "secondapp/song_form.html"
-    success_url = reverse_lazy("secondapp:song_detail.html")
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_detail", kwargs={"pk": self.object.pk})
 
 
 class SongUpdateView(generic.UpdateView):
     model = Song
     form_class = SongForm
     template_name = "secondapp/song_form.html"
-    success_url = "secondapp/song_detail.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_detail", kwargs={"pk": self.object.pk})
 
 
 class SongDeleteView(generic.DeleteView):
     model = Song
     template_name = "secondapp/song_confirm_delete.html"
-    success_url = "secondapp/song_list.html"
 
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_list")
 
+# ---------------------------------------------------------
 class PersonListView(ListView):
     template_name = "secondapp/"  # TODO HERE COMPLETE THIS SHIT
 
@@ -180,3 +201,6 @@ class PersonUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['role'] = self.object.__class__.__name__.lower()
         return context
+
+# TODO doing now "tags"
+

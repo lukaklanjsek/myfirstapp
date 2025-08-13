@@ -11,6 +11,6 @@
 <p>Genre: {{ song.genre }}</p>
 <p>Tags: {{ song.tags.all|join:", " }}</p>
 
-<a href="{% url 'secondapp:song_form' song.pk %}">UPDATE EDIT</a><br>
-<a href="{% url 'secondapp:song_confirm_delete' song.pk %}">Delete</a>
+<a href="{% url 'secondapp:song_update' song.pk %}">UPDATE EDIT</a><br>
+<a href="{% url 'secondapp:song_delete' song.pk %}">Delete</a>
 {% endblock %}

@@ -7,7 +7,7 @@
     {% csrf_token %}
     <button type="submit">Yes, delete</button>
 </form>
-<a href="{% url 'singer_detail' singer.pk %}">Cancel</a>
+<a href="{% url 'secondapp:singer_detail' singer.pk %}">Cancel</a>
 
 
 {% endblock %}

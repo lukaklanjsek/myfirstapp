@@ -2,6 +2,7 @@
 {% block title %}Rehearsals{% endblock %}
 {% block content %}
 <h1>Rehearsals</h1>
+<a href="{% url 'secondapp:rehearsal_form' %}">Add New Rehearsal</a>
 {% for rehearsal in rehearsal_list %}
     <p>Title: {{ rehearsal.subtitle }}<br>
     At: {{ rehearsal.location }}<br>

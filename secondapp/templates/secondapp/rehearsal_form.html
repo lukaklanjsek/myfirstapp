@@ -1,12 +1,12 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Edit{{rehearsal.pk}}{% endblock %}
 {% block content %}
-<h1>Edit rehearsal {{ rehearsal.pk }}</h1>
-<form method="post">
-        {% csrf_token %}
-    {{ form.as_p}}
+<h1>{% if object %}Edit{% else %}Add{% endif %} Rehearsal {{rehearsal.pk}} </h1>
+<form method="POST">{% csrf_token %}
+    {{ form.as_p }}
     <button type="submit">Save</button>
+
 </form>
 
-<a href="{% url 'secondapp:rehearsal_list' %}">Cancel</a>
+<a href="{% url 'secondapp:rehearsal_list' %}">List</a>
 {% endblock %}

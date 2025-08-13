@@ -6,7 +6,8 @@
 <form method="POST">
     {% csrf_token %}
     <button type="submit">Yes, delete</button>
+    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Cancel</a>
 </form>
-<a href="{% url 'rehearsal_detail' rehearsal.pk %}">Cancel</a>
+<a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Cancel</a>
 
 {% endblock %}
