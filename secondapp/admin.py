@@ -43,7 +43,7 @@ class RehearsalAdmin(admin.ModelAdmin):
 
 
 
-admin.site.register(Tag)
+admin.site.register(Tag, TagAdmin)
 
 admin.site.register(Song)#, SongAdmin)
 admin.site.register(Rehearsal, RehearsalAdmin)

@@ -77,4 +77,4 @@ class RehearsalForm(forms.ModelForm):
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = "__all__"
+        fields = ["name"]

@@ -1,0 +1,34 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Tags{% endblock %}
+{% block content %}
+<h1>Tags list</h1>
+<h2> Add new tag </h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add new Tag</button>
+</form>
+<h2>Links back:</h2>
+<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
+<a href="{% url 'secondapp:singer_list' %}">Singers</a><br>
+<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
+<h2> Tag list </h2>
+<ul>
+{% for tag in tags %}
+    <p>- {{ tag.name }}
+    - added  {{ tag.date_added }} - {{tag.pk}}
+    <form method="post" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="tag_id" value="{{ tag.id }}">
+        <button type="submit" name="delete_tag" onclick="return confirm('Are you sure?')">Delete</button>
+      </form>
+    </p>
+{% endfor %}
+</ul>
+<h2>Links back:</h2>
+<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
+<a href="{% url 'secondapp:singer_list' %}">Singers</a><br>
+<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
+<p>End of page.</p>
+
+{% endblock %}

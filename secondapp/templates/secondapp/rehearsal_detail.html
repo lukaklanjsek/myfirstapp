@@ -32,7 +32,9 @@
         <li>{{ tag.name }}</li>
     {% endfor %}
 </ul>
-<a href="{% url 'secondapp:rehearsal_update' rehearsal.pk %}">UPDATE - EDIT</a><br>
-<a href="{% url 'secondapp:rehearsal_delete' rehearsal.pk %}">Delete</a>
+
+<a href="{% url 'secondapp:rehearsal_update' rehearsal.pk %}">++UPDATE - EDIT++</a><br>
+<a href="{% url 'secondapp:rehearsal_delete' rehearsal.pk %}">XX Delete XX</a><br>
+<a href="{% url 'secondapp:tag' %}">>>GET THEM TAGS HERE<<</a> <br>
 
 {% endblock %}

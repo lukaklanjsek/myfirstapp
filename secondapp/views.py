@@ -4,11 +4,12 @@ from django.urls import reverse_lazy
 # Create your views here.
 #from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, View
 #from django.db.models import F
 
-from .forms import RehearsalForm , SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm
+from .forms import RehearsalForm , SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm
 from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song
+from .mixins import TagListAndCreateMixin
 
 # TODO complete making classes out of definitions and write appropriate html docs
 #TODO STATIC FILES AND SHIT  --  i think statics are done for the basics already - unsure
@@ -154,6 +155,11 @@ class SongDeleteView(generic.DeleteView):
     def get_success_url(self):
         return reverse_lazy("secondapp:song_list")
 
+
+class TagListAndCreateView(TagListAndCreateMixin, View):
+    pass
+
+
 # ---------------------------------------------------------
 class PersonListView(ListView):
     template_name = "secondapp/"  # TODO HERE COMPLETE THIS SHIT
@@ -202,5 +208,20 @@ class PersonUpdateView(UpdateView):
         context['role'] = self.object.__class__.__name__.lower()
         return context
 
-# TODO doing now "tags"
+# "tags"  - work in progress -- DONE
+
+#class TagListView(ListView):
+#    model = Tag
+#    template_name = "secondapp/tag_list_create.html"
+#    context_object_name = "tag"
+
+
+#class TagCreateView(CreateView):
+#    model = Tag
+#    form_class = TagForm
+#    template_name = "secondapp/tag_list_create.html"
+
+#    def get_success_url(self):
+#        return reverse_lazy("secondapp:tag_list")
+
 

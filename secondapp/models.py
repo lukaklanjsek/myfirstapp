@@ -46,13 +46,13 @@ class Role(Enum):
 
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    date_added = models.DateField(auto_now=True)
+    date_added = models.DateField(auto_now_add=True)
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
-        return {self.name}
+        return self.name
 
 
 class Person(models.Model):

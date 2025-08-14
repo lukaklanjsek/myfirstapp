@@ -1,6 +1,7 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Rehearsals{% endblock %}
 {% block content %}
+<a href="{% url 'secondapp:tag' %}">>>GET THEM TAGS HERE<<</a>
 <h1>Rehearsals</h1>
 <a href="{% url 'secondapp:rehearsal_form' %}">Add New Rehearsal</a>
 {% for rehearsal in rehearsal_list %}
