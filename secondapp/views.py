@@ -1,6 +1,8 @@
 #from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy
+from datetime import datetime, timedelta
+from django.utils import timezone
 # Create your views here.
 #from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
@@ -16,18 +18,48 @@ from .mixins import TagListAndCreateMixin
 
 class IndexView(generic.ListView):
     # TODO future rehearsals in a list of upcoming dates and locations  <---- this will be done some day
+    model = Rehearsal
     template_name = "secondapp/index.html"
+    context_object_name = "rehearsal_list"
+    queryset = Rehearsal.objects.all().order_by('-calendar')[:5]
 
-    def get_queryset(self):
-        return Rehearsal.objects.order_by("-calendar")[:5]
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
 
+
+        happening_now = Rehearsal.objects.filter(
+            is_cancelled=False,
+            calendar__gte=now - timedelta(minutes=660),
+            calendar__lte=now + timedelta(minutes=660)
+        ).first()
+
+        context['happening_now'] = happening_now
+        return context
 
 class RehearsalListView(generic.ListView):
     template_name = "secondapp/rehearsal_list.html"
     context_object_name = "rehearsal_list"
+    paginate_by = 7
 
     def get_queryset(self):
-        return Rehearsal.objects.order_by("-calendar")
+        return Rehearsal.objects.filter(is_cancelled=False).order_by("-calendar")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
+
+        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False).order_by("calendar")
+        context['upcoming_rehearsals'] = all_rehearsals.filter(calendar__gte=now)
+        context['past_rehearsals'] = all_rehearsals.filter(calendar__lt=now).order_by("-calendar")
+
+        happening_now = all_rehearsals.filter(
+            calendar__gte=now - timedelta(minutes=660),
+            calendar__lte=now + timedelta(minutes=660)
+        ).first()
+        context['happening_now'] = happening_now
+
+        return context
 
 
 class RehearsalDetailView(generic.DetailView):

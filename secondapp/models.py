@@ -1,10 +1,10 @@
 from random import choices
 
 from django.db import models
-#import datetime
+import datetime
 from datetime import date
 from enum import Enum
-#from django.utils import timezone
+from django.utils import timezone
 #from django.forms import ModelMultipleChoiceField
 
 
@@ -47,6 +47,9 @@ class Role(Enum):
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
     date_added = models.DateField(auto_now_add=True)
+    # this might clash between all stamps but right now doing update for the footer
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
@@ -59,7 +62,7 @@ class Person(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, db_index=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
-    #  TODO: make "role" no longer selectable within other models
+    #  TODO: make "role" no longer selectable within other models  -> how are we progressing on other roles???
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     email = models.EmailField(unique=True, blank=True, null=True)
@@ -170,18 +173,19 @@ class Musician(Person):
 
 class Song(models.Model):
     title =  models.CharField(max_length=250)
-    composer =  models.ForeignKey(Composer, on_delete=models.PROTECT, related_name="song")
-    arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT, related_name="song")
-    poet = models.ForeignKey(Poet, on_delete=models.PROTECT, related_name="song")
+    composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
+    arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
+    poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     genre = models.CharField(max_length=200, blank=True, null=True)
     tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.title} - {self.composer} - {self.genre} - {tag_names}"
+        composer_name = self.composer.last_name #if self.composer else "Unknown"
+        return f"{self.title} - {composer_name} - {self.genre} - {tag_names}"
 
 
 class Rehearsal(models.Model):
@@ -190,18 +194,37 @@ class Rehearsal(models.Model):
     parking = models.CharField(max_length=250, blank=True, null=True)
     calendar = models.DateTimeField(blank=True, null=True, unique=True)
     additional_notes = models.TextField(blank=True, null=True)
-    singers = models.ManyToManyField(Singer)
-    songs = models.ManyToManyField(Song)
+    singers = models.ManyToManyField(Singer, blank=True)
+    songs = models.ManyToManyField(Song, blank=True)
     tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
+    duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
+    attendance_count = models.PositiveIntegerField(default=0, help_text="Actual attendance count")
+    is_cancelled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Rehearsals"
 
     def recent(self):
-        return self.calendar >= timezone.now() - datetime.timedelta(months=8)
+        return self.calendar >= timezone.now() - datetime.timedelta()
+
+    def is_upcoming(self):
+        if self.calendar:
+            return self.calendar > timezone.now()
+        return False
+
+    def get_singer_count(self):
+        return self.singers.count()
+
+    def get_song_count(self):
+        return self.songs.count()
 
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.calendar} - {self.subtitle} - {tag_names}"
+        status = "(Cancelled)" if self.is_cancelled else ""
+        return f"{self.calendar} - {self.subtitle} {status} - {tag_names}"
 
     # Song
     #  -> temporary out:

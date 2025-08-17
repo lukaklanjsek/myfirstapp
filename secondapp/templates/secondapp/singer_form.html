@@ -1,12 +1,41 @@
 {% extends "secondapp/base.html" %}
-{% block title %}{{singer.pk}}Edit{% endblock %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
 {% block content %}
 
-<h1>{% if object %}Edit{% else %}Add{% endif %} Singer</h1>
-<form method="POST">{% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-</form>
+<div class="form-header">
+    <h1>{% if object %}Edit{% else %}Add{% endif %} Singer</h1>
+</div>
 
-<a href="{% url 'secondapp:singer_list' %}">List of singers</a>
+<div class="form-container">
+    <form method="POST">{% csrf_token %}
+        <div class="form-fields">
+            {{ form.as_p }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<div class="form-navigation">
+    {% if object %}
+        <div class="edit-actions">
+            <a href="{% url 'secondapp:singer_detail' object.pk %}">
+                <button type="button">Cancel Edit</button>
+            </a>
+            <a href="{% url 'secondapp:singer_list' %}">
+                <button type="button">List of singers</button>
+            </a>
+        </div>
+    {% else %}
+        <div class="create-actions">
+            <a href="{% url 'secondapp:singer_list' %}"
+               onclick="return confirm('You will lose unsaved changes. Continue?')">
+                <button type="button">Cancel & Return to List</button>
+            </a>
+        </div>
+    {% endif %}
+</div>
+
 {% endblock %}

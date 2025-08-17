@@ -1,13 +1,119 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Rehearsals{% endblock %}
 {% block content %}
-<a href="{% url 'secondapp:tag' %}">>>GET THEM TAGS HERE<<</a>
-<h1>Rehearsals</h1>
-<a href="{% url 'secondapp:rehearsal_form' %}">Add New Rehearsal</a>
-{% for rehearsal in rehearsal_list %}
-    <p>Title: {{ rehearsal.subtitle }}<br>
-    At: {{ rehearsal.location }}<br>
-    Date - {{ rehearsal.calendar }}<br>
-    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Link to {{ rehearsal.pk }}</a></p>
-{% endfor %}
+<div class="page-header">
+    <h1>Rehearsals</h1>
+
+    <!--  "HAPPENING NOW" Feature -->
+    {% if happening_now %}
+        <div class="happening-now-alert">
+            <h2>HAPPENING NOW! </h2>
+            <p><strong>{{ happening_now.subtitle }}</strong> at {{ happening_now.location }}</p>
+            <a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
+                <button type="button">CLICK HERE</button>
+            </a>
+        </div>
+    {% endif %}
+</div>
+<div class="action-buttons">
+    <a href="{% url 'secondapp:rehearsal_form' %}"><button type="button">Add New Rehearsal</button></a>
+    <a href="{% url 'secondapp:singer_form' %}"><button type="button">! Add New Singer !</button></a>
+    <a href="{% url 'secondapp:song_form' %}"><button type="button">+ Add New Song +</button></a>
+    <a href="{% url 'secondapp:tag' %}"><button type="button"># GET THEM TAGS HERE #</button></a>
+</div>
+
+
+{% if is_paginated %}
+    <div class="pagination">
+        <span class="page-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+{% endif %}
+
+<div class="rehearsals-content">
+    <!--  Upcoming Rehearsals Section -->
+    <div class="upcoming-rehearsals">
+        <h2>Upcoming Rehearsals</h2>
+        {% if upcoming_rehearsals %}
+            {% for rehearsal in upcoming_rehearsals %}
+                <div class="rehearsal-item upcoming">
+                    <p>{{ rehearsal.subtitle }}<br>
+                    At: {{ rehearsal.location }}<br>
+                    Date: {{ rehearsal.calendar }}<br>
+                    {% if rehearsal.duration_minutes %}
+                        Duration: {{ rehearsal.duration_minutes }} minutes<br>
+                    {% endif %}
+                    {% if rehearsal.get_singer_count > 0 %}
+                        Singers: {{ rehearsal.get_singer_count }}<br>
+                    {% endif %}
+                    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a>
+                    </p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No upcoming rehearsals scheduled.</p>
+        {% endif %}
+    </div>
+
+    <!--  Past Rehearsals Section -->
+    <div class="past-rehearsals">
+        <h2>Past Rehearsals</h2>
+        {% if past_rehearsals %}
+            {% for rehearsal in past_rehearsals %}
+                <div class="rehearsal-item past">
+                    <p>{{ rehearsal.subtitle }}<br>
+                    At: {{ rehearsal.location }}<br>
+                    Date: {{ rehearsal.calendar }}<br>
+                    {% if rehearsal.attendance_count > 0 %}
+                        Attendance: {{ rehearsal.attendance_count }} people<br>
+                    {% endif %}
+                    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a>
+                    </p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No past rehearsals recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_paginated %}
+    <div class="pagination">
+        <span class="page-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+{% endif %}
+
+
+
+<div class="footer-nav">
+    <a href="{% url 'secondapp:index' %}"><button type="button"> Index - Home</button></a>
+</div>
+
 {% endblock %}

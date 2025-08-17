@@ -13,8 +13,43 @@
     <!-- content goes here -->
     {% endblock %}
 
+
     <footer>
-        <p> 2025 My Django App</p>
+        <div class="footer-info">
+            <!-- Smart timestamp display -->
+            {% if object %}
+                <div class="last-updated">
+                    {% if object.updated_at %}
+                        <small>Last updated: {{ object.updated_at|date:"M d, Y H:i" }}</small>
+                        {% if object.created_at %}
+                            <small>| Created: {{ object.created_at|date:"M d, Y" }}</small>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% elif rehearsal %}
+                <div class="last-updated">
+                    {% if rehearsal.updated_at %}
+                        <small>Last updated: {{ rehearsal.updated_at|date:"M d, Y H:i" }}</small>
+                    {% endif %}
+                </div>
+            {% elif singer %}
+                <div class="last-updated">
+                    {% if singer.updated_at %}
+                        <small>Last updated: {{ singer.updated_at|date:"M d, Y H:i" }}</small>
+                    {% endif %}
+                </div>
+            {% elif song %}
+                <div class="last-updated">
+                    {% if song.updated_at %}
+                        <small>Last updated: {{ song.updated_at|date:"M d, Y H:i" }}</small>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="footer-copyright">
+            <p>© 2025 My Django App</p>
+        </div>
     </footer>
 </body>
 </html>
