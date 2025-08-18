@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>List of {{ role|title }}s</h2>
+
+<form method="get">
+    <input type="text" name="search" value="{{ search_query }}" placeholder="Search...">
+    <button type="submit">Search</button>
+</form>
+
+
+<ul>
+    {% for person in people %}
+    <li>
+        {{ person }}
+        <a href="{% url 'person_detail' role=role pk=person.pk %}">View</a>
+        <a href="{% url 'person_update' role=role pk=person.pk %}">Edit</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'person_create' role=role %}">Add New {{ role|title }}</a>
+{% endblock %}

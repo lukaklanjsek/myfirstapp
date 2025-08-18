@@ -1,11 +1,13 @@
 from random import choices
 
 from django.db import models
+from django.urls import reverse
 import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
 #from django.forms import ModelMultipleChoiceField
+from django.core.exceptions import ValidationError
 
 
 
@@ -83,6 +85,22 @@ class Person(models.Model):
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=["last_name"]),
+            models.Index(fields=["role"]),
+        ]
+
+    def get_full_name(self):
+        names = [self.first_name, self.last_name]
+        if self.third_name:
+            names.insert(1, self.third_name)
+        return " ".join(names)
+
+    def get_display_name(self):
+        display_name = f"{self.last_name}, {self.first_name}"
+        if self.third_name:
+            display_name += f" {self.third_name}"
+        return display_name
 
 
 class Singer(Person):
@@ -94,18 +112,22 @@ class Singer(Person):
     date_joined = models.DateField("joined",default=date.today)
 
     class Meta(Person.Meta):
-        ordering = ["voice"]
+        ordering = ["voice", "last_name"]
+        verbose_name = "Singer"
+        verbose_name_plural = "Singers"
 
     def save(self, *args, **kwargs):
         self.role = Role.SINGER.name
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return  reverse("secondapp_singer_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.voice} - {tag_names}"
+        status = "(Inactive)" if not self.is_active else ""
+        return f"{self.get_display_name()} - {self.voice} {status} - {tag_names}"
 
 
 class Composer(Person):
@@ -113,45 +135,67 @@ class Composer(Person):
     musical_era = models.CharField(max_length=250, blank=True, null=True)
     instruments = models.CharField("favorite instruments", max_length=250)
 
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Composer"
+        verbose_name_plural = "Composers"
+
     def save(self, *args, **kwargs):
         self.role = Role.COMPOSER.name
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return reverse("secondapp:composer_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.musical_era} {tag_names}"
+        era = f"{self.musical_era}" if self.musical_era else ""
+        return f"{self.get_display_name()} - {era} {tag_names}"
 
 
 class Poet(Person):
     writing_style =  models.CharField(max_length=250)
     literary_style = models.CharField(max_length=250)
 
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Poet"
+        verbose_name_plural = "Poets"
+
     def save(self, *args, **kwargs):
         self.role = Role.POET.name
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return reverse("secondapp:poet_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {tag_names}"
+        return f"{self.get_display_name()} - {self.writing_style} - {tag_names}"
 
 
 class Arranger(Person):
     style = models.CharField(max_length=250)
     instruments = models.CharField("favorite instruments", max_length=250)
 
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Arranger"
+        verbose_name_plural = "Arrangers"
+
     def save(self, *args, **kwargs):
         self.role = Role.ARRANGER.name
         super().save(*args, **kwargs)
 
+    def get_abslute_url(self):
+        return reverse("secondapp:arranger_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.style} - {tag_names}"
+        return f"{self.get_display_name()} - {self.style} - {tag_names}"
 
 
 class Musician(Person):
@@ -160,15 +204,22 @@ class Musician(Person):
     #bands = models.ManyToManyField "active currently"
     #songs = models.ManyToManyField "best song performances"
 
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Musician"
+        verbose_name_plural = "Musicians"
+
     def save(self, *args, **kwargs):
         self.role = Role.MUSICIAN.name
         super().save(*args, **kwargs)
 
+    def get_abslute_url(self):
+        return reverse("secondapp:musician_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.instrument} - {tag_names}"
+        return f"{self.get_display_name()} - {self.instrument} - {tag_names}"
 
 
 class Song(models.Model):
@@ -181,11 +232,22 @@ class Song(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ["title"]
+        indexes = [
+            models.Index(fields=["title"]),
+            models.Index(fields=["genre"]),
+        ]
+
+    def get_absolute_url(self):
+        return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        composer_name = self.composer.last_name #if self.composer else "Unknown"
-        return f"{self.title} - {composer_name} - {self.genre} - {tag_names}"
+        composer_name = self.composer.last_name if self.composer else "Unknown"
+        genre_display = f"- {self.genre}" if self.genre else ""
+        return f"{self.title} - {composer_name} - {genre_display} - {tag_names}"
 
 
 class Rehearsal(models.Model):
@@ -205,6 +267,11 @@ class Rehearsal(models.Model):
 
     class Meta:
         verbose_name_plural = "Rehearsals"
+        ordering = ["-calendar"]
+        indexes = [
+            models.Index(fields=["calendar"]),
+            models.Index(fields=["is_cancelled"]),
+        ]
 
     def recent(self):
         return self.calendar >= timezone.now() - datetime.timedelta()
@@ -220,11 +287,15 @@ class Rehearsal(models.Model):
     def get_song_count(self):
         return self.songs.count()
 
+    def get_absolute_url(self):
+        return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         status = "(Cancelled)" if self.is_cancelled else ""
-        return f"{self.calendar} - {self.subtitle} {status} - {tag_names}"
+        calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M") #if self.calendar else "TBD"
+        return f"{calendar_display} - {self.subtitle} {status} - {tag_names}"
 
     # Song
     #  -> temporary out:

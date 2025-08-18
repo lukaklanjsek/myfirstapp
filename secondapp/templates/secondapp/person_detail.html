@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>{{ person }}</h2>
+<p>Role: {{ role|title }}</p>
+
+<a href="{% url 'person_update' role=role pk=person.pk %}">Edit</a>
+<a href="{% url 'person_delete' role=role pk=person.pk %}">Delete</a>
+<a href="{% url 'person_list' role=role %}">Back to List</a>
+{% endblock %}
