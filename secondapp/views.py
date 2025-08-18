@@ -49,14 +49,22 @@ class RehearsalListView(generic.ListView):
         context = super().get_context_data(**kwargs)
         now = timezone.now()
 
-        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False).order_by("calendar")
-        context['upcoming_rehearsals'] = all_rehearsals.filter(calendar__gte=now)
-        context['past_rehearsals'] = all_rehearsals.filter(calendar__lt=now).order_by("-calendar")
+        paginated_rehearsals = context['rehearsal_list']
+        context['upcoming_rehearsals'] = [
+            rehearsal for rehearsal in paginated_rehearsals
+            if rehearsal.calendar >= now
+        ]
+        context['past_rehearsals'] = [
+            rehearsal for rehearsal in paginated_rehearsals
+            if rehearsal.calendar < now
+        ]
 
-        happening_now = all_rehearsals.filter(
+        happening_now = Rehearsal.objects.filter(
+            is_cancelled=False,
             calendar__gte=now - timedelta(minutes=660),
             calendar__lte=now + timedelta(minutes=660)
         ).first()
+
         context['happening_now'] = happening_now
 
         return context
