@@ -3,8 +3,8 @@ from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
-from .models import Tag, Musician, Composer, Poet, Arranger
-from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm
+from .models import Tag, Musician, Composer, Poet, Arranger, Singer
+from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, SingerForm
 
 
 class TagListAndCreateMixin(FormMixin, ListView):
@@ -42,6 +42,7 @@ class TagListAndCreateMixin(FormMixin, ListView):
 
 class PersonRoleMixin:
     role_model_form_map = {
+        "singer": (Singer, SingerForm),
         "composer": (Composer, ComposerForm),
         "poet": (Poet, PoetForm),
         "arranger": (Arranger, ArrangerForm),

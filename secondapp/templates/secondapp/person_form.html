@@ -1,10 +1,41 @@
-{% extends 'base.html' %}
-
+{% extends "secondapp/base.html" %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
 {% block content %}
-<h2>Add/Edit {{ role|title }}</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-</form>
+
+<div class="form-header">
+    <h1>{% if object %}Edit{% else %}Add{% endif %} {{ role }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">{% csrf_token %}
+        <div class="form-fields">
+            {{ form.as_p }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<div class="form-navigation">
+    {% if object %}
+        <div class="edit-actions">
+            <a href="{% url 'person_detail' role=role pk=person.pk %}">
+                <button type="button">Cancel Edit</button>
+            </a>
+            <a href="{% url 'person_list' role=role %}">
+                <button type="button">List of {{ role }}</button>
+            </a>
+        </div>
+    {% else %}
+        <div class="create-actions">
+            <a href="{% url 'person_list' role=role %}"
+               onclick="return confirm('You will lose unsaved changes. Continue?')">
+                <button type="button">Cancel & Return to List</button>
+            </a>
+        </div>
+    {% endif %}
+</div>
+
 {% endblock %}
