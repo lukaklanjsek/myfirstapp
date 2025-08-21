@@ -27,7 +27,9 @@
         <h2> Singers present </h2>
         <ul>
             {% for singer in rehearsal.singers.all %}
-                <li>{{ singer.voice }} - <a href="{% url 'secondapp:singer_detail' singer.pk %}">{{ singer.first_name}} {{ singer.last_name}}</a></li>
+                <li>{{ singer.voice }} -{{ singer.first_name}} {{ singer.last_name}}
+
+                </li>
             {% endfor %}
         </ul>
     </div>

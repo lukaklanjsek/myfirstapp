@@ -8,8 +8,8 @@
 </div>
 
 <div class="action-buttons">
-    <a href="{% url 'person_form' role=role pk=person.pk %}">
-        <button type="button">Add New Singer</button>
+    <a href="{% url 'secondapp:person_form' role=role %}">
+        <button type="button">Add New {{ role }}</button>
     </a>
 </div>
 
@@ -32,26 +32,30 @@
 
 
 <div class="person-content">
-    {% for person in people %}
-        <div class="is-active">
-            <ul>
-                {% if person.is_active=True %}
-                    {{ person }}
-                    <a href="{% url 'person_detail' role=role pk=person.pk %}">View</a>
-                    <a href="{% url 'person_update' role=role pk=person.pk %}">Edit</a>
-                {% endif %}
-            </ul>
-        </div>
-        <div class="is-inactive">
-            <ul>
-                {% if person.is_active=False %}
-                    {{ person }}
-                    <a href="{% url 'person_detail' role=role pk=person.pk %}">View</a>
-                    <a href="{% url 'person_update' role=role pk=person.pk %}">Edit</a>
-                {% endif %}
-            </ul>
-        </div>
-    {% endfor %}
+    <div class="is-active">
+        <ul>
+            {% for person in active_people %}
+            <li>
+                {{ person.first_name }} - {{ person.voice }}
+                <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+            </li>
+
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="is-inactive">
+        <ul>
+            {% for person in inactive_people %}
+            <li>
+                {{ person.first_name }} - {{ person.voice }}
+                <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+            </li>
+
+            {% endfor %}
+        </ul>
+    </div>
 </div>
 
 <div class="footer-actions">

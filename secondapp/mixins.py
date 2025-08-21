@@ -1,4 +1,5 @@
 # mixins.py
+from django.http import Http404
 from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
@@ -51,6 +52,8 @@ class PersonRoleMixin:
 
     def get_model(self):
         role = self.kwargs.get("role")
+        if role not in self.role_model_form_map:
+            raise Http404(f"invalid role {role}")
         return self.role_model_form_map[role][0]
 
     def get_form_class(self):

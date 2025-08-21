@@ -3,14 +3,14 @@
 {% block content %}
 
 <div class="navigation-top">
-    <a href="{% url 'person_list' role=role %}">{{ role }} list - Back</a>
+    <a href="{% url 'secondapp:person_list' role=role %}">{{ role }} list - Back</a>
 </div>
 
 <div class="action-buttons-top">
-    <a href="{% url 'person_update' role=role pk=person.pk %}">
+    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">
         <button type="button">UPDATE - EDIT</button>
     </a>
-    <a href="{% url 'person_delete' role=role pk=person.pk %}">
+    <a href="{% url 'secondapp:person_delete' role=role pk=person.pk %}">
         <button type="button">Delete</button>
     </a>
 </div>
@@ -24,7 +24,7 @@
         <h2>{{ person.first_name }} {{ person.last_name }} {{ person.third_name }}</h2>
         <p><strong>Role:</strong> {{ role }}</p>
         <p><strong>Skill Level:</strong> {{ person.skill_level }}</p>
-        <p><strong>Is Active:</strong> {% if role.is_active %}✓{% else %}✗{% endif %}</p>
+        <p><strong>Is Active:</strong> {% if person.is_active %}✓{% else %}✗{% endif %}</p>
         <p><strong>Date Joined:</strong> {{ person.date_joined }}</p>
     </div>
 
@@ -68,16 +68,16 @@
 </div>
 
 <div class="action-buttons-bottom">
-    <a href="{% url 'person_update' role=role pk=person.pk %}">
+    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">
         <button type="button">UPDATE - EDIT</button>
     </a>
-    <a href="{% url 'person_delete' role=role pk=person.pk %}">
+    <a href="{% url 'secondapp:person_delete' role=role pk=person.pk %}">
         <button type="button">Delete</button>
     </a>
 </div>
 
 <div class="footer-actions">
-    <a href="{% url 'person_list' role=role %}">
+    <a href="{% url 'secondapp:person_list' role=role %}">
         <button type="button">{{role}} list - BACK</button>
     </a>
     <br>

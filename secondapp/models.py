@@ -64,7 +64,7 @@ class Person(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, db_index=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
-    # -- TODO: make "role" no longer selectable within other models  -> how are we progressing on other roles???  -> in progress -----
+    # -- TODO: make "role" no longer selectable within other models   in progress -----
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     email = models.EmailField(unique=True, blank=True, null=True)

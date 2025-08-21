@@ -22,7 +22,7 @@ urlpatterns = [
 
     path("tag/", views.TagListAndCreateView.as_view(), name="tag"),
 
-    path("<str:role>/list/", views.PersonListView.as_view(), name="person_list"),
+    path("<str:role>/", views.PersonListView.as_view(), name="person_list"),
     path("<str:role>/<int:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
     path("<str:role>/create/", views.PersonCreateView.as_view(), name="person_form"),
     path("<str:role>/<int:pk>/update/", views.PersonUpdateView.as_view(), name="person_update"),

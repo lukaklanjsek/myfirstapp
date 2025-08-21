@@ -4,10 +4,20 @@
 
 {% block content %}
 <h1> This is index.html from templates. </h1>
-<p>Here are links to rehearsals and singers:</p>
+<p>Here are links to rehearsals and other people:</p>
 <div class="action-buttons">
-<a href="{% url 'secondapp:rehearsal_list' %}"><button type="button">Rehearsals</button></a> <br><br>
-<a href="{% url 'secondapp:singer_list' %}"><button type="button">Singers</button></a>
+    <ul>
+        <li><a href="{% url 'secondapp:rehearsal_list' %}"><button type="button">Rehearsals</button></a></li>
+        <div class="role-links">
+            {% for role in all_roles %}
+                <li>
+                    <a href="{% url 'secondapp:person_list' role=role %}">
+                        <button type="button">{{ role }}</button>
+                    </a>
+                </li>
+            {% endfor %}
+        </div>
+    </ul>
 </div>
 
 <!--  "HAPPENING NOW" Feature -->

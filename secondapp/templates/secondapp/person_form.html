@@ -21,16 +21,16 @@
 <div class="form-navigation">
     {% if object %}
         <div class="edit-actions">
-            <a href="{% url 'person_detail' role=role pk=person.pk %}">
+            <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">
                 <button type="button">Cancel Edit</button>
             </a>
-            <a href="{% url 'person_list' role=role %}">
+            <a href="{% url 'secondapp:person_list' role=role %}">
                 <button type="button">List of {{ role }}</button>
             </a>
         </div>
     {% else %}
         <div class="create-actions">
-            <a href="{% url 'person_list' role=role %}"
+            <a href="{% url 'secondapp:person_list' role=role %}"
                onclick="return confirm('You will lose unsaved changes. Continue?')">
                 <button type="button">Cancel & Return to List</button>
             </a>

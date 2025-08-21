@@ -2,11 +2,11 @@
 {% block title %}{{song.pk}}Song{% endblock %}
 {% block content %}<br>
 <a href="{% url 'secondapp:song_list' %}"><button type="button">Songs - Back</button></a>
-<h1> detail of {{ song }}</h1>
+<h1> detail of song {{ song.pk }}</h1>
 <p> rendered from a template </p>
-<h1>{{ song.title }}</h1>
+<h2>{{ song.title }}</h2>
 <p>Composer: {{ song.composer }}</p>
-<p>Arranger: {{ song.arranger }}</p>
+<p>Arranger: {{ song.arranger }}</p>c
 <p>Poet: {{ song.poet }}</p>
 <p>Genre: {{ song.genre }}</p>
 <p>Tags: {{ song.tags.all|join:", " }}</p>
