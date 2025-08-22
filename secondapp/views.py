@@ -174,7 +174,7 @@ class PersonListView(PersonRoleMixin, ListView):
     template_name = "secondapp/person_list.html"
     context_object_name = "people"
 
-    def get_queryset(self):
+    def get_base_queryset(self):
         model = self.get_model()
         queryset = model.objects.all().order_by("last_name")
 
@@ -184,20 +184,28 @@ class PersonListView(PersonRoleMixin, ListView):
                 Q(first_name__icontains=search_query) |
                 Q(last_name__icontains=search_query)
             )
+        return queryset
+
+    def get_queryset(self):
+        queryset = self.get_base_queryset
+        model = self.get_model()
 
         if hasattr(model, "is_active"):
-            queryset = queryset.filter(is_active=True)
+            return queryset
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        all_people = self.get_queryset()
+        base_queryset = self.get_base_queryset()
         model = self.get_model()
 
         if hasattr(model, 'is_active'):
-            context["active_people"] = all_people.filter(is_active=True)
-            context["inactive_people"] = all_people.filter(is_active=False)
+            context["active_people"] = base_queryset.filter(is_active=True)
+            context["inactive_people"] = base_queryset.filter(is_active=False)
+        else:
+            context["active_people"] = base_queryset
+            context["inactive_perople"] = base_queryset.none()
 
         context["search_query"] = self.request.GET.get("search", "")
 

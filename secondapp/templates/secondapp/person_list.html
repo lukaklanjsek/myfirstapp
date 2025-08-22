@@ -33,29 +33,34 @@
 
 <div class="person-content">
     <div class="is-active">
+        <h2>Active {{ role }} people:</h2>
         <ul>
             {% for person in active_people %}
-            <li>
-                {{ person.first_name }} - {{ person.voice }}
-                <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
-                <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
-            </li>
-
+                <li>
+                    {{ person.first_name }} -
+                    {% if person.voice %} {{ person.voice }} {% endif %}
+                    <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+                </li>
             {% endfor %}
         </ul>
     </div>
-    <div class="is-inactive">
-        <ul>
-            {% for person in inactive_people %}
-            <li>
-                {{ person.first_name }} - {{ person.voice }}
-                <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
-                <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
-            </li>
+    {% if inactive_people %}
+        <div class="is-inactive">
+            <h2>Inactive {{ role }} people:</h2>
+            <ul>
+                {% for person in inactive_people %}
+                <li>
+                    {{ person.first_name }} -
+                    {% if person.voice %} {{ person.voice }} {% endif %}
+                    <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+                </li>
 
-            {% endfor %}
-        </ul>
-    </div>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 </div>
 
 <div class="footer-actions">
