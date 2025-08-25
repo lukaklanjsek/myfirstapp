@@ -24,7 +24,11 @@
         <h2>{{ person.first_name }} {{ person.last_name }} {{ person.third_name }}</h2>
         <p><strong>Role:</strong> {{ role }}</p>
         <p><strong>Skill Level:</strong> {{ person.skill_level }}</p>
-        <p><strong>Is Active:</strong> {% if person.is_active %}✓{% else %}✗{% endif %}</p>
+        <p><strong>Is Active:</strong>
+            {% if person.activity %}
+                {% if person.is_active %}✓{% else %}✗{% endif %}
+            {% endif %}
+        </p>
         <p><strong>Date Joined:</strong> {{ person.date_joined }}</p>
     </div>
 

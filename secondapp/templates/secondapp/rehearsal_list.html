@@ -50,17 +50,21 @@
         {% if upcoming_rehearsals %}
             {% for rehearsal in upcoming_rehearsals %}
                 <div class="rehearsal-item upcoming">
-                    <p>{{ rehearsal.subtitle }}<br>
-                    At: {{ rehearsal.location }}<br>
-                    Date: {{ rehearsal.calendar }}<br>
-                    {% if rehearsal.duration_minutes %}
-                        Duration: {{ rehearsal.duration_minutes }} minutes<br>
-                    {% endif %}
-                    {% if rehearsal.get_singer_count > 0 %}
-                        Singers: {{ rehearsal.get_singer_count }}<br>
-                    {% endif %}
-                    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a>
-                    </p>
+                    <table>
+                        <caption>Rehearsal: {{ rehearsal.pk }}</caption>
+                        <tr>
+                            <th>Title:</th><td> {{ rehearsal.subtitle }}</td>
+                        </tr>
+                        <tr>
+                            <th>At:</th><td> {{ rehearsal.location }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th> <td> {{ rehearsal.calendar }}</td>
+                        </tr>
+                        <tr>
+                            <th>link:</th><td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a></td>
+                        </tr>
+                    </table>
                 </div>
             {% endfor %}
         {% else %}
@@ -74,14 +78,21 @@
         {% if past_rehearsals %}
             {% for rehearsal in past_rehearsals %}
                 <div class="rehearsal-item past">
-                    <p>{{ rehearsal.subtitle }}<br>
-                    At: {{ rehearsal.location }}<br>
-                    Date: {{ rehearsal.calendar }}<br>
-                    {% if rehearsal.attendance_count > 0 %}
-                        Attendance: {{ rehearsal.attendance_count }} people<br>
-                    {% endif %}
-                    <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a>
-                    </p>
+                    <table>
+                        <caption>Rehearsal: {{ rehearsal.pk }}</caption>
+                        <tr>
+                            <th>Title:</th><td> {{ rehearsal.subtitle }}</td>
+                        </tr>
+                        <tr>
+                            <th>At:</th><td> {{ rehearsal.location }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th> <td> {{ rehearsal.calendar }}</td>
+                        </tr>
+                        <tr>
+                            <th>link:</th><td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a></td>
+                        </tr>
+                    </table>
                 </div>
             {% endfor %}
         {% else %}

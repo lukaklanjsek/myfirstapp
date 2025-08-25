@@ -203,9 +203,11 @@ class PersonListView(PersonRoleMixin, ListView):
         if hasattr(model, 'is_active'):
             context["active_people"] = base_queryset.filter(is_active=True)
             context["inactive_people"] = base_queryset.filter(is_active=False)
+            context["has_voice"] = True
         else:
             context["active_people"] = base_queryset
-            context["inactive_perople"] = base_queryset.none()
+            context["inactive_people"] = base_queryset.none()
+            context["has_voice"] = False
 
         context["search_query"] = self.request.GET.get("search", "")
 
