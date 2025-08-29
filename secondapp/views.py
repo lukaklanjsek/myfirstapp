@@ -14,9 +14,6 @@ from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerFo
 from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song
 from .mixins import TagListAndCreateMixin, PersonRoleMixin
 
-# TODO complete making classes out of definitions and write appropriate html docs
-#TODO STATIC FILES AND SHIT  --  i think statics are done for the basics already - unsure
-
 class IndexView(generic.ListView):
     model = Rehearsal
     template_name = "secondapp/index.html"

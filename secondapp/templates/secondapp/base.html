@@ -5,51 +5,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
 </head>
 <body>
-    <img src="{% static 'secondapp/images/sitelogo.png' %}" alt="Logo" width="34" height="34">
-<a href="{% url 'secondapp:index' %}">Home</a>
-    {% block content %}
-    <!-- content goes here -->
-    {% endblock %}
+<!-- toggle button -->
+    <div class="header">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <h1>Secondapp</h1>
+    </div>
+<!-- mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!--main table-->
+    <div class="main">
+        <table width="100%" border="0">
+            <tr>
 
 
+                <td width="200" valign="top">
+                <nav class="sidebar" id="sidebar">
+                    <div class="sidebar-header">
+                        <h2>Navigation</h2>
+                    </div>
+
+                    <ul class="sidebar-menu">
+                        <li><a href="{% url 'secondapp:index' %}">Home</a></li>
+                        <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
+                        <li><a href="{% url 'secondapp:song_list' %}">Songs - Archive</a></li>
+                        {% for role in all_roles %}
+                            <li>
+                                <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}</a>
+                            </li>
+                        {% endfor %}
+                        <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
+                        <li><a href="{% url 'logout' %}">Logout</a></li>
+                    </ul>
+
+                </nav>
+                </td>
+
+
+            <td valign="top">
+                {% block content %}
+                <!-- content goes here -->
+                {% endblock %}
+            </td>
+            </tr>
+        </table>
+     </div>
     <footer>
         <div class="footer-info">
-            <!-- Smart timestamp display -->
-            {% if object %}
-                <div class="last-updated">
-                    {% if object.updated_at %}
-                        <small>Last updated: {{ object.updated_at|date:"M d, Y H:i" }}</small>
-                        {% if object.created_at %}
-                            <small>| Created: {{ object.created_at|date:"M d, Y" }}</small>
-                        {% endif %}
-                    {% endif %}
-                </div>
-            {% elif rehearsal %}
-                <div class="last-updated">
-                    {% if rehearsal.updated_at %}
-                        <small>Last updated: {{ rehearsal.updated_at|date:"M d, Y H:i" }}</small>
-                    {% endif %}
-                </div>
-            {% elif singer %}
-                <div class="last-updated">
-                    {% if singer.updated_at %}
-                        <small>Last updated: {{ singer.updated_at|date:"M d, Y H:i" }}</small>
-                    {% endif %}
-                </div>
-            {% elif song %}
-                <div class="last-updated">
-                    {% if song.updated_at %}
-                        <small>Last updated: {{ song.updated_at|date:"M d, Y H:i" }}</small>
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
+            <table>
 
-        <div class="footer-copyright">
-            <p>© 2025 My Django App</p>
+                <!-- timestamp  -->
+                {% if object.updated_at %}
+                    Last updated: {{ object.updated_at|date:"d M, Y, H:i" }}
+                {% endif %}
+                {% if object.created_at %}
+                    | Created: {{ object.created_at|date:"d M, Y" }}
+                {% endif %}
+                <p>© 2025 My Django App</p>
+            </table>
         </div>
     </footer>
+
 </body>
 </html>
