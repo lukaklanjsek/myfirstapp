@@ -6,68 +6,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
+    <link rel="stylesheet" href="{% static 'secondapp/style.css' %}">
 </head>
 <body>
-<!-- toggle button -->
-    <div class="header">
-        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-        <h1>Secondapp</h1>
-    </div>
-<!-- mobile overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <div class="grid-container">
 
-<!--main table-->
-    <div class="main">
-        <table width="100%" border="0">
-            <tr>
+    <!-- toggle button -->
+        <nav class="sidebar" id="sidebar">
+            <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+            <h3>Menu</h3>
+            <ul class="menu-links">
+                <li><a href="{% url 'secondapp:index' %}">Home</a></li>
+                <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
+                <li><a href="{% url 'secondapp:song_list' %}">Songs - Archive</a></li>
+                {% for role in all_roles %}
+                    <li>
+                        <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}</a>
+                    </li>
+                {% endfor %}
+                <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
+                <li><a href="{% url 'logout' %}">Logout</a></li>
+            </ul>
+        </nav>
+    <!-- mobile overlay -->
+        <!--<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>-->
 
+    <!--main -->
+        <main class="main">
+            <button class="toggle-button-desktop" onclick="toggleMenu()">☰</button>
+            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
 
-                <td width="200" valign="top">
-                <nav class="sidebar" id="sidebar">
-                    <div class="sidebar-header">
-                        <h2>Navigation</h2>
-                    </div>
-
-                    <ul class="sidebar-menu">
-                        <li><a href="{% url 'secondapp:index' %}">Home</a></li>
-                        <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
-                        <li><a href="{% url 'secondapp:song_list' %}">Songs - Archive</a></li>
-                        {% for role in all_roles %}
-                            <li>
-                                <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}</a>
-                            </li>
-                        {% endfor %}
-                        <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
-                        <li><a href="{% url 'logout' %}">Logout</a></li>
-                    </ul>
-
-                </nav>
-                </td>
-
-
-            <td valign="top">
+            <div class="main-content">
                 {% block content %}
                 <!-- content goes here -->
                 {% endblock %}
-            </td>
-            </tr>
-        </table>
-     </div>
-    <footer>
-        <div class="footer-info">
-            <table>
+            </div>
+            <footer class="footer">
+                <div class="footer-info">
+                    <!-- timestamp  -->
+                        {% if object.updated_at %}
+                        Last updated: {{ object.updated_at|date:"d M, Y, H:i" }}
+                    {% endif %}
+                    {% if object.created_at %}
+                        | Created: {{ object.created_at|date:"d M, Y" }}
+                    {% endif %}
+                    <p>© 2025 My Django App</p>
+                </div>
+            </footer>
+         </main>
 
-                <!-- timestamp  -->
-                {% if object.updated_at %}
-                    Last updated: {{ object.updated_at|date:"d M, Y, H:i" }}
-                {% endif %}
-                {% if object.created_at %}
-                    | Created: {{ object.created_at|date:"d M, Y" }}
-                {% endif %}
-                <p>© 2025 My Django App</p>
-            </table>
-        </div>
-    </footer>
+    </div>
 
+    <script>
+        function toggleMenu(){
+            const container = document.querySelector(".grid-container");
+            const sidebar = document.querySelector(".sidebar");
+
+            if (window.innerWidth < 768) {
+                container.classList.toggle("menu-visible");
+            } else {
+                container.classList.toggle("menu-hidden");
+            }
+        }
+
+        window.addEventListener("resize", function() {
+            const container = document.querySelector(".grid-container");
+            if (window.innerWidth > 768) {
+                container.classList.remove("menu-visible");
+            } else {
+                container.classList.remove("menu-hidden");
+            }
+        });
+    </script>
 </body>
 </html>
