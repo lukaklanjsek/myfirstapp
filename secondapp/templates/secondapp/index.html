@@ -3,22 +3,7 @@
 {% block title %}index{% endblock %}
 
 {% block content %}
-<h1> This is index.html from templates. </h1>
-<p>Here are links to rehearsals and other people:</p>
-<div class="action-buttons">
-    <ul>
-        <li><a href="{% url 'secondapp:rehearsal_list' %}"><button type="button">Rehearsals</button></a></li>
-        <div class="role-links">
-            {% for role in all_roles %}
-                <li>
-                    <a href="{% url 'secondapp:person_list' role=role %}">
-                        <button type="button">{{ role }}</button>
-                    </a>
-                </li>
-            {% endfor %}
-        </div>
-    </ul>
-</div>
+<h1> Index.html </h1>
 
 <!--  "HAPPENING NOW" Feature -->
 {% if happening_now %}
@@ -26,40 +11,30 @@
         <div class="urgent-alert">
             <h2> REHEARSAL HAPPENING NOW! </h2>
             <div class="happening-details">
-                <p>{{ happening_now.subtitle }}</p>
+                <p><a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
+                    {{ happening_now.subtitle }}</a></p>
                 <p> Location: {{ happening_now.location }}</p>
                 <p> Started: {{ happening_now.calendar }}</p>
-            </div>
-            <div class="happening-actions">
-                <a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
-                    <button type="button">GO TO REHEARSAL</button>
-                </a>
             </div>
         </div>
     </div>
 {% endif %}
 
 <p>last 5 rehearsals:</p>
-<table>
-<tr>
-    <th> calendar </th>
-    <th> subtitle </th>
-    <th> location </th>
-    <th> link </th>
-</tr>
-    {% for rehearsal in rehearsal_list %}
-    <tr>
-        <td> {{ rehearsal.calendar }} </td>
-        <td> {{ rehearsal.subtitle }} </td>
-        <td> {{ rehearsal.location }} </td>
-        <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Link</a></td>
-    </tr>
-    {% endfor %}
-</table>
-
- <br>
-<div class="action-buttons">
-<a href="{% url 'secondapp:song_list' %}"><button type="button">SONGS ARCHIVE</button></a><br><br>
-<a href="{% url 'secondapp:tag' %}"><button type="button"># GET THEM TAGS HERE </button></a>
+<div class="rehearsal-table">
+    <table>
+        <tr>
+            <th> calendar </th>
+            <th> subtitle </th>
+            <th> location </th>
+        </tr>
+        {% for rehearsal in rehearsal_list %}
+        <tr>
+            <td> {{ rehearsal.calendar }} </td>
+            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.subtitle }} </a></td>
+            <td> {{ rehearsal.location }} </td>
+        </tr>
+        {% endfor %}
+    </table>
 </div>
 {% endblock %}

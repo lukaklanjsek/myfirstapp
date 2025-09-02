@@ -1,10 +1,10 @@
-{% load static %}
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    {% load static %}
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
     <link rel="stylesheet" href="{% static 'secondapp/style.css' %}">
 </head>
@@ -13,7 +13,6 @@
 
     <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
-            <button class="menu-toggle" onclick="toggleMenu()">☰</button>
             <h3>Menu</h3>
             <ul class="menu-links">
                 <li><a href="{% url 'secondapp:index' %}">Home</a></li>
@@ -21,19 +20,17 @@
                 <li><a href="{% url 'secondapp:song_list' %}">Songs - Archive</a></li>
                 {% for role in all_roles %}
                     <li>
-                        <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}</a>
+                        <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}s</a>
                     </li>
                 {% endfor %}
                 <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
                 <li><a href="{% url 'logout' %}">Logout</a></li>
             </ul>
         </nav>
-    <!-- mobile overlay -->
-        <!--<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>-->
 
     <!--main -->
         <main class="main">
-            <button class="toggle-button-desktop" onclick="toggleMenu()">☰</button>
+
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
 
             <div class="main-content">
@@ -60,12 +57,10 @@
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
-            const sidebar = document.querySelector(".sidebar");
+            {#const sidebar = document.querySelector(".sidebar");#}
 
-            if (window.innerWidth < 768) {
+            if (window.innerWidth < 769) {
                 container.classList.toggle("menu-visible");
-            } else {
-                container.classList.toggle("menu-hidden");
             }
         }
 
@@ -73,10 +68,9 @@
             const container = document.querySelector(".grid-container");
             if (window.innerWidth > 768) {
                 container.classList.remove("menu-visible");
-            } else {
-                container.classList.remove("menu-hidden");
             }
-        });
+        })
+        ;
     </script>
 </body>
 </html>
