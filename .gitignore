@@ -1,0 +1,22 @@
+# .gitignore - Tell Git what NOT to track
+
+# Environment files (your secrets)
+.env
+.env.local
+settings.env
+
+# Database files
+db.sqlite3
+*.db
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
