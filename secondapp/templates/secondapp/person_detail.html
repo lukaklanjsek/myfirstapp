@@ -1,10 +1,6 @@
 {% extends "secondapp/base.html" %}
-{% block title %}{{person.pk}}{{role}}{% endblock %}
+{% block title %}{{person.pk}}|{{role}}{% endblock %}
 {% block content %}
-
-<div class="navigation-top">
-    <a href="{% url 'secondapp:person_list' role=role %}">{{ role }} list - Back</a>
-</div>
 
 <div class="action-buttons-top">
     <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">
@@ -18,17 +14,28 @@
 <h2>{{ person }}</h2>
 <p>Role: {{ role }}</p>
 
-
 <div class="person-details">
     <div class="basic-info">
         <h2>{{ person.first_name }} {{ person.last_name }} {{ person.third_name }}</h2>
         <p><strong>Role:</strong> {{ role }}</p>
         <p><strong>Skill Level:</strong> {{ person.skill_level }}</p>
-        <p><strong>Is Active:</strong>
-            {% if person.activity %}
-                {% if person.is_active %}✓{% else %}✗{% endif %}
-            {% endif %}
-        </p>
+
+        {% if person.is_active %}
+            <p><strong>Is Active:</strong>
+                {% if person.is_active %}YES{% else %}NO{% endif %}
+            </p>
+        {% endif %}
+        {% if person %}
+            <h3>Rehearsal Attendance</h3>
+            <h4>Present at Rehearsals ({{ present|length }}) </h4>
+
+            <h4>Missing from Rehearsals ({{ missing|length }}) </h4>
+            <ul>
+                {% for rehearsal in missing %}
+                    <li>{{ rehearsal.calendar }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
         <p><strong>Date Joined:</strong> {{ person.date_joined }}</p>
     </div>
 
@@ -79,19 +86,4 @@
         <button type="button">Delete</button>
     </a>
 </div>
-
-<div class="footer-actions">
-    <a href="{% url 'secondapp:person_list' role=role %}">
-        <button type="button">{{role}} list - BACK</button>
-    </a>
-    <br>
-    <a href="{% url 'secondapp:tag' %}">
-        <button type="button">GET THEM TAGS HERE</button>
-    </a>
-    <br>
-    <a href="{% url 'secondapp:index' %}">
-        <button type="button">Index - Home</button>
-    </a>
-</div>
-
 {% endblock %}

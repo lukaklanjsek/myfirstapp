@@ -64,7 +64,6 @@ class Person(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, db_index=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
-    # -- TODO: make "role" no longer selectable within other models   in progress -----
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     email = models.EmailField(unique=True, blank=True, null=True)
@@ -123,11 +122,21 @@ class Singer(Person):
     def get_absolute_url(self):
         return  reverse("secondapp_singer_detail", kwargs={"pk": self.pk})
 
+    def get_rehearsal_attendance(self):
+        present_rehearsals = self.rehearsal_set.all()
+        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
+        missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
+
+        return {
+            "present": present_rehearsals,
+            "missing": missing_rehearsals,
+        }
+
     def __str__(self):
         max_tags = 5
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         status = "(Inactive)" if not self.is_active else ""
-        return f"{self.get_display_name()} - {self.voice} {status} - {tag_names}"
+        return f"{self.get_display_name()} - {self.voice} {status}"
 
 
 class Composer(Person):
@@ -151,7 +160,7 @@ class Composer(Person):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         era = f"{self.musical_era}" if self.musical_era else ""
-        return f"{self.get_display_name()} - {era} {tag_names}"
+        return f"{self.get_display_name()}"
 
 
 class Poet(Person):
@@ -173,7 +182,7 @@ class Poet(Person):
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        return f"{self.get_display_name()} - {self.writing_style} - {tag_names}"
+        return f"{self.get_display_name()}"
 
 
 class Arranger(Person):
@@ -195,7 +204,7 @@ class Arranger(Person):
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        return f"{self.get_display_name()} - {self.style} - {tag_names}"
+        return f"{self.get_display_name()}"
 
 
 class Musician(Person):
@@ -219,7 +228,7 @@ class Musician(Person):
     def __str__(self):
         max_tags = 3
         tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        return f"{self.get_display_name()} - {self.instrument} - {tag_names}"
+        return f"{self.get_display_name()} - {self.instrument}"
 
 
 class Song(models.Model):
@@ -256,7 +265,7 @@ class Rehearsal(models.Model):
     parking = models.CharField(max_length=250, blank=True, null=True)
     calendar = models.DateTimeField(blank=True, null=True, unique=True)
     additional_notes = models.TextField(blank=True, null=True)
-    singers = models.ManyToManyField(Singer, blank=True)
+    singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
     songs = models.ManyToManyField(Song, blank=True)
     tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
     duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
@@ -289,6 +298,17 @@ class Rehearsal(models.Model):
 
     def get_absolute_url(self):
         return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
+
+    def get_singer_status(self):
+        now = timezone.now()
+        active_singers = Singer.objects.filter(is_active=True)
+        present_singers = self.singers.all()
+        missing_singers = active_singers.exclude(pk__in=present_singers)
+
+        return {
+            "present": present_singers,
+            "missing": missing_singers,
+        }
 
     def __str__(self):
         max_tags = 5

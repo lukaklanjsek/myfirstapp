@@ -93,7 +93,9 @@ class SongForm(BaseForm):
 class RehearsalForm(BaseForm):
     class Meta:
         model = Rehearsal
-        fields = "__all__"
+        fields = ["subtitle","location", "parking", "calendar", "additional_notes",
+                  "singers", "songs", "tags", "duration_minutes", "attendance_count",
+                  "is_cancelled"]
         widgets = {
             'calendar': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'duration_minutes': forms.NumberInput(attrs={'min': '1', 'placeholder': 'e.g. 180'}),
@@ -103,7 +105,7 @@ class RehearsalForm(BaseForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['singers'].required = False
+        self.fields['singers'].queryset = Singer.objects.filter(is_active=True)
         self.fields['songs'].required = False
         self.fields['is_cancelled'].label = "Mark as cancelled"
         self.fields['duration_minutes'].label = "Expected duration (minutes) *"

@@ -18,12 +18,27 @@ class IndexView(generic.ListView):
     model = Rehearsal
     template_name = "secondapp/index.html"
     context_object_name = "rehearsal_list"
-    queryset = Rehearsal.objects.all().order_by('-calendar')[:5]
+    queryset = Rehearsal.objects.filter(is_cancelled=False).order_by('-calendar')[:20]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.now()
+        paginated_rehearsals = context["rehearsal_list"]
 
+        context["upcoming_rehearsals"] = [
+            rehearsal for rehearsal in paginated_rehearsals
+            if rehearsal.calendar > now
+        ]
+        context["past_rehearsals"] = [
+            rehearsal for rehearsal in paginated_rehearsals
+            if rehearsal.calendar < now
+        ]
+
+        for rehearsal in context['upcoming_rehearsals']:
+            rehearsal.singer_status = rehearsal.get_singer_status()
+
+        for rehearsal in context['past_rehearsals']:
+            rehearsal.singer_status = rehearsal.get_singer_status()
 
         happening_now = Rehearsal.objects.filter(
             is_cancelled=False,
@@ -39,7 +54,7 @@ class IndexView(generic.ListView):
 class RehearsalListView(generic.ListView):
     template_name = "secondapp/rehearsal_list.html"
     context_object_name = "rehearsal_list"
-    paginate_by = 7
+    paginate_by = 20
 
     def get_queryset(self):
         return Rehearsal.objects.filter(is_cancelled=False).order_by("-calendar")
@@ -58,6 +73,12 @@ class RehearsalListView(generic.ListView):
             if rehearsal.calendar < now
         ]
 
+        for rehearsal in context['upcoming_rehearsals']:
+            rehearsal.singer_status = rehearsal.get_singer_status()
+
+        for rehearsal in context['past_rehearsals']:
+            rehearsal.singer_status = rehearsal.get_singer_status()
+
         happening_now = Rehearsal.objects.filter(
             is_cancelled=False,
             calendar__gte=now - timedelta(minutes=660),
@@ -71,6 +92,15 @@ class RehearsalListView(generic.ListView):
 class RehearsalDetailView(generic.DetailView):
     model = Rehearsal
     template_name = "secondapp/rehearsal_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        rehearsal = self.object
+        now = timezone.now()
+        singer_status = rehearsal.get_singer_status()
+        context.update(singer_status)
+
+        return context
 
 
 class RehearsalCreateView(generic.CreateView):
@@ -201,6 +231,18 @@ class PersonListView(PersonRoleMixin, ListView):
             context["active_people"] = base_queryset.filter(is_active=True)
             context["inactive_people"] = base_queryset.filter(is_active=False)
             context["has_voice"] = True
+
+            all_rehearsals = Rehearsal.objects.filter(is_cancelled=False).count()
+            for singer in context["active_people"]:
+                attendance = singer.get_rehearsal_attendance()
+                singer.missing_count = attendance["missing"].count()
+                singer.total_rehearsals = all_rehearsals
+
+            for singer in context["inactive_people"]:
+                attendance = singer.get_rehearsal_attendance()
+                singer.missing_count = attendance["missing"].count()
+                singer.total_rehearsals = all_rehearsals
+
         else:
             context["active_people"] = base_queryset
             context["inactive_people"] = base_queryset.none()
@@ -217,6 +259,16 @@ class PersonDetailView(PersonRoleMixin, DetailView):
 
     def get_object(self, queryset=None):
         return self.get_model().objects.get(pk=self.kwargs.get('pk'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        person = self.object
+
+        if isinstance(person, Singer):
+            attendance = person.get_rehearsal_attendance()
+            context.update(attendance)
+
+        return context
 
 
 class PersonCreateView(PersonRoleMixin, CreateView):

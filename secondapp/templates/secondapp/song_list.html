@@ -2,22 +2,6 @@
 {% block title %}Songs{% endblock %}
 {% block content %}<br><br>
 
-<div class="action-buttons">
-    <p>guideance links</p>
-    <ul>
-        <li><a href="{% url 'secondapp:rehearsal_list' %}"><button type="button">Rehearsals</button></a></li>
-        <div class="role-links">
-            {% for role in all_roles %}
-                <li>
-                    <a href="{% url 'secondapp:person_list' role=role %}">
-                        <button type="button">{{ role }}</button>
-                    </a>
-                </li>
-            {% endfor %}
-        </div>
-        <li><a href="{% url 'secondapp:tag' %}"><button type="button">GET THEM TAGS HERE</button></a></li>
-    </ul>
-</div>
 <div>
     <a href="{% url 'secondapp:song_form' %}"><button type="button">+ Add New Song +</button></a><br><br>
 </div>
@@ -28,17 +12,14 @@
     <th> title </th>
     <th> composer </th>
     <th> genre </th>
-    <th> link </th>
  </tr>
 {% for song in song_list %}
     <tr>
         <td> {{ song.pk }} </td>
-        <td> {{ song.title }} </td>
+        <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a></td>
         <td> {{ song.composer.last_name }} {{song.composer.first_name }} </td>
         <td> {{ song.genre }} </td>
-        <td><a href="{% url 'secondapp:song_detail' song.pk %}"> Link </a></td>
     </tr>
 {% endfor %}
-</table><br>
-<a href="{% url 'secondapp:index' %}"><button type="button"> Index - Home</button></a>
+</table>
 {% endblock %}

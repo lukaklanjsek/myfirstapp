@@ -17,11 +17,7 @@
 </div>
 <div class="action-buttons">
     <a href="{% url 'secondapp:rehearsal_form' %}"><button type="button">Add New Rehearsal</button></a>
-    <a href="{% url 'secondapp:person_form' role='singer' %}"><button type="button">! Add New Singer !</button></a>
-    <a href="{% url 'secondapp:song_form' %}"><button type="button">+ Add New Song +</button></a>
-    <a href="{% url 'secondapp:tag' %}"><button type="button"># GET THEM TAGS HERE #</button></a>
 </div>
-
 
 {% if is_paginated %}
     <div class="pagination">
@@ -51,18 +47,19 @@
             {% for rehearsal in upcoming_rehearsals %}
                 <div class="rehearsal-item upcoming">
                     <table>
-                        <caption>Rehearsal: {{ rehearsal.pk }}</caption>
                         <tr>
-                            <th>Title:</th><td> {{ rehearsal.subtitle }}</td>
-                        </tr>
-                        <tr>
-                            <th>At:</th><td> {{ rehearsal.location }}</td>
-                        </tr>
-                        <tr>
-                            <th>Date:</th> <td> {{ rehearsal.calendar }}</td>
-                        </tr>
-                        <tr>
-                            <th>link:</th><td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a></td>
+                            <td>{{ rehearsal.calendar|date:"j b Y, G:i" }}
+                                <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
+                                    {{ rehearsal.subtitle }}
+                                </a>
+                                {% for song in rehearsal.songs.all %}
+                                    {{ song.pk }} {{ song.title }}
+                                {% endfor %}
+                                |
+                                {% for singer in rehearsal.singer_status.missing %}
+                                    {{ singer.first_name }} {{ singer.voice }}
+                                {% endfor %}
+                            </td>
                         </tr>
                     </table>
                 </div>
@@ -79,18 +76,19 @@
             {% for rehearsal in past_rehearsals %}
                 <div class="rehearsal-item past">
                     <table>
-                        <caption>Rehearsal: {{ rehearsal.pk }}</caption>
                         <tr>
-                            <th>Title:</th><td> {{ rehearsal.subtitle }}</td>
-                        </tr>
-                        <tr>
-                            <th>At:</th><td> {{ rehearsal.location }}</td>
-                        </tr>
-                        <tr>
-                            <th>Date:</th> <td> {{ rehearsal.calendar }}</td>
-                        </tr>
-                        <tr>
-                            <th>link:</th><td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">View Details</a></td>
+                            <td>{{ rehearsal.calendar|date:"j b Y, G:i" }}
+                                <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
+                                    {{ rehearsal.subtitle }}
+                                </a> |
+                                {% for song in rehearsal.songs.all %}
+                                    {{ song.pk }} {{ song.title }}
+                                {% endfor %}
+                                |
+                                {% for singer in rehearsal.singer_status.missing %}
+                                    {{ singer.first_name }} {{ singer.voice }}
+                                {% endfor %}
+                            </td>
                         </tr>
                     </table>
                 </div>
@@ -120,11 +118,5 @@
         </span>
     </div>
 {% endif %}
-
-
-
-<div class="footer-nav">
-    <a href="{% url 'secondapp:index' %}"><button type="button"> Index - Home</button></a>
-</div>
 
 {% endblock %}
