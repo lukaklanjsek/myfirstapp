@@ -20,7 +20,7 @@ from django.conf.global_settings import LOGIN_REDIRECT_URL, STATICFILES_DIRS, DA
 # BASE_DIR points to the project root (one level above django_app)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
-
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
