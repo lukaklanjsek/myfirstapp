@@ -5,13 +5,31 @@
 .env.local
 settings.env
 
+venv/
+ENV/
+.envrc
+
 # Database files
 db.sqlite3
 *.db
+.sqlite3
+
+# Django cache / runtime files
+*.log
+*.pot
+*.mo
+staticfiles/
+media/
 
 # Python cache files
 __pycache__/
 *.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
 
 # IDE files
 .idea/
@@ -20,3 +38,5 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+.sh
