@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "polls.apps.PollsConfig",
     "secondapp",
+    "import_export",
 ]
 
 MIDDLEWARE = [

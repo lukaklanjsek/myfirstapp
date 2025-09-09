@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
+from import_export.admin import ImportExportModelAdmin
 
 # Register your models here.
 
@@ -10,36 +11,41 @@ from .models import Singer, Composer, Arranger, Poet, Musician
 
 # classes
 
-class TagAdmin(admin.ModelAdmin):
-    pass
-
-class SingerAdmin(admin.ModelAdmin):
-    pass
-
-class ComposerAdmin(admin.ModelAdmin):
-    pass
-
-class ArrangerAdmin(admin.ModelAdmin):
-    pass
-
-class PoetAdmin(admin.ModelAdmin):
-    pass
-
-class MusicianAdmin(admin.ModelAdmin):
-    pass
-
-
-
-
 class SongInline(admin.StackedInline):
     model = Song
     pass
 
 
-class RehearsalAdmin(admin.ModelAdmin):
+class TagAdmin(ImportExportModelAdmin):
+    pass
+
+class SingerAdmin(ImportExportModelAdmin):
+    pass
+
+class ComposerAdmin(ImportExportModelAdmin):
+    pass
+
+class ArrangerAdmin(ImportExportModelAdmin):
+    pass
+
+class PoetAdmin(ImportExportModelAdmin):
+    pass
+
+class MusicianAdmin(ImportExportModelAdmin):
+    pass
+
+
+class RehearsalAdmin(ImportExportModelAdmin):
     model = Rehearsal
     filter_horizontal = ["songs", "singers", "tags"]
     pass
+
+class SongAdmin(ImportExportModelAdmin):
+    pass
+
+
+
+
 
 
 

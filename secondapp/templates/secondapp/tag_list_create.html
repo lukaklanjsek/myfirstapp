@@ -8,19 +8,7 @@
     {{ form.as_p }}
     <button type="submit">Add new Tag</button>
 </form>
-<h2>Links back:</h2>
-<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
-<div class="role-links">
-    {% for role in all_roles %}
-        <li>
-            <a href="{% url 'secondapp:person_list' role=role %}">
-                <button type="button">{{ role }}</button>
-            </a>
-        </li>
-    {% endfor %}
-</div>
-<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
-<a href="{% url 'secondapp:index' %}">Home - Index</a>
+
 <h2> Tag list </h2>
 <ul>
 {% for tag in tags %}
@@ -34,19 +22,6 @@
     </p>
 {% endfor %}
 </ul>
-<h2>Links back:</h2>
-<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
-<div class="role-links">
-    {% for role in all_roles %}
-        <li>
-            <a href="{% url 'secondapp:person_list' role=role %}">
-                <button type="button">{{ role }}</button>
-            </a>
-        </li>
-    {% endfor %}
-</div>
-<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
-<a href="{% url 'secondapp:index' %}">Home - Index</a>
-<p>End of page.</p>
+
 
 {% endblock %}
