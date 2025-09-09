@@ -33,7 +33,7 @@ class PersonForm(BaseForm):
             "influenced_by",
             "awards",
             "website",
-            "tags",
+            #"tags",
             "additional_notes"
         ]
 
