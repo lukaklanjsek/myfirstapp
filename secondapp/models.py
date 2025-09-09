@@ -76,7 +76,7 @@ class Person(models.Model):
     influenced_by = models.TextField(blank=True, null=True)
     awards = models.TextField(blank=True, null=True)
     website = models.TextField(blank=True, null=True)
-    tags = models.ManyToManyField(Tag, help_text="max singers 5, others 3", blank=True)
+    #tags = models.ManyToManyField(Tag, help_text="max singers 5, others 3", blank=True)
     additional_notes = models.TextField(blank=True, null=True)
     # portrait =    ->    # TODO
     updated_at = models.DateTimeField(auto_now=True)
@@ -133,8 +133,8 @@ class Singer(Person):
         }
 
     def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        #max_tags = 5
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         status = "(Inactive)" if not self.is_active else ""
         return f"{self.get_display_name()} - {self.voice} {status}"
 
@@ -157,8 +157,8 @@ class Composer(Person):
         return reverse("secondapp:composer_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        #max_tags = 3
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         era = f"{self.musical_era}" if self.musical_era else ""
         return f"{self.get_display_name()}"
 
@@ -180,8 +180,8 @@ class Poet(Person):
         return reverse("secondapp:poet_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        #max_tags = 3
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()}"
 
 
@@ -202,8 +202,8 @@ class Arranger(Person):
         return reverse("secondapp:arranger_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        #max_tags = 3
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()}"
 
 
@@ -226,8 +226,8 @@ class Musician(Person):
         return reverse("secondapp:musician_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        #max_tags = 3
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()} - {self.instrument}"
 
 
