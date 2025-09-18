@@ -2,3 +2,5 @@ asgiref
 Django
 sqlparse
 python-dotenv
+django-flatpickr
+django-formset

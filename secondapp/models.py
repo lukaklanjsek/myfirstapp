@@ -44,6 +44,7 @@ class Role(Enum):
     ARRANGER = "Arranger"
     POET = "Poet"
     MUSICIAN = "Musician"
+    CONDUCTOR = "Conductor"
 
 
 class Tag(models.Model):
@@ -101,6 +102,9 @@ class Person(models.Model):
             display_name += f" {self.third_name}"
         return display_name
 
+    def get_role_name(self):
+        return self.__class__.__name__.lower()
+
 
 class Singer(Person):
     voice = models.CharField(max_length=10, choices=[(voice.name, voice.value) for voice in VoiceType])
@@ -120,7 +124,7 @@ class Singer(Person):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return  reverse("secondapp_singer_detail", kwargs={"pk": self.pk})
+        return  reverse("secondapp:person_detail", kwargs={"role": "singer", "pk": self.pk})
 
     def get_rehearsal_attendance(self):
         present_rehearsals = self.rehearsal_set.all()
@@ -154,7 +158,7 @@ class Composer(Person):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("secondapp:composer_detail", kwargs={"pk": self.pk})
+        return reverse("secondapp:person_detail", kwargs={"role": "composer", "pk": self.pk})
 
     def __str__(self):
         #max_tags = 3
@@ -177,7 +181,7 @@ class Poet(Person):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("secondapp:poet_detail", kwargs={"pk": self.pk})
+        return reverse("secondapp:person_detail", kwargs={"role": "poet", "pk": self.pk})
 
     def __str__(self):
         #max_tags = 3
@@ -199,7 +203,7 @@ class Arranger(Person):
         super().save(*args, **kwargs)
 
     def get_abslute_url(self):
-        return reverse("secondapp:arranger_detail", kwargs={"pk": self.pk})
+        return reverse("secondapp:person_detail", kwargs={"role": "arranger", "pk": self.pk})
 
     def __str__(self):
         #max_tags = 3
@@ -223,12 +227,45 @@ class Musician(Person):
         super().save(*args, **kwargs)
 
     def get_abslute_url(self):
-        return reverse("secondapp:musician_detail", kwargs={"pk": self.pk})
+        return reverse("secondapp:person_detail", kwargs={"role": "musician", "pk": self.pk})
 
     def __str__(self):
         #max_tags = 3
         #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()} - {self.instrument}"
+
+
+class Conductor(Person):
+    is_active = models.BooleanField(default=True)
+    messenger = models.CharField(max_length=250, blank=True, null=True)
+    date_joined = models.DateField("joined",default=date.today)
+
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Conductor"
+        verbose_name_plural = "Conductors"
+
+    def save(self, *args, **kwargs):
+        self.role = Role.CONDUCTOR.name
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "conductor", "pk": self.pk})
+
+    def get_rehearsal_attendance(self):
+        present_rehearsals = self.rehearsal_set.all()
+        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
+        missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
+
+        return {
+            "present": present_rehearsals,
+            "missing": missing_rehearsals,
+        }
+
+    def __str__(self):
+        #max_tags = 3
+        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+        return f"{self.get_display_name()}"
 
 
 class Song(models.Model):
@@ -266,6 +303,7 @@ class Rehearsal(models.Model):
     calendar = models.DateTimeField(blank=True, null=True, unique=True)
     additional_notes = models.TextField(blank=True, null=True)
     singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
+    conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")
     songs = models.ManyToManyField(Song, blank=True)
     tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
     duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
@@ -330,3 +368,36 @@ class Rehearsal(models.Model):
     #date_of_concert = models.ForeignKey(RehearsalDate, on_delete=models.PROTECT, related_name='song', blank=True, null=True) #, default=1 # -> for later implementation
     #date_added = models.DateField("added to archive", default=date.today)
     #additional_songs_notes = models.TextField(blank=True, null=True)
+
+
+class Ensemble(models.Model):
+    name = models.CharField(max_length=250)
+    address = models.TextField()
+    additional_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class Activity(models.Model):
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    singer = models.ForeignKey(Singer, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
+    conductor = models.ForeignKey(Conductor, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
+    ensemble = models.ForeignKey(Ensemble, on_delete=models.PROTECT, related_name="activity")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def get_absolute_url(self):     # this is supposed to point back to the person
+        if self.singer:
+            role = "singer"
+            person = self.singer
+        elif self.conductor:
+            role = "conductor"
+            person = self.conductor
+        else:
+            return "/"
+
+        return reverse("secondapp:person_detail", kwargs={"role": role, "pk": person.pk})

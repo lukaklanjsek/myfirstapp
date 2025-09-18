@@ -9,9 +9,10 @@ from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
 from django.views.generic.edit import DeleteView
 from django.db.models import Q
+from django.apps import apps
 
-from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm
-from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song
+from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm
+from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor
 from .mixins import TagListAndCreateMixin, PersonRoleMixin
 
 class IndexView(generic.ListView):
@@ -233,15 +234,15 @@ class PersonListView(PersonRoleMixin, ListView):
             context["has_voice"] = True
 
             all_rehearsals = Rehearsal.objects.filter(is_cancelled=False).count()
-            for singer in context["active_people"]:
-                attendance = singer.get_rehearsal_attendance()
-                singer.missing_count = attendance["missing"].count()
-                singer.total_rehearsals = all_rehearsals
+            for person in context["active_people"]:
+                attendance = person.get_rehearsal_attendance()
+                person.missing_count = attendance["missing"].count()
+                person.total_rehearsals = all_rehearsals
 
-            for singer in context["inactive_people"]:
-                attendance = singer.get_rehearsal_attendance()
-                singer.missing_count = attendance["missing"].count()
-                singer.total_rehearsals = all_rehearsals
+            for person in context["inactive_people"]:
+                attendance = person.get_rehearsal_attendance()
+                person.missing_count = attendance["missing"].count()
+                person.total_rehearsals = all_rehearsals
 
         else:
             context["active_people"] = base_queryset
@@ -267,6 +268,8 @@ class PersonDetailView(PersonRoleMixin, DetailView):
         if isinstance(person, Singer):
             attendance = person.get_rehearsal_attendance()
             context.update(attendance)
+
+        context["activity"] = person.activity.all()
 
         return context
 
@@ -332,3 +335,114 @@ class PersonDeleteView(PersonRoleMixin, DeleteView):
     def get_success_url(self):
         role = self.kwargs.get("role")
         return reverse_lazy("secondapp:person_list", kwargs={"role": role})
+
+
+# ---------------------------------------------
+
+class EnsembleListView(generic.ListView):
+    model = Ensemble
+    template_name = "secondapp/ensemble_list.html"
+    context_object_name = "ensemble_list"
+
+
+class EnsembleDetailView(generic.DetailView):
+    model = Ensemble
+    template_name = "secondapp/ensemble_detail.html"
+    context_object_name = "ensemble"
+
+
+class EnsembleCreateView(generic.CreateView):
+    model = Ensemble
+    form_class = EnsembleForm
+    template_name = "secondapp/ensemble_form.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:ensemble_detail", kwargs={"pk": self.object.pk})
+
+
+class EnsembleUpdateView(generic.UpdateView):
+    model = Ensemble
+    form_class = EnsembleForm
+    template_name = "secondapp/ensemble_form.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:ensemble_detail", kwargs={"pk": self.object.pk})
+
+
+class EnsembleDeleteView(generic.DeleteView):
+    model = Ensemble
+    template_name = "secondapp/ensemble_confirm_delete.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:ensemble_list")
+
+# ---------------------------------------------
+
+class ActivityCreateView(generic.CreateView):
+    model = Activity
+    fields = ["start_date", "end_date", "ensemble"]
+    template_name = "secondapp/activity_form.html"
+
+    def form_valid(self, form):
+        role = self.kwargs["role"]
+        person_id = self.kwargs["pk"]
+
+        if role == "singer":
+            form.instance.singer = Singer.objects.get(pk=person_id)
+        elif role == "conductor":
+            form.instance.conductor = Conductor.objects.get(pk=person_id)
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["role"] = self.kwargs["role"]
+        person_id = self.kwargs["pk"]
+        if context["role"] == "singer":
+            context["person"] = Singer.objects.get(pk=person_id)
+        elif context["role"] == "conductor":
+            context["person"] = Conductor.objects.get(pk=person_id)
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+class ActivityUpdateView(generic.UpdateView):
+    model = Activity
+    fields = ["start_date", "end_date", "ensemble"]
+    template_name = "secondapp/activity_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.singer:
+            context["person"] = self.object.singer
+            context["role"] = "singer"
+        elif self.object.conductor:
+            context["person"] = self.object.conductor
+            context["role"] = "conductor"
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
+class ActivityDeleteView(generic.DeleteView):
+    model = Activity
+    template_name = "secondapp/activity_confirm_delete.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.singer:
+            context["person"] = self.object.singer
+            context["role"] = "singer"
+        elif self.object.conductor:
+            context["person"] = self.object.conductor
+            context["role"] = "conductor"
+        return context
+
+    def get_success_url(self):
+        if self.object.singer:
+            return self.object.singer.get_absolute_url()
+        elif self.object.conductor:
+            return self.object.conductor.get_absolute_url()
+        return "/"

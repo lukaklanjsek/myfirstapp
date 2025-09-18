@@ -1,5 +1,6 @@
 from django.urls import path
 
+
 from . import views
 
 app_name = 'secondapp'
@@ -22,10 +23,20 @@ urlpatterns = [
 
     path("tag/", views.TagListAndCreateView.as_view(), name="tag"),
 
+    path("ensemble/", views.EnsembleListView.as_view(), name="ensemble_list"),
+    path("ensemble/<int:pk>/", views.EnsembleDetailView.as_view(), name="ensemble_detail"),
+    path("ensemble/create/", views.EnsembleCreateView.as_view(), name="ensemble_form"),
+    path("ensemble/<int:pk>/update/", views.EnsembleUpdateView.as_view(), name="ensemble_update"),
+    path("ensemble/<int:pk>/delete/", views.EnsembleDeleteView.as_view(), name="ensemble_delete"),
+
     path("<str:role>/", views.PersonListView.as_view(), name="person_list"),
     path("<str:role>/<int:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
     path("<str:role>/create/", views.PersonCreateView.as_view(), name="person_form"),
     path("<str:role>/<int:pk>/update/", views.PersonUpdateView.as_view(), name="person_update"),
     path("<str:role>/<int:pk>/delete/", views.PersonDeleteView.as_view(), name="person_delete"),
+
+    path("<str:role>/<int:pk>/activity/create/", views.ActivityCreateView.as_view(), name="activity_form"),
+    path("<str:role>/<int:pk>/activity/update/", views.ActivityUpdateView.as_view(), name="activity_update"),
+    path("<str:role>/<int:pk>/activity/delete/", views.ActivityDeleteView.as_view(), name="activity_confirm_delete"),
 
 ]

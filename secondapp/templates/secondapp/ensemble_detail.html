@@ -1,0 +1,11 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{ensemble.pk}}Ensemble{% endblock %}
+{% block content %}
+<h1>Detail of {{ ensemble.name }}</h1>
+<p>Name: {{ ensemble.name }}</p>
+<p>Address: {{ ensemble.address }}</p>
+<p>Additional notes: {{ ensemble.additional_notes }}</p>
+<p>Other fields will be added eventually.</p><br>
+<a href="{% url 'secondapp:ensemble_update' ensemble.pk %}">UPDATE EDIT</a><br><br>
+<a href="{% url 'secondapp:ensemble_delete' ensemble.pk %}">Delete - are you really sure?</a>
+{% endblock %}

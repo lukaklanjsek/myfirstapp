@@ -7,6 +7,7 @@
     {{ form.as_p }}
     <button type="submit">Save</button>
 </form>
+<p>You are {% if object %}editing {{ object }}{{ object.pk }}{% else %}adding new {{ object }}{{ object.pk }}{% endif %}</p>
 {% if object %}
     <a href="{% url 'secondapp:song_detail' object.pk %}">
         <button type="button">Cancel Edit</button>

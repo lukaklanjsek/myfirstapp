@@ -1,0 +1,14 @@
+{% extends "secondapp/base.html" %}
+{% block title %}confirm{% endblock %}
+{% block content %}
+  <h2>Delete Activity</h2>
+
+  <p>Are you sure you want to delete this activity?</p>
+  <p><strong>{{ object.ensemble.name }}:</strong> {{ object.start_date }} → {{ object.end_date|default:"…" }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+    <a href="{{ person.get_absolute_url }}">Cancel</a>
+  </form>
+{% endblock %}

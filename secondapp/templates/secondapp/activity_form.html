@@ -1,0 +1,13 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
+{% block content %}
+  <h2>{% if object %}Edit{% else %}Add{% endif %} Activity</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <button type="submit">Save</button>
+      <a href="{{ person.get_absolute_url }}">Cancel</a>
+  </form>
+{% endblock %}

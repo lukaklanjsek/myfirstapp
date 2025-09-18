@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load i18n %}
 {% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+
     <link rel="stylesheet" href="{% static 'secondapp/style.css' %}">
+    <link rel="stylesheet" href="{% static 'secondapp/vendor/flatpickr/flatpickr.min.css' %}">
+    <link rel="stylesheet" href="{% static 'secondapp/vendor/bootstrap/bootstrap.min.css' %}">
+
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
+
+    <link href="{% static 'formset/css/collections.css' %}" rel="stylesheet">
+
+    <script src="{% static 'secondapp/vendor/flatpickr/flatpickr.min.js' %}"></script>
+    <script src="{% url 'javascript-catalog' %}"></script>
+    <script type="module" src="{% static 'formset/js/django-formset.js' %}"></script>
 
 </head>
 <body>
@@ -24,8 +35,14 @@
                         <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}s</a>
                     </li>
                 {% endfor %}
+                <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
                 <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
-                <li><a href="{% url 'logout' %}">Logout</a></li>
+                <li>
+                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
+                        {% csrf_token %}
+                        <button type="submit">Logout</button>
+                    </form>
+                </li>
             </ul>
         </nav>
 
@@ -33,7 +50,6 @@
         <main class="main">
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
-
             <div class="main-content">
                 {% block content %}
                 <!-- content goes here -->
@@ -54,7 +70,21 @@
          </main>
 
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // - DateTimeField inputs:
+            flatpickr(".datetimepicker", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i"
+            });
 
+            // - DateField inputs:
+            flatpickr(".datepicker", {
+                enableTime: false,
+                dateFormat: "Y-m-d"
+            });
+        });
+    </script>
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");
