@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-{% load i18n %}
 {% load static %}
 <head>
     <meta charset="UTF-8">
@@ -8,16 +7,18 @@
     <title>{% block title %}{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'secondapp/style.css' %}">
+
     <link rel="stylesheet" href="{% static 'secondapp/vendor/flatpickr/flatpickr.min.css' %}">
-    <link rel="stylesheet" href="{% static 'secondapp/vendor/bootstrap/bootstrap.min.css' %}">
 
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
 
-    <link href="{% static 'formset/css/collections.css' %}" rel="stylesheet">
+    <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
+
+    <script src="{% static 'secondapp/jquery-3.7.1.min.js' %}"></script>
 
     <script src="{% static 'secondapp/vendor/flatpickr/flatpickr.min.js' %}"></script>
-    <script src="{% url 'javascript-catalog' %}"></script>
-    <script type="module" src="{% static 'formset/js/django-formset.js' %}"></script>
+
+    <script src="{% static 'django_select2/django_select2.js' %}"></script>
 
 </head>
 <body>
@@ -103,5 +104,6 @@
         })
         ;
     </script>
+{{ form.media }}
 </body>
 </html>

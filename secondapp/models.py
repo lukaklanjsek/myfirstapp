@@ -300,7 +300,7 @@ class Rehearsal(models.Model):
     subtitle = models.CharField(max_length=250)
     location = models.CharField(max_length=250)
     parking = models.CharField(max_length=250, blank=True, null=True)
-    calendar = models.DateTimeField(blank=True, null=True, unique=True)
+    calendar = models.DateTimeField(unique=True)
     additional_notes = models.TextField(blank=True, null=True)
     singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
     conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")

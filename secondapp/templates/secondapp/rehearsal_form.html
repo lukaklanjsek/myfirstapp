@@ -21,10 +21,12 @@
         </p>
     </div>
 </div>
-<django-formset endpoint="secondapp:rehearsal_detail" csrf-token="{{ csrf_token }}">
-    {{ form }}
-    <button type="button" df-click="submit -> proceed">Submit</button>
-</django-formset>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
 
 <div class="form-navigation">
     {% if object %}

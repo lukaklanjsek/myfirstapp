@@ -45,8 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "polls.apps.PollsConfig",
-    "formset",
     "secondapp",
+    "django_select2",
     "import_export",
     "django_flatpickr",
 ]

@@ -3,4 +3,4 @@ Django
 sqlparse
 python-dotenv
 django-flatpickr
-django-formset
+django-select2

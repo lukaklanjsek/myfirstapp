@@ -28,6 +28,7 @@ urlpatterns = [
     path("polls/", include("polls.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
     path('jsi18n/', cache_page(3600)(JavaScriptCatalog.as_view(packages=['formset'])), name='javascript-catalog'),
+    path("select2/", include("django_select2.urls")),
     path("", include("secondapp.urls", namespace="secondapp")),
 
 ]
