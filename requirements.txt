@@ -1,8 +1,10 @@
-asgiref==3.9.1
-Django==5.2.3
-gunicorn==23.0.0
-packaging==25.0
-python-decouple==3.8
-python-dotenv==1.1.1
-sqlparse==0.5.3
+asgiref
+Django
+gunicorn
+packaging
+sqlparse
+python-decouple
+python-dotenv
 django-import-export
+django-flatpickr
+django-select2

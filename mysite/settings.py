@@ -99,10 +99,10 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        "NAME": os.getenv("DATABASE_NAME", os.path.join(BASE_DIR, "db.sqlite3")),
+        # Store db.sqlite3 in a dedicated "data" folder at the project root (mounted via Docker)
+        'NAME': os.path.join(BASE_DIR, "data", os.getenv("DATABASE_NAME", "db.sqlite3")),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
