@@ -1,6 +1,10 @@
 asgiref
 Django
+gunicorn
+packaging
 sqlparse
+python-decouple
 python-dotenv
+django-import-export
 django-flatpickr
 django-select2
