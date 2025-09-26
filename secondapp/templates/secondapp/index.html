@@ -5,8 +5,29 @@
 {% block content %}
 <h1> This is index.html from templates. </h1>
 <p>Here are links to rehearsals and singers:</p>
-<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
-<a href="{% url 'secondapp:singer_list' %}">Singers</a>
+<div class="action-buttons">
+<a href="{% url 'secondapp:rehearsal_list' %}"><button type="button">Rehearsals</button></a> <br><br>
+<a href="{% url 'secondapp:singer_list' %}"><button type="button">Singers</button></a>
+</div>
+
+<!--  "HAPPENING NOW" Feature -->
+{% if happening_now %}
+    <div class="happening-now-banner">
+        <div class="urgent-alert">
+            <h2> REHEARSAL HAPPENING NOW! </h2>
+            <div class="happening-details">
+                <p>{{ happening_now.subtitle }}</p>
+                <p> Location: {{ happening_now.location }}</p>
+                <p> Started: {{ happening_now.calendar }}</p>
+            </div>
+            <div class="happening-actions">
+                <a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
+                    <button type="button">GO TO REHEARSAL</button>
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
 
 <p>last 5 rehearsals:</p>
 <table>
@@ -22,11 +43,13 @@
         <td> {{ rehearsal.subtitle }} </td>
         <td> {{ rehearsal.location }} </td>
         <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">Link</a></td>
-    {% endfor %}
     </tr>
+    {% endfor %}
 </table>
 
  <br>
-<a href="{% url 'secondapp:song_list' %}">SONGS ARCHIVE</a>
-
+<div class="action-buttons">
+<a href="{% url 'secondapp:song_list' %}"><button type="button">SONGS ARCHIVE</button></a><br><br>
+<a href="{% url 'secondapp:tag' %}"><button type="button"># GET THEM TAGS HERE </button></a>
+</div>
 {% endblock %}

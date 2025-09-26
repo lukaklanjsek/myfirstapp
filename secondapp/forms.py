@@ -1,5 +1,6 @@
 from django import forms
-from .models import Rehearsal, Song, Person, Singer, Composer, Musician, Arranger, Poet, Tag
+from .models import Song, Person, Singer, Composer, Musician, Arranger, Poet, Tag
+from .models import Rehearsal
 
 
 class PersonForm(forms.ModelForm):
@@ -72,9 +73,22 @@ class RehearsalForm(forms.ModelForm):
     class Meta:
         model = Rehearsal
         fields = "__all__"
+        widgets = {
+            'calendar': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'duration_minutes': forms.NumberInput(attrs={'min': '1', 'placeholder': 'e.g. 120'}),
+            'additional_notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['singers'].required = False
+        self.fields['songs'].required = False
+        self.fields['is_cancelled'].label = "Mark as cancelled"
+        self.fields['duration_minutes'].label = "Expected duration (minutes)"  # Changed from 'duration'
+        self.fields['attendance_count'].label = "Actual attendance count"
 
 
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = "__all__"
+        fields = ["name"]

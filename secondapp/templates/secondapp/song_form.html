@@ -1,5 +1,5 @@
 {% extends "secondapp/base.html" %}
-{% block title %}{{song.pk}}Edit{% endblock %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
 {% block content %}
 
 <h1>{% if object %}Edit{% else %}Add{% endif %} Song</h1>
@@ -7,6 +7,17 @@
     {{ form.as_p }}
     <button type="submit">Save</button>
 </form>
+{% if object %}
+    <a href="{% url 'secondapp:song_detail' object.pk %}">
+        <button type="button">Cancel Edit</button>
+    </a>
+<br><br>
+<a href="{% url 'secondapp:song_list' %}"><button type="button">List of songs</button></a>
+{% else %}
+    <a href="{% url 'secondapp:song_list' %}"
+          onclick="return confirm('You will lose unsaved changes. Continue?')">
+        <button type="button">Cancel & Return to List</button>
+    </a>
+{% endif %}
 
-<a href="{% url 'secondapp:song_list' %}">Cancel</a>
 {% endblock %}

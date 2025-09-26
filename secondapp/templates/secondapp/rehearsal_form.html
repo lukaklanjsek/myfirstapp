@@ -1,12 +1,57 @@
 {% extends "secondapp/base.html" %}
-{% block title %}Edit{{rehearsal.pk}}{% endblock %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
 {% block content %}
-<h1>{% if object %}Edit{% else %}Add{% endif %} Rehearsal {{rehearsal.pk}} </h1>
+<div class="form-header">
+    <h1>{% if object %}Edit{% else %}Add{% endif %} Rehearsal {{rehearsal.pk}} </h1>
+</div>
+
+<div class="form-helpers">
+    <div class="helper-links">
+        <p>Need to add a new singer first?
+            <a href="{% url 'secondapp:singer_form' %}"
+               onclick="return confirm('You will lose unsaved changes. Continue?')">
+                <button type="button">Add Singer</button></a>
+        </p>
+
+        <p>Need to add a new song first?
+            <a href="{% url 'secondapp:song_form' %}"
+               onclick="return confirm('You will lose unsaved changes. Continue?')">
+                <button type="button">Add Song</button>
+            </a>
+        </p>
+    </div>
+</div>
+
+<div class="form-container">
 <form method="POST">{% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
+    <div class="form-fields">
+        {{ form.as_p }}
+    </div>
 
+    <div class="form-action">
+        <button type="submit">Save</button>
+    </div>
 </form>
+</div>
 
-<a href="{% url 'secondapp:rehearsal_list' %}">List</a>
+<div class="form-navigation">
+    {% if object %}
+    <div class="edit-actions">
+        <a href="{% url 'secondapp:rehearsal_detail' object.pk %}">
+            <button type="button">Cancel Edit</button>
+        </a>
+        <a href="{% url 'secondapp:rehearsal_list' %}">
+            <button type="button">List of rehearsals</button>
+        </a>
+    </div>
+    {% else %}
+    <div class="create-actions">
+        <a href="{% url 'secondapp:rehearsal_list' %}"
+           onclick="return confirm('You will lose unsaved changes. Continue?')">
+            <button type="button">Cancel & Return to List</button>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
 {% endblock %}

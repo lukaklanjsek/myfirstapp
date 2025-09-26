@@ -2,41 +2,87 @@
 {% block title %}Singers{% endblock %}
 {% block content %}
 
-<h1>Hi to the singers' list.</h1>
-<a href="{% url 'secondapp:singer_form' %}">Add New Singer</a>
 
-<p>The following singers are available:</p>
-<table>
-<tr>
-    <th> voice </th>
-    <th> first name </th>
-    <th> last name </th>
-    <th> link </th>
-</tr>
-{% for singer in active_singers %}
-    <tr>
-        <td> {{ singer.voice }} </td>
-        <td> {{ singer.first_name }} </td>
-        <td> {{ singer.last_name }} </td>
-        <td><a href="{% url 'secondapp:singer_detail' singer.pk %}"> Link </a></td>
-    </tr>
-{% endfor %}
-</table>
- <p>The following singers are NOT available:</p>
-<table>
-    <tr>
-    <th> voice </th>
-    <th> first name </th>
-    <th> last name </th>
-    <th> link </th>
-</tr>
- {% for singer in inactive_singers %}
-    <tr>
-        <td>{{ singer.voice }}</td>
-        <td>{{ singer.first_name }}</td>
-        <td>{{ singer.last_name }}</td>
-        <td><a href="{% url 'secondapp:singer_detail' singer.pk %}">Link</a></td>
-    </tr>
- {% endfor %}
-</table>
+<div class="page-header">
+    <h1>Welcome to the singers' list.</h1>
+</div>
+
+<div class="action-buttons">
+    <a href="{% url 'secondapp:singer_form' %}">
+        <button type="button">Add New Singer</button>
+    </a>
+</div>
+
+<div class="navigation-links">
+    <p>Lost? Back to rehearsals:
+        <a href="{% url 'secondapp:rehearsal_list' %}">
+            <button type="button">Rehearsals</button>
+        </a>
+    </p>
+    <p>Back to songs:
+        <a href="{% url 'secondapp:song_list' %}">
+            <button type="button">Songs</button>
+        </a>
+    </p>
+    <a href="{% url 'secondapp:tag' %}">
+        <button type="button"># GET THEM TAGS HERE #</button>
+    </a>
+</div>
+
+<div class="singers-content">
+    <div class="active-singers-section">
+        <p>The following singers are available:</p>
+        <div class="singers-table">
+            <table>
+                <tr>
+                    <th>Voice</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Link</th>
+                </tr>
+                {% for singer in active_singers %}
+                    <tr>
+                        <td>{{ singer.voice }}</td>
+                        <td>{{ singer.first_name }}</td>
+                        <td>{{ singer.last_name }}</td>
+                        <td><a href="{% url 'secondapp:singer_detail' singer.pk %}">Link</a></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <div class="inactive-singers-section">
+        <p>The following singers are NOT available:</p>
+        <div class="singers-table">
+            <table>
+                <tr>
+                    <th>Voice</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Link</th>
+                </tr>
+                {% for singer in inactive_singers %}
+                    <tr>
+                        <td>{{ singer.voice }}</td>
+                        <td>{{ singer.first_name }}</td>
+                        <td>{{ singer.last_name }}</td>
+                        <td><a href="{% url 'secondapp:singer_detail' singer.pk %}">Link</a></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="footer-actions">
+    <a href="{% url 'secondapp:tag' %}">
+        <button type="button">GET THEM TAGS HERE</button>
+    </a>
+    <br>
+    <a href="{% url 'secondapp:index' %}">
+        <button type="button">Index - Home</button>
+    </a>
+</div>
+
 {% endblock %}

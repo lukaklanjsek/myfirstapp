@@ -1,7 +1,7 @@
 {% extends "secondapp/base.html" %}
 {% block title %}{{song.pk}}Song{% endblock %}
-{% block content %}
-<a href="{% url 'secondapp:song_list' %}">Songs - Back</a>
+{% block content %}<br>
+<a href="{% url 'secondapp:song_list' %}"><button type="button">Songs - Back</button></a>
 <h1> detail of {{ song }}</h1>
 <p> rendered from a template </p>
 <h1>{{ song.title }}</h1>
@@ -11,6 +11,7 @@
 <p>Genre: {{ song.genre }}</p>
 <p>Tags: {{ song.tags.all|join:", " }}</p>
 
-<a href="{% url 'secondapp:song_update' song.pk %}">UPDATE EDIT</a><br>
-<a href="{% url 'secondapp:song_delete' song.pk %}">Delete</a>
+<a href="{% url 'secondapp:song_update' song.pk %}"><button type="button">UPDATE EDIT</button></a><br><br>
+<a href="{% url 'secondapp:song_delete' song.pk %}"><button type="button">Delete</button></a><br><br>
+<a href="{% url 'secondapp:tag' %}"><button type="button"># GET THEM TAGS HERE #</button></a> <br>
 {% endblock %}

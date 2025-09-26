@@ -2,12 +2,53 @@
 {% block title %}{{song.pk}}confirm{% endblock %}
 {% block content %}
 
-<h1>Are you sure you want to delete "{{ song.title }} {{song.pk}}"?</h1>
-<form method="POST">
-    {% csrf_token %}
-    <button type="submit">Yes, delete</button>
-</form>
-<a href="{% url 'secondapp:song_detail' song.pk %}">Cancel</a>
+<div class="delete-confirmation-container">
+    <div class="warning-header">
+        <h1>Delete Song Confirmation</h1>
+    </div>
 
+    <div class="warning-message">
+        <p>Are you sure you want to delete this song?</p>
+        <div class="item-details">
+            <p><strong>Title:</strong> {{ song.title }}</p>
+            <p><strong>Song ID:</strong> {{song.pk}}</p>
+            {% if song.composer %}
+                <p><strong>Composer:</strong> {{song.composer}}</p>
+            {% endif %}
+            {% if song.genre %}
+                <p><strong>Genre:</strong> {{song.genre}}</p>
+            {% endif %}
+        </div>
+        <div class="warning-note">
+            <p>️ This action cannot be undone.</p>
+        </div>
+    </div>
+
+    <div class="confirmation-form">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-actions">
+                <div class="danger-action">
+                    <button type="submit" class="delete-btn">Yes, delete</button>
+                </div>
+                <div class="safe-action">
+                    <a href="{% url 'secondapp:song_detail' song.pk %}">
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="navigation-footer">
+        <a href="{% url 'secondapp:index' %}">
+            <button type="button" class="home-btn">Home - Index</button>
+        </a>
+    </div>
+
+    <div class="additional-info">
+        <p>This will remove the song from all rehearsals where it was scheduled.</p>
+    </div>
+</div>
 
 {% endblock %}
