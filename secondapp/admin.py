@@ -49,7 +49,7 @@ class ConductorAdmin(ImportExportModelAdmin):
 
 class RehearsalAdmin(ImportExportModelAdmin):
     model = Rehearsal
-    filter_horizontal = ["songs", "singers", "tags"]
+    filter_horizontal = ["songs", "singers"]
     pass
 
 class SongAdmin(ImportExportModelAdmin):

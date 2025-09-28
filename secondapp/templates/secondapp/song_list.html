@@ -7,18 +7,18 @@
 </div>
 <p>Here is a list of all songs:</p>
 <table>
- <tr>
-     <th> number </th>
-    <th> title </th>
-    <th> composer </th>
-    <th> genre </th>
- </tr>
+    <tr>
+        <th> number </th>
+        <th> title </th>
+        <th> composer </th>
+        <th> copies </th>
+    </tr>
 {% for song in song_list %}
     <tr>
         <td> {{ song.pk }} </td>
         <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a></td>
         <td> {{ song.composer.last_name }} {{song.composer.first_name }} </td>
-        <td> {{ song.genre }} </td>
+        <td>{{ song.number_of_copies }}</td>
     </tr>
 {% endfor %}
 </table>

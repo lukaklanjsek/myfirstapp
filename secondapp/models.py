@@ -77,9 +77,7 @@ class Person(models.Model):
     influenced_by = models.TextField(blank=True, null=True)
     awards = models.TextField(blank=True, null=True)
     website = models.TextField(blank=True, null=True)
-    #tags = models.ManyToManyField(Tag, help_text="max singers 5, others 3", blank=True)
     additional_notes = models.TextField(blank=True, null=True)
-    # portrait =    ->    # TODO
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -137,16 +135,12 @@ class Singer(Person):
         }
 
     def __str__(self):
-        #max_tags = 5
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         status = "(Inactive)" if not self.is_active else ""
         return f"{self.get_display_name()} - {self.voice} {status}"
 
 
 class Composer(Person):
-    work_style = models.CharField(max_length=250)
     musical_era = models.CharField(max_length=250, blank=True, null=True)
-    instruments = models.CharField("favorite instruments", max_length=250)
 
     class Meta(Person.Meta):
         ordering = ["last_name", "first_name"]
@@ -161,9 +155,6 @@ class Composer(Person):
         return reverse("secondapp:person_detail", kwargs={"role": "composer", "pk": self.pk})
 
     def __str__(self):
-        #max_tags = 3
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        era = f"{self.musical_era}" if self.musical_era else ""
         return f"{self.get_display_name()}"
 
 
@@ -184,14 +175,11 @@ class Poet(Person):
         return reverse("secondapp:person_detail", kwargs={"role": "poet", "pk": self.pk})
 
     def __str__(self):
-        #max_tags = 3
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()}"
 
 
 class Arranger(Person):
     style = models.CharField(max_length=250)
-    instruments = models.CharField("favorite instruments", max_length=250)
 
     class Meta(Person.Meta):
         ordering = ["last_name", "first_name"]
@@ -206,16 +194,11 @@ class Arranger(Person):
         return reverse("secondapp:person_detail", kwargs={"role": "arranger", "pk": self.pk})
 
     def __str__(self):
-        #max_tags = 3
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()}"
 
 
 class Musician(Person):
     instrument = models.CharField("primary instrument", max_length=250)
-    genre =  models.CharField("primary genre", max_length=250)
-    #bands = models.ManyToManyField "active currently"
-    #songs = models.ManyToManyField "best song performances"
 
     class Meta(Person.Meta):
         ordering = ["last_name", "first_name"]
@@ -230,8 +213,6 @@ class Musician(Person):
         return reverse("secondapp:person_detail", kwargs={"role": "musician", "pk": self.pk})
 
     def __str__(self):
-        #max_tags = 3
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()} - {self.instrument}"
 
 
@@ -263,18 +244,19 @@ class Conductor(Person):
         }
 
     def __str__(self):
-        #max_tags = 3
-        #tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         return f"{self.get_display_name()}"
 
 
 class Song(models.Model):
     title =  models.CharField(max_length=250)
     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
-    arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
-    genre = models.CharField(max_length=200, blank=True, null=True)
-    tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
+    number_of_pages = models.IntegerField(blank=True, null=True)
+    number_of_copies = models.IntegerField(blank=True, null=True)
+    year = models.DateField("year of creation", blank=True, null=True)
+    group = models.CharField("mixed/male/female" , max_length=250, blank=True, null=True)
+    number_of_voices = models.IntegerField(blank=True, null=True)
+    additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -282,18 +264,14 @@ class Song(models.Model):
         ordering = ["title"]
         indexes = [
             models.Index(fields=["title"]),
-            models.Index(fields=["genre"]),
         ]
 
     def get_absolute_url(self):
         return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         composer_name = self.composer.last_name if self.composer else "Unknown"
-        genre_display = f"- {self.genre}" if self.genre else ""
-        return f"{self.title} - {composer_name} - {genre_display} - {tag_names}"
+        return f"{self.title} - {composer_name}"
 
 
 class Rehearsal(models.Model):
@@ -305,7 +283,6 @@ class Rehearsal(models.Model):
     singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
     conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")
     songs = models.ManyToManyField(Song, blank=True)
-    tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
     duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
     attendance_count = models.PositiveIntegerField(default=0, help_text="Actual attendance count")
     is_cancelled = models.BooleanField(default=False)
@@ -349,25 +326,9 @@ class Rehearsal(models.Model):
         }
 
     def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
         status = "(Cancelled)" if self.is_cancelled else ""
         calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M") #if self.calendar else "TBD"
-        return f"{calendar_display} - {self.subtitle} {status} - {tag_names}"
-
-    # Song
-    #  -> temporary out:
-    #number_of_copies = models.IntegerField(validators=[MinValueValidator(1)])
-    #number_of_pages = models.IntegerField(validators=[MinValueValidator(1)])
-    #number_of_voices = models.IntegerField(validators=[MinValueValidator(1)])
-    #song_difficulty_level =  models.CharField(max_length=20, choices=SkillLevel.choices, default=SkillLevel.EXPERIENCED)
-    #transcript = models.TextField()
-    #translation = models.TextField(blank=True, null=True)
-    #speech_articulation = models.TextField(blank=True, null=True)
-    #date_of_rehearsal = models.DateField("date of rehearsal")  # -> for later implementation
-    #date_of_concert = models.ForeignKey(RehearsalDate, on_delete=models.PROTECT, related_name='song', blank=True, null=True) #, default=1 # -> for later implementation
-    #date_added = models.DateField("added to archive", default=date.today)
-    #additional_songs_notes = models.TextField(blank=True, null=True)
+        return f"{calendar_display} - {self.subtitle} {status}"
 
 
 class Ensemble(models.Model):

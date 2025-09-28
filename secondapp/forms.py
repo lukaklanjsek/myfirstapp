@@ -55,19 +55,9 @@ class PersonForm(BaseForm):
             "influenced_by",
             "awards",
             "website",
-            #"tags",
             "additional_notes"
         ]
 
-
-#    def __init__(self, *args, **kwargs):
-#        super().__init__(*args, **kwargs)
-
-#        for field_name, field in self.fields.items():
-#            if field.required:
-#                field.label = f"{field.label} *"
-#            else:
-#                field.label = f"{field.label} (-)"
 
 
 class SingerForm(PersonForm):
@@ -90,7 +80,7 @@ class SingerForm(PersonForm):
 class ComposerForm(PersonForm):
     class Meta:
         model = Composer
-        fields = PersonForm.Meta.fields + ["work_style", "musical_era", "instruments"]
+        fields = PersonForm.Meta.fields + ["musical_era"]
         widgets = {
             "birth_date": DatePickerInput(),
             "death_date": DatePickerInput(),
@@ -110,7 +100,7 @@ class PoetForm(PersonForm):
 class ArrangerForm(PersonForm):
     class Meta:
         model = Arranger
-        fields = PersonForm.Meta.fields + ["style", "instruments"]
+        fields = PersonForm.Meta.fields + ["style"]
         widgets = {
             "birth_date": DatePickerInput(),
             "death_date": DatePickerInput(),
@@ -120,7 +110,7 @@ class ArrangerForm(PersonForm):
 class MusicianForm(PersonForm):
     class Meta:
         model = Musician
-        fields = PersonForm.Meta.fields + ["instrument", "genre"]
+        fields = PersonForm.Meta.fields + ["instrument"]
         widgets = {
             "birth_date": DatePickerInput(),
             "death_date": DatePickerInput(),
@@ -135,7 +125,7 @@ class ConductorForm(PersonForm):
             "date_joined"
         ]
         widgets = {
-            "date_joined": DatePickerInput(),
+                "date_joined": DatePickerInput(),
                 "birth_date": DatePickerInput(),
                 "death_date": DatePickerInput(),
             }
@@ -146,12 +136,16 @@ class SongForm(BaseForm):
         model = Song
         fields = "__all__"
 
+        widgets = {
+            "year": DatePickerInput(),
+        }
+
 
 class RehearsalForm(BaseForm):
     class Meta:
         model = Rehearsal
         fields = ["subtitle","location", "parking", "calendar", "additional_notes",
-                  "singers", "conductors", "songs", "tags", "duration_minutes", "attendance_count",
+                  "singers", "conductors", "songs", "duration_minutes", "attendance_count",
                   "is_cancelled"]
         widgets = {
             'calendar': DateTimePickerInput(),
@@ -160,7 +154,6 @@ class RehearsalForm(BaseForm):
             'singers': SingerWidget(attrs={'style': 'width: 100%;'}),
             'conductors': ModelSelect2MultipleWidget(model=Conductor, search_fields=["first_name__icontains"], attrs={'style': 'width: 100%;'}),
             'songs': SongWidget(attrs={'style': 'width: 100%;'}),
-            'tags': ModelSelect2MultipleWidget(model=Tag, search_fields=["name__icontains"], attrs={'style': 'width: 100%;'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -144,7 +144,6 @@ class SongListView(generic.ListView):
         if search_query:
             queryset = queryset.filter(
                 Q(title__icontains=search_query) |
-                Q(genre__icontains=search_query) |
                 Q(composer__last_name__icontains=search_query)
             )
         return queryset
