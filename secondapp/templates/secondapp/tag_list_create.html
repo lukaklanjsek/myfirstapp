@@ -8,11 +8,7 @@
     {{ form.as_p }}
     <button type="submit">Add new Tag</button>
 </form>
-<h2>Links back:</h2>
-<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
-<a href="{% url 'secondapp:singer_list' %}">Singers</a><br>
-<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
-<a href="{% url 'secondapp:index' %}">Home - Index</a>
+
 <h2> Tag list </h2>
 <ul>
 {% for tag in tags %}
@@ -26,11 +22,6 @@
     </p>
 {% endfor %}
 </ul>
-<h2>Links back:</h2>
-<a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a> <br>
-<a href="{% url 'secondapp:singer_list' %}">Singers</a><br>
-<a href="{% url 'secondapp:song_list' %}">Songs</a><br>
-<a href="{% url 'secondapp:index' %}">Home - Index</a>
-<p>End of page.</p>
+
 
 {% endblock %}

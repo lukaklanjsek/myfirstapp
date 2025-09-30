@@ -1,9 +1,11 @@
 # mixins.py
-from django.views.generic import ListView, DeleteView
+from django.http import Http404
+from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
-from .models import Tag
-from .forms import TagForm
+from django.urls import reverse_lazy
+from .models import Tag, Musician, Composer, Poet, Arranger, Singer, Conductor
+from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, SingerForm, ConductorForm
 
 
 class TagListAndCreateMixin(FormMixin, ListView):
@@ -37,3 +39,29 @@ class TagListAndCreateMixin(FormMixin, ListView):
     def form_valid(self, form):
         form.save()
         return super().form_valid(form)
+
+
+class PersonRoleMixin:
+    role_model_form_map = {
+        "singer": (Singer, SingerForm),
+        "composer": (Composer, ComposerForm),
+        "poet": (Poet, PoetForm),
+        "arranger": (Arranger, ArrangerForm),
+        "musician": (Musician, MusicianForm),
+        "conductor": (Conductor, ConductorForm),
+    }
+
+    def get_model(self):
+        role = self.kwargs.get("role")
+        if role not in self.role_model_form_map:
+            raise Http404(f"invalid role {role}")
+        return self.role_model_form_map[role][0]
+
+    def get_form_class(self):
+        role = self.kwargs.get("role")
+        return self.role_model_form_map[role][1]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["role"] = self.kwargs.get("role")
+        return context

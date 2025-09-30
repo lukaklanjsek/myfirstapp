@@ -1,0 +1,23 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Ensembles{% endblock %}
+{% block content %}
+
+<div>
+    <a href="{% url 'secondapp:ensemble_form' %}"><button type="button">+ Add New Ensemble +</button></a><br><br>
+</div>
+<h2>Ensembles:</h2>
+<table>
+    <tr>
+        <th>Name:</th>
+        <th>Address:</th>
+        <th>Additional notes:</th>
+    </tr>
+    {% for ensemble in ensemble_list %}
+        <tr>
+            <td>{{ ensemble.name }}</td>
+            <td>{{ ensemble.address}}</td>
+            <td>{{ ensemble.additional_notes }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

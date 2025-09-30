@@ -14,19 +14,28 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import path
-
-
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls.static import static
+from django.views.decorators.cache import cache_page
+from django.views.i18n import JavaScriptCatalog
 
 urlpatterns = [
-    path("", include("secondapp.urls")),
-    path("polls/", include("polls.urls")),
-    path("secondapp/", include("secondapp.urls", namespace="secondapp")),
     path("admin/", admin.site.urls),
+    path("polls/", include("polls.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path('jsi18n/', cache_page(3600)(JavaScriptCatalog.as_view(packages=['formset'])), name='javascript-catalog'),
+    path("select2/", include("django_select2.urls")),
+    path("", include("secondapp.urls", namespace="secondapp")),
+
 ]
 
 
+
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
+urlpatterns += staticfiles_urlpatterns()
 

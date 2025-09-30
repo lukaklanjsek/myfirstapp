@@ -1,0 +1,11 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
+{% block content %}
+
+<h1>{% if object %}Edit{% else %}Add{% endif %} Ensemble</h1>
+<form method="POST">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+<p>You are {% if object %}editing {{ object }}{{object.pk}}{% else %}adding new {{ object }}{{object.pk}}{% endif %}</p>
+{% endblock %}

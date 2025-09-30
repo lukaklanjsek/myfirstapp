@@ -1,0 +1,78 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{ role }}{% endblock %}
+{% block content %}
+
+
+<div class="page-header">
+    <h1>{{ role }}s list</h1>
+</div>
+
+<div class="action-buttons">
+    <a href="{% url 'secondapp:person_form' role=role %}">
+        <button type="button">Add New {{ role }}</button>
+    </a>
+</div>
+
+<div class="person-content">
+    <div class="is-active">
+        <h2>Active {{ role }} people:</h2>
+
+        <table>
+            <tr>
+                <th>num</th>
+                <th>Name</th>
+                {% if has_voice %}
+                    <th>voice</th>
+                    <th>missing:</th>
+                {% endif %}
+                <th>action links</th>
+            </tr>
+
+            {% for person in active_people %}
+                <tr>
+                    <td>{{person.pk}}</td>
+                    <td>{{ person.first_name }} {{person.last_name}} </td>
+                    {% if has_voice %}
+                        <td>{{ person.voice }}</td>
+                        <td>{{ person.missing_count }} / {{ person.total_rehearsals }}</td>
+                    {% endif %}
+                    <td>
+                        <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                        <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+    {% if inactive_people %}
+        <div class="is-inactive">
+            <h2>Inactive {{ role }} people:</h2>
+            <table>
+            <tr>
+                <th>num</th>
+                <th>Name</th>
+                {% if has_voice %}
+                    <th>voice</th>
+                {% endif %}
+                <th>action links</th>
+            </tr>
+
+            {% for person in inactive_people %}
+                <tr>
+                    <td>{{person.pk}}</td>
+                    <td>{{ person.first_name }} {{person.last_name}} </td>
+                    {% if has_voice %}
+                        <td>{{ person.voice }}</td>
+                    {% endif %}
+                    <td>
+                        <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">View</a>
+                        <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">Edit</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

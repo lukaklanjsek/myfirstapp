@@ -1,11 +1,13 @@
 from random import choices
 
 from django.db import models
+from django.urls import reverse
 import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
 #from django.forms import ModelMultipleChoiceField
+from django.core.exceptions import ValidationError
 
 
 
@@ -42,6 +44,7 @@ class Role(Enum):
     ARRANGER = "Arranger"
     POET = "Poet"
     MUSICIAN = "Musician"
+    CONDUCTOR = "Conductor"
 
 
 class Tag(models.Model):
@@ -62,7 +65,6 @@ class Person(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, db_index=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
-    #  TODO: make "role" no longer selectable within other models  -> how are we progressing on other roles???
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     email = models.EmailField(unique=True, blank=True, null=True)
@@ -75,14 +77,31 @@ class Person(models.Model):
     influenced_by = models.TextField(blank=True, null=True)
     awards = models.TextField(blank=True, null=True)
     website = models.TextField(blank=True, null=True)
-    tags = models.ManyToManyField(Tag, help_text="max singers 5, others 3", blank=True)
     additional_notes = models.TextField(blank=True, null=True)
-    # portrait =    ->    # TODO
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=["last_name"]),
+            models.Index(fields=["role"]),
+        ]
+
+    def get_full_name(self):
+        names = [self.first_name, self.last_name]
+        if self.third_name:
+            names.insert(1, self.third_name)
+        return " ".join(names)
+
+    def get_display_name(self):
+        display_name = f"{self.last_name}, {self.first_name}"
+        if self.third_name:
+            display_name += f" {self.third_name}"
+        return display_name
+
+    def get_role_name(self):
+        return self.__class__.__name__.lower()
 
 
 class Singer(Person):
@@ -94,109 +113,176 @@ class Singer(Person):
     date_joined = models.DateField("joined",default=date.today)
 
     class Meta(Person.Meta):
-        ordering = ["voice"]
+        ordering = ["voice", "last_name"]
+        verbose_name = "Singer"
+        verbose_name_plural = "Singers"
 
     def save(self, *args, **kwargs):
         self.role = Role.SINGER.name
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return  reverse("secondapp:person_detail", kwargs={"role": "singer", "pk": self.pk})
+
+    def get_rehearsal_attendance(self):
+        present_rehearsals = self.rehearsal_set.all()
+        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
+        missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
+
+        return {
+            "present": present_rehearsals,
+            "missing": missing_rehearsals,
+        }
 
     def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.voice} - {tag_names}"
+        status = "(Inactive)" if not self.is_active else ""
+        return f"{self.get_display_name()} - {self.voice} {status}"
 
 
 class Composer(Person):
-    work_style = models.CharField(max_length=250)
     musical_era = models.CharField(max_length=250, blank=True, null=True)
-    instruments = models.CharField("favorite instruments", max_length=250)
+
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Composer"
+        verbose_name_plural = "Composers"
 
     def save(self, *args, **kwargs):
         self.role = Role.COMPOSER.name
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+    def get_absolute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "composer", "pk": self.pk})
 
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.musical_era} {tag_names}"
+    def __str__(self):
+        return f"{self.get_display_name()}"
 
 
 class Poet(Person):
     writing_style =  models.CharField(max_length=250)
     literary_style = models.CharField(max_length=250)
 
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Poet"
+        verbose_name_plural = "Poets"
+
     def save(self, *args, **kwargs):
         self.role = Role.POET.name
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+    def get_absolute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "poet", "pk": self.pk})
 
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {tag_names}"
+    def __str__(self):
+        return f"{self.get_display_name()}"
 
 
 class Arranger(Person):
     style = models.CharField(max_length=250)
-    instruments = models.CharField("favorite instruments", max_length=250)
+
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Arranger"
+        verbose_name_plural = "Arrangers"
 
     def save(self, *args, **kwargs):
         self.role = Role.ARRANGER.name
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+    def get_abslute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "arranger", "pk": self.pk})
 
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.style} - {tag_names}"
+    def __str__(self):
+        return f"{self.get_display_name()}"
 
 
 class Musician(Person):
     instrument = models.CharField("primary instrument", max_length=250)
-    genre =  models.CharField("primary genre", max_length=250)
-    #bands = models.ManyToManyField "active currently"
-    #songs = models.ManyToManyField "best song performances"
+
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Musician"
+        verbose_name_plural = "Musicians"
 
     def save(self, *args, **kwargs):
         self.role = Role.MUSICIAN.name
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        max_tags = 3
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
+    def get_abslute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "musician", "pk": self.pk})
 
-        return f"{self.first_name}, {self.last_name} {self.third_name} - {self.instrument} - {tag_names}"
+    def __str__(self):
+        return f"{self.get_display_name()} - {self.instrument}"
+
+
+class Conductor(Person):
+    is_active = models.BooleanField(default=True)
+    messenger = models.CharField(max_length=250, blank=True, null=True)
+    date_joined = models.DateField("joined",default=date.today)
+
+    class Meta(Person.Meta):
+        ordering = ["last_name", "first_name"]
+        verbose_name = "Conductor"
+        verbose_name_plural = "Conductors"
+
+    def save(self, *args, **kwargs):
+        self.role = Role.CONDUCTOR.name
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("secondapp:person_detail", kwargs={"role": "conductor", "pk": self.pk})
+
+    def get_rehearsal_attendance(self):
+        present_rehearsals = self.rehearsal_set.all()
+        all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
+        missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
+
+        return {
+            "present": present_rehearsals,
+            "missing": missing_rehearsals,
+        }
+
+    def __str__(self):
+        return f"{self.get_display_name()}"
 
 
 class Song(models.Model):
     title =  models.CharField(max_length=250)
     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
-    arranger = models.ForeignKey(Arranger, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
-    genre = models.CharField(max_length=200, blank=True, null=True)
-    tags = models.ManyToManyField(Tag, help_text="max 3", blank=True)
+    number_of_pages = models.IntegerField(blank=True, null=True)
+    number_of_copies = models.IntegerField(blank=True, null=True)
+    year = models.DateField("year of creation", blank=True, null=True)
+    group = models.CharField("mixed/male/female" , max_length=250, blank=True, null=True)
+    number_of_voices = models.IntegerField(blank=True, null=True)
+    additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ["title"]
+        indexes = [
+            models.Index(fields=["title"]),
+        ]
+
+    def get_absolute_url(self):
+        return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
+
     def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        composer_name = self.composer.last_name #if self.composer else "Unknown"
-        return f"{self.title} - {composer_name} - {self.genre} - {tag_names}"
+        composer_name = self.composer.last_name if self.composer else "Unknown"
+        return f"{self.title} - {composer_name}"
 
 
 class Rehearsal(models.Model):
     subtitle = models.CharField(max_length=250)
     location = models.CharField(max_length=250)
     parking = models.CharField(max_length=250, blank=True, null=True)
-    calendar = models.DateTimeField(blank=True, null=True, unique=True)
+    calendar = models.DateTimeField(unique=True)
     additional_notes = models.TextField(blank=True, null=True)
-    singers = models.ManyToManyField(Singer, blank=True)
+    singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
+    conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")
     songs = models.ManyToManyField(Song, blank=True)
-    tags = models.ManyToManyField(Tag, help_text="max 5", blank=True)
     duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
     attendance_count = models.PositiveIntegerField(default=0, help_text="Actual attendance count")
     is_cancelled = models.BooleanField(default=False)
@@ -205,6 +291,11 @@ class Rehearsal(models.Model):
 
     class Meta:
         verbose_name_plural = "Rehearsals"
+        ordering = ["-calendar"]
+        indexes = [
+            models.Index(fields=["calendar"]),
+            models.Index(fields=["is_cancelled"]),
+        ]
 
     def recent(self):
         return self.calendar >= timezone.now() - datetime.timedelta()
@@ -220,22 +311,54 @@ class Rehearsal(models.Model):
     def get_song_count(self):
         return self.songs.count()
 
-    def __str__(self):
-        max_tags = 5
-        tag_names = ", ".join(tag.name for tag in self.tags.all()[:max_tags])
-        status = "(Cancelled)" if self.is_cancelled else ""
-        return f"{self.calendar} - {self.subtitle} {status} - {tag_names}"
+    def get_absolute_url(self):
+        return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
 
-    # Song
-    #  -> temporary out:
-    #number_of_copies = models.IntegerField(validators=[MinValueValidator(1)])
-    #number_of_pages = models.IntegerField(validators=[MinValueValidator(1)])
-    #number_of_voices = models.IntegerField(validators=[MinValueValidator(1)])
-    #song_difficulty_level =  models.CharField(max_length=20, choices=SkillLevel.choices, default=SkillLevel.EXPERIENCED)
-    #transcript = models.TextField()
-    #translation = models.TextField(blank=True, null=True)
-    #speech_articulation = models.TextField(blank=True, null=True)
-    #date_of_rehearsal = models.DateField("date of rehearsal")  # -> for later implementation
-    #date_of_concert = models.ForeignKey(RehearsalDate, on_delete=models.PROTECT, related_name='song', blank=True, null=True) #, default=1 # -> for later implementation
-    #date_added = models.DateField("added to archive", default=date.today)
-    #additional_songs_notes = models.TextField(blank=True, null=True)
+    def get_singer_status(self):
+        now = timezone.now()
+        active_singers = Singer.objects.filter(is_active=True)
+        present_singers = self.singers.all()
+        missing_singers = active_singers.exclude(pk__in=present_singers)
+
+        return {
+            "present": present_singers,
+            "missing": missing_singers,
+        }
+
+    def __str__(self):
+        status = "(Cancelled)" if self.is_cancelled else ""
+        calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M") #if self.calendar else "TBD"
+        return f"{calendar_display} - {self.subtitle} {status}"
+
+
+class Ensemble(models.Model):
+    name = models.CharField(max_length=250)
+    address = models.TextField()
+    additional_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class Activity(models.Model):
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    singer = models.ForeignKey(Singer, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
+    conductor = models.ForeignKey(Conductor, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
+    ensemble = models.ForeignKey(Ensemble, on_delete=models.PROTECT, related_name="activity")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def get_absolute_url(self):     # this is supposed to point back to the person
+        if self.singer:
+            role = "singer"
+            person = self.singer
+        elif self.conductor:
+            role = "conductor"
+            person = self.conductor
+        else:
+            return "/"
+
+        return reverse("secondapp:person_detail", kwargs={"role": role, "pk": person.pk})

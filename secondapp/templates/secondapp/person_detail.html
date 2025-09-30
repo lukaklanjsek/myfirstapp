@@ -1,0 +1,104 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{person.pk}}|{{role}}{% endblock %}
+{% block content %}
+
+<div class="action-buttons-top">
+    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">
+        <button type="button">UPDATE - EDIT</button>
+    </a>
+    <a href="{% url 'secondapp:person_delete' role=role pk=person.pk %}">
+        <button type="button">Delete</button>
+    </a>
+</div>
+
+<h2>{{ person }}</h2>
+<p>Role: {{ role }}</p>
+
+<div class="person-details">
+    <div class="basic-info">
+        <h2>{{ person.first_name }} {{ person.last_name }} {{ person.third_name }}</h2>
+        <p><strong>Role:</strong> {{ role }}</p>
+        <p><strong>Skill Level:</strong> {{ person.skill_level }}</p>
+
+        {% if person.is_active %}
+            <p><strong>Is Active:</strong>
+                {% if person.is_active %}YES{% else %}NO{% endif %}
+            </p>
+        {% endif %}
+        {% if person %}
+            <h3>Rehearsal Attendance</h3>
+            <h4>Present at Rehearsals ({{ present|length }}) </h4>
+
+            <h4>Missing from Rehearsals ({{ missing|length }}) </h4>
+            <ul>
+                {% for rehearsal in missing %}
+                    <li>{{ rehearsal.calendar }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <p><strong>Date Joined:</strong> {{ person.date_joined }}</p>
+    </div>
+
+    <div class="activity">
+        {% if person.activity.exists %}
+            {% for activity in person.activity.all %}
+              <li>
+                {{ activity.ensemble.name }}: {{ activity.start_date }} - {{ activity.end_date }}
+                <a href="{% url 'secondapp:activity_update' role=role pk=activity.pk %}">UPDATE</a> -
+                <a href="{% url 'secondapp:activity_confirm_delete' role=role pk=activity.pk %}">DELETE</a>
+              </li>
+            {% endfor %}
+        <a href="{% url 'secondapp:activity_form' role=role pk=person.pk %}">Add Activity</a>
+        {% else %}
+            <a href="{% url 'secondapp:activity_form' role=role pk=person.pk %}">Add Activity</a>
+        {% endif %}
+    </div>
+
+    <div class="personal-info">
+        <h3>Personal Information</h3>
+        {% if person.shirt_size %}
+        <p><strong>Shirt Size:</strong> {{ person.shirt_size }}</p>
+        {% endif %}
+        {% if person.messenger %}
+        <p><strong>Messenger:</strong> {{ person.messenger }}</p>
+        {% endif %}
+        {% if person.website %}
+            <p><strong>Website:</strong> <a href="{{ person.website }}">{{ person.website }}</a></p>
+        {% endif %}
+    </div>
+
+    <div class="musical-background">
+        <h3>Musical Background</h3>
+        {% if person.biography %}
+            <p><strong>Biography:</strong> {{ person.biography }}</p>
+        {% endif %}
+        {% if person.favorite_works %}
+            <p><strong>Favorite Works:</strong> {{ person.favorite_works }}</p>
+        {% endif %}
+        {% if person.influenced_by %}
+            <p><strong>Influenced By:</strong> {{ person.influenced_by }}</p>
+        {% endif %}
+        {% if person.awards %}
+            <p><strong>Awards:</strong> {{ person.awards }}</p>
+        {% endif %}
+    </div>
+
+    <div class="additional-info">
+        {% if person.tags.all %}
+            <p><strong>Tags:</strong> {{ person.tags.all|join:", " }}</p>
+        {% endif %}
+        {% if person.additional_notes %}
+            <p><strong>Additional Notes:</strong> {{ person.additional_notes }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="action-buttons-bottom">
+    <a href="{% url 'secondapp:person_update' role=role pk=person.pk %}">
+        <button type="button">UPDATE - EDIT</button>
+    </a>
+    <a href="{% url 'secondapp:person_delete' role=role pk=person.pk %}">
+        <button type="button">Delete</button>
+    </a>
+</div>
+{% endblock %}

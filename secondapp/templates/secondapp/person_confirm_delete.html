@@ -1,20 +1,18 @@
 {% extends "secondapp/base.html" %}
-{% block title %}{{singer.pk}}confirm{% endblock %}
+{% block title %}{{role}}confirm{% endblock %}
 {% block content %}
-
-
 <div class="delete-confirmation-container">
     <div class="warning-header">
-        <h1>Delete Singer Confirmation</h1>
+        <h1>Delete {{ role }} Confirmation</h1>
     </div>
 
     <div class="warning-message">
-        <p>Are you sure you want to delete this singer?</p>
+        <p>Are you sure you want to delete this {{ person }}</p>
         <div class="item-details">
-            <p><strong>Name:</strong> {{singer.first_name}} {{singer.last_name}}</p>
-            <p><strong>Singer ID:</strong> {{singer.pk}}</p>
-            {% if singer.voice %}
-                <p><strong>Voice:</strong> {{singer.voice}}</p>
+            <p><strong>Name:</strong> {{person.first_name}} {{person.last_name}}</p>
+            <p><strong>{{ role }} ID:</strong> {{ person.pk }}</p>
+            {% if role.voice %}
+                <p><strong>Voice:</strong> {{role.voice}}</p>
             {% endif %}
         </div>
         <div class="warning-note">
@@ -23,14 +21,14 @@
     </div>
 
     <div class="confirmation-form">
-        <form method="POST">
+        <form method="POST" action="{% url 'secondapp:person_delete' role=role pk=person.pk %}">
             {% csrf_token %}
             <div class="form-actions">
                 <div class="danger-action">
                     <button type="submit" class="delete-btn">Yes, delete</button>
                 </div>
                 <div class="safe-action">
-                    <a href="{% url 'secondapp:singer_detail' singer.pk %}">
+                    <a href="{% url 'secondapp:person_detail' role=role pk=person.pk %}">
                         <button type="button" class="cancel-btn">Cancel</button>
                     </a>
                 </div>
@@ -39,7 +37,7 @@
     </div>
 
     <div class="additional-info">
-        <p>This will remove the singer from all rehearsals they were assigned to.</p>
+        <p>This will remove the {{ role }} from all rehearsals and songs they were assigned to.</p>
     </div>
 </div>
 

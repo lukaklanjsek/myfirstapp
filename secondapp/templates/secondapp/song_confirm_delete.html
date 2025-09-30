@@ -10,13 +10,10 @@
     <div class="warning-message">
         <p>Are you sure you want to delete this song?</p>
         <div class="item-details">
-            <p><strong>Title:</strong> {{ song.title }}</p>
-            <p><strong>Song ID:</strong> {{song.pk}}</p>
+            <p>Title: {{ song.title }}</p>
+            <p>Song ID: {{song.pk}}</p>
             {% if song.composer %}
-                <p><strong>Composer:</strong> {{song.composer}}</p>
-            {% endif %}
-            {% if song.genre %}
-                <p><strong>Genre:</strong> {{song.genre}}</p>
+                <p>Composer: {{song.composer}}</p>
             {% endif %}
         </div>
         <div class="warning-note">
