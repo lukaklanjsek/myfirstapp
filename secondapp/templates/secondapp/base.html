@@ -38,6 +38,7 @@
                 {% endfor %}
                 <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
                 <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
+                <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>
                 <li>
                     <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
                         {% csrf_token %}

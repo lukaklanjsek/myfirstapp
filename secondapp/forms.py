@@ -1,6 +1,6 @@
 from django import forms
 from .models import Song, Person, Singer, Composer, Musician, Arranger, Poet, Tag
-from .models import Rehearsal, Activity, Conductor, Ensemble
+from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 #from .widgets import DateInput, DateTimeInput
 from django_select2 import forms as s2forms
 from django_select2.forms import ModelSelect2MultipleWidget
@@ -188,3 +188,11 @@ class ActivityForm(BaseForm):
             "start_date": DatePickerInput(),
             "end_date": DatePickerInput(),
         }
+
+class ImportFileForm(BaseForm):
+    class Meta:
+        model = ImportFile
+        fields = [
+            "title",
+            "my_file"
+        ]

@@ -1,0 +1,21 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Import{% endblock %}
+{% block content %}
+
+<div>
+    <a href="{% url 'secondapp:import_upload' %}"><button type="button">+ New Upload +</button></a><br><br>
+</div>
+<h2>Imports:</h2>
+<table>
+    <tr>
+        <th>Title:</th>
+        <th>Date:</th>
+    </tr>
+    {% for import in import_list %}
+        <tr>
+            <td>{{ ensemble.name }}</td>
+            <td>{{ import.updated_at }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

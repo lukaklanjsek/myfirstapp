@@ -362,3 +362,9 @@ class Activity(models.Model):
             return "/"
 
         return reverse("secondapp:person_detail", kwargs={"role": role, "pk": person.pk})
+
+
+class ImportFile(models.Model):
+    title = models.CharField(max_length=250)
+    my_file = models.FileField(upload_to="imports/")
+    updated_at = models.DateTimeField(auto_now=True)

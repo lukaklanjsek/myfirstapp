@@ -1,18 +1,23 @@
 from django.http import HttpRequest, HttpResponse, Http404
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
 from datetime import datetime, timedelta
 from django.utils import timezone
 #from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView
 from django.views.generic.edit import DeleteView
 from django.db.models import Q
 from django.apps import apps
+from django.conf import settings
+import os
+import csv
 
-from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm
-from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor
+
+
+from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
+from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 from .mixins import TagListAndCreateMixin, PersonRoleMixin
 
 class IndexView(generic.ListView):
@@ -445,3 +450,30 @@ class ActivityDeleteView(generic.DeleteView):
         elif self.object.conductor:
             return self.object.conductor.get_absolute_url()
         return "/"
+
+#---------------------------------------------------------
+
+class ImportFileListView(generic.ListView):
+    model = ImportFile
+    template_name = "secondapp/import_list.html"
+    context_object_name = "import_list"
+
+
+#def handle_uploaded_file(f):
+#    upload_path = os.path.join(settings.MEDIA_ROOT, f.name)
+#    with open(upload_path, 'wb+') as destination:
+#        for chunk in f.chunks():
+#            destination.write(chunk)
+
+
+class ImportFileUpdateView(generic.UpdateView):
+    form_class = ImportFileForm
+    template_name = "secondapp/import_upload.html"
+    success_url = reverse_lazy("secondapp:import_list")
+
+
+class ImportFileDetailView(generic.DetailView):
+    model = ImportFile
+    template_name = "secondapp/import_detail.html"
+    context_object_name = "import_detail"
+
