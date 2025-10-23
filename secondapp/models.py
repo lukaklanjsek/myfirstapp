@@ -366,5 +366,5 @@ class Activity(models.Model):
 
 class ImportFile(models.Model):
     title = models.CharField(max_length=250)
-    my_file = models.FileField(upload_to="imports/")
+    file = models.FileField(upload_to="imports/")
     updated_at = models.DateTimeField(auto_now=True)

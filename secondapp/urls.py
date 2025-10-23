@@ -24,8 +24,8 @@ urlpatterns = [
     path("tag/", views.TagListAndCreateView.as_view(), name="tag"),
 
     path("import/", views.ImportFileListView.as_view(), name="import_list"),
-    path("import/upload", views.ImportFileUpdateView.as_view(), name="import_upload"),
-    path("import/detail", views.ImportFileDetailView.as_view(), name="import_detail"),
+    path("import/upload/", views.ImportFileFormView.as_view(), name="import_upload"),
+    path("import/<int:pk>/", views.ImportFileDetailView.as_view(), name="import_detail"),
 
     path("ensemble/", views.EnsembleListView.as_view(), name="ensemble_list"),
     path("ensemble/<int:pk>/", views.EnsembleDetailView.as_view(), name="ensemble_detail"),

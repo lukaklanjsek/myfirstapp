@@ -190,9 +190,10 @@ class ActivityForm(BaseForm):
         }
 
 class ImportFileForm(BaseForm):
+    file = forms.FileField()
     class Meta:
         model = ImportFile
         fields = [
             "title",
-            "my_file"
+            "file"
         ]

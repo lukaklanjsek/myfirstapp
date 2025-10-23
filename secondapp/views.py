@@ -1,5 +1,5 @@
 from django.http import HttpRequest, HttpResponse, Http404
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse_lazy
 from django.contrib import messages
 from datetime import datetime, timedelta
@@ -12,9 +12,6 @@ from django.db.models import Q
 from django.apps import apps
 from django.conf import settings
 import os
-import csv
-
-
 
 from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
@@ -459,21 +456,29 @@ class ImportFileListView(generic.ListView):
     context_object_name = "import_list"
 
 
-#def handle_uploaded_file(f):
-#    upload_path = os.path.join(settings.MEDIA_ROOT, f.name)
-#    with open(upload_path, 'wb+') as destination:
-#        for chunk in f.chunks():
-#            destination.write(chunk)
+def handle_uploaded_file(f):
+    upload_path = os.path.join(settings.MEDIA_ROOT, f.name)
+    with open(upload_path, 'wb+') as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
 
 
-class ImportFileUpdateView(generic.UpdateView):
+class ImportFileFormView(generic.FormView):
     form_class = ImportFileForm
+    model = ImportFile
     template_name = "secondapp/import_upload.html"
     success_url = reverse_lazy("secondapp:import_list")
 
+    def form_valid(self, form):
+        file = form.cleaned_data.get("file")
+        handle_uploaded_file(file)
+        ImportFile.objects.create(
+            title=form.cleaned_data.get("title"),
+            file=f"imports/{file.name}"
+        )
+        return super().form_valid(form)
 
 class ImportFileDetailView(generic.DetailView):
     model = ImportFile
     template_name = "secondapp/import_detail.html"
     context_object_name = "import_detail"
-
