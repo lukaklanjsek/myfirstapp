@@ -23,17 +23,17 @@
 </div>
 
 <div class="rehearsal-details">
-    <div class="singers-section">
-        <h2> Singers missing </h2>
+    <div class="members-section">
+        <h2> Members missing </h2>
         <ul>
-            {% for singer in missing %}
-            <li> {{ singer.voice }} {{ singer.first_name }} </li>
+            {% for member in missing %}
+            <li> {{ member.voice }} {{ member.first_name }} </li>
             {% endfor %}
         </ul>
-        <h2> Singers present </h2>
+        <h2> Members present </h2>
         <ul>
-            {% for singer in present %}
-                <li>{{ singer.voice }} {{ singer.first_name}}
+            {% for member in present %}
+                <li>{{ member.voice }} {{ member.first_name}}
                 </li>
             {% endfor %}
         </ul>

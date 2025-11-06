@@ -1,5 +1,5 @@
 from django import forms
-from .models import Song, Person, Singer, Composer, Musician, Arranger, Poet, Tag
+from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 #from .widgets import DateInput, DateTimeInput
 from django_select2 import forms as s2forms
@@ -7,15 +7,15 @@ from django_select2.forms import ModelSelect2MultipleWidget
 from django_flatpickr.widgets import DatePickerInput, DateTimePickerInput
 
 
-class SingerWidget(ModelSelect2MultipleWidget):
-    model = Singer
+class MemberWidget(ModelSelect2MultipleWidget):
+    model = Member
     search_fields = [
         "first_name__icontains",
         "last_name__icontains",
     ]
 
     def get_queryset(self):
-        return Singer.objects.filter(is_active=True)
+        return Member.objects.filter(is_active=True)
 
 class SongWidget(ModelSelect2MultipleWidget):
     model = Song
@@ -44,36 +44,37 @@ class PersonForm(BaseForm):
             "first_name",
             "last_name",
             "third_name",
-            "phone_number",
-            "email",
             "address",
+            "email",
+            "phone_number",
+            "mobile_number",
             "birth_date",
-            "death_date",
-            "nationality",
-            "biography",
-            "favorite_works",
-            "influenced_by",
-            "awards",
-            "website",
+#            "death_date",
+#            "nationality",
+#            "biography",
+#            "favorite_works",
+#            "influenced_by",
+#            "awards",
+#            "website",
             "additional_notes"
         ]
 
 
 
-class SingerForm(PersonForm):
+class MemberForm(PersonForm):
     class Meta:
-        model = Singer
+        model = Member
         fields = PersonForm.Meta.fields + [
             "voice",
             "is_active",
-            "skill_level",
-            "messenger",
-            "shirt_size",
-            "date_joined"
+#            "skill_level",
+#            "messenger",
+#            "shirt_size",
+            "date_active"
         ]
-        widgets = {"date_joined": DatePickerInput(),
+        widgets = {#"date_joined": DatePickerInput(),
                    "birth_date": DatePickerInput(),
-                   "death_date": DatePickerInput(),
+                   #"death_date": DatePickerInput(),
         }
 
 
@@ -83,7 +84,7 @@ class ComposerForm(PersonForm):
         fields = PersonForm.Meta.fields + ["musical_era"]
         widgets = {
             "birth_date": DatePickerInput(),
-            "death_date": DatePickerInput(),
+#            "death_date": DatePickerInput(),
         }
 
 
@@ -93,7 +94,7 @@ class PoetForm(PersonForm):
         fields = PersonForm.Meta.fields + ["writing_style", "literary_style"]
         widgets = {
             "birth_date": DatePickerInput(),
-            "death_date": DatePickerInput(),
+#            "death_date": DatePickerInput(),
         }
 
 
@@ -103,7 +104,7 @@ class ArrangerForm(PersonForm):
         fields = PersonForm.Meta.fields + ["style"]
         widgets = {
             "birth_date": DatePickerInput(),
-            "death_date": DatePickerInput(),
+#            "death_date": DatePickerInput(),
         }
 
 
@@ -113,7 +114,7 @@ class MusicianForm(PersonForm):
         fields = PersonForm.Meta.fields + ["instrument"]
         widgets = {
             "birth_date": DatePickerInput(),
-            "death_date": DatePickerInput(),
+#            "death_date": DatePickerInput(),
         }
 
 class ConductorForm(PersonForm):
@@ -121,13 +122,13 @@ class ConductorForm(PersonForm):
         model = Conductor
         fields = PersonForm.Meta.fields + [
             "is_active",
-            "messenger",
+#            "messenger",
             "date_joined"
         ]
         widgets = {
-                "date_joined": DatePickerInput(),
+#                "activity": DatePickerInput(),
                 "birth_date": DatePickerInput(),
-                "death_date": DatePickerInput(),
+#                "death_date": DatePickerInput(),
             }
 
 
@@ -145,13 +146,13 @@ class RehearsalForm(BaseForm):
     class Meta:
         model = Rehearsal
         fields = ["subtitle","location", "parking", "calendar", "additional_notes",
-                  "singers", "conductors", "songs", "duration_minutes", "attendance_count",
+                  "members", "conductors", "songs", "duration_minutes", "attendance_count",
                   "is_cancelled"]
         widgets = {
             'calendar': DateTimePickerInput(),
             'duration_minutes': forms.NumberInput(attrs={'min': '1', 'placeholder': 'e.g. 180'}),
             'additional_notes': forms.Textarea(attrs={'rows': 3}),
-            'singers': SingerWidget(attrs={'style': 'width: 100%;'}),
+            'members': MemberWidget(attrs={'style': 'width: 100%;'}),
             'conductors': ModelSelect2MultipleWidget(model=Conductor, search_fields=["first_name__icontains"], attrs={'style': 'width: 100%;'}),
             'songs': SongWidget(attrs={'style': 'width: 100%;'}),
         }
@@ -191,6 +192,7 @@ class ActivityForm(BaseForm):
 
 class ImportFileForm(BaseForm):
     file = forms.FileField()
+    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",), ("rehearsals", "Rehearsals")], required=True)
     class Meta:
         model = ImportFile
         fields = [
