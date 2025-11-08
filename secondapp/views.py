@@ -481,15 +481,14 @@ class ImportFileFormView(generic.FormView):
         if import_mode == "members":
             lines = uploaded_file.read().decode("utf-8").splitlines()
             reader = csv.DictReader(lines)
+#            for row in reader:
 
 
-
-            for row in reader:
-                try:
-
-                    pass
-                except: #Exception as e:
-                    pass#print(f"error at import")
+#                try:
+#                    pass
+#                except: #Exception as e:
+#                    pass#print(f"error at import")
+            uploaded_file.close()
 
         return super().form_valid(form)
 
