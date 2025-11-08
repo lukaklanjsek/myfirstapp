@@ -39,7 +39,7 @@ class SkillLevel(Enum):
 
 
 class Role(Enum):
-    SINGER = "Singer"
+    MEMBER = "Member"
     COMPOSER = "Composer"
     ARRANGER = "Arranger"
     POET = "Poet"
@@ -66,17 +66,18 @@ class Person(models.Model):
     last_name = models.CharField(max_length=100, db_index=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
-    phone_number = models.CharField(max_length=17, blank=True, null=True)
-    email = models.EmailField(unique=True, blank=True, null=True)
     address = models.CharField(max_length=250, blank=True, null=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
+    phone_number = models.CharField(max_length=17, blank=True, null=True)
+    mobile_number = models.CharField(max_length=17, blank=True, null=True)
     birth_date = models.DateField("birthday", blank=True, null=True)
-    death_date = models.DateField("death day", blank=True, null=True)
-    nationality = models.CharField("nationality", max_length=100, blank=True, null=True)
-    biography = models.TextField("short bio", blank=True, null=True)
-    favorite_works = models.TextField(blank=True, null=True)
-    influenced_by = models.TextField(blank=True, null=True)
-    awards = models.TextField(blank=True, null=True)
-    website = models.TextField(blank=True, null=True)
+#    death_date = models.DateField("death day", blank=True, null=True)
+#    nationality = models.CharField("nationality", max_length=100, blank=True, null=True)
+#    biography = models.TextField("short bio", blank=True, null=True)
+#    favorite_works = models.TextField(blank=True, null=True)
+#    influenced_by = models.TextField(blank=True, null=True)
+#    awards = models.TextField(blank=True, null=True)
+#    website = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,25 +105,25 @@ class Person(models.Model):
         return self.__class__.__name__.lower()
 
 
-class Singer(Person):
+class Member(Person):
     voice = models.CharField(max_length=10, choices=[(voice.name, voice.value) for voice in VoiceType])
     is_active = models.BooleanField(default=True)
-    skill_level = models.CharField(max_length=20, choices=[(skill.name, skill.value) for skill in SkillLevel])
-    messenger = models.CharField(max_length=250, blank=True, null=True)
-    shirt_size = models.CharField(max_length=4, choices=[(size.name, size.value) for size in ShirtSize], blank=True, null=True)
-    date_joined = models.DateField("joined",default=date.today)
+#    skill_level = models.CharField(max_length=20, choices=[(skill.name, skill.value) for skill in SkillLevel])
+#    messenger = models.CharField(max_length=250, blank=True, null=True)
+#    shirt_size = models.CharField(max_length=4, choices=[(size.name, size.value) for size in ShirtSize], blank=True, null=True)
+    date_active = models.TextField("date_active", blank=True, null=True)
 
     class Meta(Person.Meta):
         ordering = ["voice", "last_name"]
-        verbose_name = "Singer"
-        verbose_name_plural = "Singers"
+        verbose_name = "Member"
+        verbose_name_plural = "Members"
 
     def save(self, *args, **kwargs):
-        self.role = Role.SINGER.name
+        self.role = Role.MEMBER.name
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return  reverse("secondapp:person_detail", kwargs={"role": "singer", "pk": self.pk})
+        return  reverse("secondapp:person_detail", kwargs={"role": "member", "pk": self.pk})
 
     def get_rehearsal_attendance(self):
         present_rehearsals = self.rehearsal_set.all()
@@ -280,7 +281,7 @@ class Rehearsal(models.Model):
     parking = models.CharField(max_length=250, blank=True, null=True)
     calendar = models.DateTimeField(unique=True)
     additional_notes = models.TextField(blank=True, null=True)
-    singers = models.ManyToManyField(Singer, blank=True, related_name= "rehearsal_set")
+    members = models.ManyToManyField(Member, blank=True, related_name= "rehearsal_set")
     conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")
     songs = models.ManyToManyField(Song, blank=True)
     duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
@@ -305,8 +306,8 @@ class Rehearsal(models.Model):
             return self.calendar > timezone.now()
         return False
 
-    def get_singer_count(self):
-        return self.singers.count()
+    def get_member_count(self):
+        return self.members.count()
 
     def get_song_count(self):
         return self.songs.count()
@@ -314,15 +315,15 @@ class Rehearsal(models.Model):
     def get_absolute_url(self):
         return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
 
-    def get_singer_status(self):
+    def get_member_status(self):
         now = timezone.now()
-        active_singers = Singer.objects.filter(is_active=True)
-        present_singers = self.singers.all()
-        missing_singers = active_singers.exclude(pk__in=present_singers)
+        active_members = Member.objects.filter(is_active=True)
+        present_members = self.members.all()
+        missing_members = active_members.exclude(pk__in=present_members)
 
         return {
-            "present": present_singers,
-            "missing": missing_singers,
+            "present": present_members,
+            "missing": missing_members,
         }
 
     def __str__(self):
@@ -345,16 +346,16 @@ class Ensemble(models.Model):
 class Activity(models.Model):
     start_date = models.DateField()
     end_date = models.DateField(blank=True, null=True)
-    singer = models.ForeignKey(Singer, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
+    member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
     conductor = models.ForeignKey(Conductor, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
     ensemble = models.ForeignKey(Ensemble, on_delete=models.PROTECT, related_name="activity")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def get_absolute_url(self):     # this is supposed to point back to the person
-        if self.singer:
-            role = "singer"
-            person = self.singer
+        if self.member:
+            role = "member"
+            person = self.member
         elif self.conductor:
             role = "conductor"
             person = self.conductor

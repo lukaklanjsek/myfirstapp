@@ -2,7 +2,12 @@
 {% block title %}{{object.pk}} New Import{% endblock %}
 {% block content %}
 
-<h1>Import Upload</h1>
+<h2> App models:</h2>
+{% for model, fields in models_info.items %}
+<tr>{{ model }}{% for field in fields %}{{ field }}{% endfor %}</tr>
+{% endfor %}
+
+<h2>Import Upload</h2>
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}

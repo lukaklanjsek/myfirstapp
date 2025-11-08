@@ -1,5 +1,11 @@
-from django.http import HttpRequest, HttpResponse, Http404
+import csv
+from dataclasses import field
+from fileinput import filename
+
+from django.core.files.uploadedfile import UploadedFile
+from django.http import HttpRequest, HttpResponse, Http404, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
+from django.template.context_processors import request
 from django.urls import reverse_lazy
 from django.contrib import messages
 from datetime import datetime, timedelta
@@ -13,8 +19,8 @@ from django.apps import apps
 from django.conf import settings
 import os
 
-from .forms import RehearsalForm, SingerForm, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
-from .models import Rehearsal, Singer, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
+from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
+from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 from .mixins import TagListAndCreateMixin, PersonRoleMixin
 
 class IndexView(generic.ListView):
@@ -38,10 +44,10 @@ class IndexView(generic.ListView):
         ]
 
         for rehearsal in context['upcoming_rehearsals']:
-            rehearsal.singer_status = rehearsal.get_singer_status()
+            rehearsal.member_status = rehearsal.get_member_status()
 
         for rehearsal in context['past_rehearsals']:
-            rehearsal.singer_status = rehearsal.get_singer_status()
+            rehearsal.member_status = rehearsal.get_member_status()
 
         happening_now = Rehearsal.objects.filter(
             is_cancelled=False,
@@ -77,10 +83,10 @@ class RehearsalListView(generic.ListView):
         ]
 
         for rehearsal in context['upcoming_rehearsals']:
-            rehearsal.singer_status = rehearsal.get_singer_status()
+            rehearsal.member_status = rehearsal.get_member_status()
 
         for rehearsal in context['past_rehearsals']:
-            rehearsal.singer_status = rehearsal.get_singer_status()
+            rehearsal.member_status = rehearsal.get_member_status()
 
         happening_now = Rehearsal.objects.filter(
             is_cancelled=False,
@@ -100,8 +106,8 @@ class RehearsalDetailView(generic.DetailView):
         context = super().get_context_data(**kwargs)
         rehearsal = self.object
         now = timezone.now()
-        singer_status = rehearsal.get_singer_status()
-        context.update(singer_status)
+        member_status = rehearsal.get_member_status()
+        context.update(member_status)
 
         return context
 
@@ -266,7 +272,7 @@ class PersonDetailView(PersonRoleMixin, DetailView):
         context = super().get_context_data(**kwargs)
         person = self.object
 
-        if isinstance(person, Singer):
+        if isinstance(person, Member):
             attendance = person.get_rehearsal_attendance()
             context.update(attendance)
 
@@ -388,8 +394,8 @@ class ActivityCreateView(generic.CreateView):
         role = self.kwargs["role"]
         person_id = self.kwargs["pk"]
 
-        if role == "singer":
-            form.instance.singer = Singer.objects.get(pk=person_id)
+        if role == "member":
+            form.instance.member = Member.objects.get(pk=person_id)
         elif role == "conductor":
             form.instance.conductor = Conductor.objects.get(pk=person_id)
 
@@ -399,8 +405,8 @@ class ActivityCreateView(generic.CreateView):
         context = super().get_context_data(**kwargs)
         context["role"] = self.kwargs["role"]
         person_id = self.kwargs["pk"]
-        if context["role"] == "singer":
-            context["person"] = Singer.objects.get(pk=person_id)
+        if context["role"] == "member":
+            context["person"] = Member.objects.get(pk=person_id)
         elif context["role"] == "conductor":
             context["person"] = Conductor.objects.get(pk=person_id)
         return context
@@ -415,9 +421,9 @@ class ActivityUpdateView(generic.UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.object.singer:
-            context["person"] = self.object.singer
-            context["role"] = "singer"
+        if self.object.member:
+            context["person"] = self.object.member
+            context["role"] = "member"
         elif self.object.conductor:
             context["person"] = self.object.conductor
             context["role"] = "conductor"
@@ -433,17 +439,17 @@ class ActivityDeleteView(generic.DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.object.singer:
-            context["person"] = self.object.singer
-            context["role"] = "singer"
+        if self.object.member:
+            context["person"] = self.object.member
+            context["role"] = "member"
         elif self.object.conductor:
             context["person"] = self.object.conductor
             context["role"] = "conductor"
         return context
 
     def get_success_url(self):
-        if self.object.singer:
-            return self.object.singer.get_absolute_url()
+        if self.object.member:
+            return self.object.member.get_absolute_url()
         elif self.object.conductor:
             return self.object.conductor.get_absolute_url()
         return "/"
@@ -456,27 +462,36 @@ class ImportFileListView(generic.ListView):
     context_object_name = "import_list"
 
 
-def handle_uploaded_file(f):
-    upload_path = os.path.join(settings.MEDIA_ROOT, f.name)
-    with open(upload_path, 'wb+') as destination:
-        for chunk in f.chunks():
-            destination.write(chunk)
+
+
+
+
 
 
 class ImportFileFormView(generic.FormView):
     form_class = ImportFileForm
     model = ImportFile
     template_name = "secondapp/import_upload.html"
-    success_url = reverse_lazy("secondapp:import_list")
+    success_url = reverse_lazy("secondapp:import_detail")
 
     def form_valid(self, form):
-        file = form.cleaned_data.get("file")
-        handle_uploaded_file(file)
-        ImportFile.objects.create(
-            title=form.cleaned_data.get("title"),
-            file=f"imports/{file.name}"
-        )
+        import_mode = form.cleaned_data["import_mode"]
+        uploaded_file = self.request.FILES["file"]
+
+        if import_mode == "members":
+            lines = uploaded_file.read().decode("utf-8").splitlines()
+            reader = csv.DictReader(lines)
+#            for row in reader:
+
+
+#                try:
+#                    pass
+#                except: #Exception as e:
+#                    pass#print(f"error at import")
+            uploaded_file.close()
+
         return super().form_valid(form)
+
 
 class ImportFileDetailView(generic.DetailView):
     model = ImportFile

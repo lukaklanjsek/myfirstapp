@@ -7,7 +7,7 @@ from import_export.admin import ImportExportModelAdmin
 from .models import Tag
 from .models import Song
 from .models import Rehearsal
-from .models import Singer, Composer, Arranger, Poet, Musician, Conductor, Ensemble, Activity
+from .models import Member, Composer, Arranger, Poet, Musician, Conductor, Ensemble, Activity
 
 # classes
 
@@ -26,8 +26,8 @@ class EnsembleAdmin(admin.ModelAdmin):
 class TagAdmin(ImportExportModelAdmin):
     pass
 
-class SingerAdmin(ImportExportModelAdmin):
-    model = Singer
+class MemberAdmin(ImportExportModelAdmin):
+    model = Member
     inlines = [ActivityInLine]
     pass
 
@@ -49,7 +49,7 @@ class ConductorAdmin(ImportExportModelAdmin):
 
 class RehearsalAdmin(ImportExportModelAdmin):
     model = Rehearsal
-    filter_horizontal = ["songs", "singers"]
+    filter_horizontal = ["songs", "members"]
     pass
 
 class SongAdmin(ImportExportModelAdmin):
@@ -65,7 +65,7 @@ admin.site.register(Tag, TagAdmin)
 admin.site.register(Ensemble, EnsembleAdmin)
 admin.site.register(Song)#, SongAdmin)
 admin.site.register(Rehearsal, RehearsalAdmin)
-admin.site.register(Singer, SingerAdmin)
+admin.site.register(Member, MemberAdmin)
 admin.site.register(Composer, ComposerAdmin)
 admin.site.register(Arranger, ArrangerAdmin)
 admin.site.register(Poet, PoetAdmin)
