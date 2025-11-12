@@ -14,7 +14,7 @@
     </tr>
     {% for ensemble in ensemble_list %}
         <tr>
-            <td>{{ ensemble.name }}</td>
+            <td><a href="{% url 'secondapp:ensemble_detail' ensemble.pk %}"> {{ ensemble.name }}</td>
             <td>{{ ensemble.address}}</td>
             <td>{{ ensemble.additional_notes }}</td>
         </tr>

@@ -19,6 +19,7 @@ from django.apps import apps
 from django.conf import settings
 import os
 
+
 from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 from .mixins import TagListAndCreateMixin, PersonRoleMixin
@@ -463,11 +464,6 @@ class ImportFileListView(generic.ListView):
 
 
 
-
-
-
-
-
 class ImportFileFormView(generic.FormView):
     form_class = ImportFileForm
     model = ImportFile
@@ -478,19 +474,78 @@ class ImportFileFormView(generic.FormView):
         import_mode = form.cleaned_data["import_mode"]
         uploaded_file = self.request.FILES["file"]
 
+        # TEST # -----  detected encoding: Windows-1250 ##################
+
         if import_mode == "members":
-            lines = uploaded_file.read().decode("utf-8").splitlines()
-            reader = csv.DictReader(lines)
-#            for row in reader:
+            lines = uploaded_file.read().decode("cp1250").splitlines()    # "cp1250"  "utf-8"    <------------ SET "decode"
+            reader = csv.DictReader(lines, delimiter=';')
+
+#            print("print post dictreader:", reader)    #  ->  TEST PRINT
+
+            new_keys = ("first_name", "last_name", "third_name")
+            parts = {}
+
+            for row in reader:
+
+#                print("TEST PRINT ROWS:", row)  #  ->     TEST PRINT
+
+                if "Ime in priimek" in row:
+
+                    parts = row["Ime in priimek"].split(" ")
+
+#                    print("print post split row:", parts)    #  ->  TEST PRINT
+
+                    name_together = dict(zip(new_keys, parts))
+
+                    print("after zip:", name_together)     #  ->  TEST PRINT
+
+                else:
+                    print("no 'Ime in priimek' in row")   #  ->   TEST PRINT
+
+                addr_together = {"address":row["Naslov"], "email":row["e-pošta"], "phone_number":row["Telefon"], "mobile_number":row["Mobilc"]}
+
+                print("ADDRESS NEEDS SQL:", addr_together)
+
+                bday = {"birth_date":row["Datum roj."]}
+
+                print("BDAY:", bday)
+
+#                print("voice pre-IF:", row["Glas"])
+
+                if "Glas" in row:
+                    glas = row["Glas"]
+
+                    if glas == "Alt":
+                        voice_dict = {"voice":"Alto"}
+                    elif glas == "Sopran":
+                        voice_dict = {"voice":"Soprano"}
+                    elif glas == "Tenor":
+                        voice_dict = {"voice":"Tenor"}
+                    elif glas == "Bas":
+                        voice_dict = {"voice":"Bass"}
+                    else:
+                        voice_dict = {}
+                else:
+                    pass    #   --------------------
+
+                print("Voice post-IF:", voice_dict)
 
 
-#                try:
-#                    pass
-#                except: #Exception as e:
-#                    pass#print(f"error at import")
+
+
+    #      ------------------------------------------------------
+            print("outside if loop:", new_keys)
+            print("outside if loop:", parts)
+
+
+
+            self.object = form.save()
             uploaded_file.close()
 
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:import_detail", kwargs={"pk": self.object.pk})
 
 
 class ImportFileDetailView(generic.DetailView):

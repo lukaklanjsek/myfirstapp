@@ -13,8 +13,9 @@
     </tr>
     {% for import in import_list %}
         <tr>
-            <td>{{ import.name }}</td>
-            <td>{{ import.updated_at }}</td>,
+            <td><a href="{% url 'secondapp:import_detail' import.pk %}">{{ import.name }}
+                {{ import.updated_at }}</a>
+            </td>
         </tr>
     {% endfor %}
 </table>

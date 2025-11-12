@@ -344,7 +344,7 @@ class Ensemble(models.Model):
 
 
 class Activity(models.Model):
-    start_date = models.DateField()
+    start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
     conductor = models.ForeignKey(Conductor, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
