@@ -160,8 +160,8 @@ class Composer(Person):
 
 
 class Poet(Person):
-    writing_style =  models.CharField(max_length=250)
-    literary_style = models.CharField(max_length=250)
+    writing_style =  models.CharField(max_length=250, blank=True, null=True)
+    literary_style = models.CharField(max_length=250, blank=True, null=True)
 
     class Meta(Person.Meta):
         ordering = ["last_name", "first_name"]
