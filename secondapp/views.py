@@ -10,7 +10,7 @@ from django.shortcuts import render, get_object_or_404
 from django.template.context_processors import request
 from django.urls import reverse_lazy
 from django.contrib import messages
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.utils import timezone
 #from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
@@ -465,6 +465,166 @@ class ImportFileListView(generic.ListView):
     context_object_name = "import_list"
 
 
+def import_members(reader):
+
+    new_keys = ("first_name", "last_name", "third_name")
+
+    for row in reader:
+        parts = row["Ime in priimek"].split(" ")
+        name_together = dict(zip(new_keys, parts))
+        addr_together = {"address": row["Naslov"],
+                         "email": row["e-pošta"],
+                         "phone_number": row["Telefon"],
+                         "mobile_number": row["Mobilc"]}
+        bday = {"birth_date": row["Datum roj."] if row["Datum roj."] and row["Datum roj."] != "0000-00-00" else None}
+        glas = row["Glas"]
+        if glas == "Alt":
+            voice_dict = {"voice": "Alto"}
+        elif glas == "Sopran":
+            voice_dict = {"voice": "Soprano"}
+        elif glas == "Tenor":
+            voice_dict = {"voice": "Tenor"}
+        elif glas == "Bas":
+            voice_dict = {"voice": "Bass"}
+        else:
+            voice_dict = {}
+
+#        currently = False     # maybe this can go out
+        date_active = ""
+        right_now = {"is_active": False}
+
+        if "Aktiven" in row:
+            date_range = row["Aktiven"].split(",")
+            trajanje = []
+
+
+            for obdobje in date_range:
+                if not obdobje or "-" not in obdobje:
+                    continue
+
+                seznam = obdobje.split("-")
+                if len(seznam) < 3:
+                    continue
+                beginning = None
+                finish = None
+
+                if seznam[0] and seznam[1] and seznam[2]:
+                    try:
+                        beginning = date(int(seznam[0]), int(seznam[1]), int(seznam[2]))
+                    except ValueError:
+                        beginning = None
+
+                if len(seznam) >= 6 and seznam[3] and seznam[4] and seznam[5]:
+                    try:
+                        finish = date(int(seznam[3]), int(seznam[4]), int(seznam[5]))
+                    except ValueError:
+                        finish = None
+                trajanje.append((beginning, finish))
+
+                if beginning is not None and finish is not None:
+                    continue
+                elif beginning is None and finish is None:
+                    continue
+                else:
+                    right_now = {"is_active": True}
+
+        date_active = ", ".join([f"{a} - {b}" for a, b in trajanje])   # this is only backup text field in member.date_active
+
+        member_data = {**name_together, **addr_together, **bday, **right_now}
+
+        conductor_name = "Branka"
+        conductor, _ = Conductor.objects.update_or_create(first_name=conductor_name, defaults={"role":"Conductor"})
+        ensemble, _ = Ensemble.objects.update_or_create(name="De profundis", address="address")
+
+        if not voice_dict:
+            member_data.update({"role":"Conductor"})
+            Conductor.objects.update_or_create(
+                first_name=member_data["first_name"],
+                last_name=member_data["last_name"],
+                third_name=member_data["third_name"],
+                address=member_data["address"],
+                email=member_data["email"],
+                mobile_number=member_data["mobile_number"],
+                birth_date=member_data["birth_date"],
+                defaults={"role": "Conductor"}
+            )
+        else:
+            member_data.update({"date_active":date_active, **voice_dict, "role":"Member"})
+            member_obj, _ = Member.objects.update_or_create(
+                first_name=member_data["first_name"],
+                last_name=member_data["last_name"],
+                defaults=member_data)
+            for aaaaa, bbbbb in trajanje:
+                existing_activity = Activity.objects.filter(
+                    conductor = conductor,
+                    ensemble = ensemble,
+                    member = member_obj,
+                    start_date = aaaaa,
+                    end_date = bbbbb
+                ).first()
+                if not existing_activity:
+                    Activity.objects.create(
+                        conductor=conductor,
+                        ensemble=ensemble,
+                        member=member_obj,
+                        start_date=aaaaa,
+                        end_date=bbbbb,
+                    )
+
+
+def import_songs(reader):
+    new_keys = ("last_name", "first_name", "third_name")
+    placeholders = ("-", "- Skladatelj neznan -", "-Brez tekstopisca-", )
+    group_map = {"0":"mixed", "1":"female", "2":"male"}
+    for row in reader:
+        composer_name = row["Skladatelj"].strip()
+        if composer_name in placeholders or not composer_name:
+            first_name = "unknown"
+            last_name = "unknown"
+            composer_name = dict(zip(new_keys, (last_name, first_name)))
+        else:
+            composer_name = row["Skladatelj"].split(" ")
+            composer_name = dict(zip(new_keys, composer_name))
+
+        composer_name.update({"role":"Composer"})
+
+        composer, _ = Composer.objects.update_or_create(**composer_name)
+
+        poet_name = row["Tekstopisec"].strip()
+        if poet_name in placeholders or not poet_name:
+            first_name = "unknown"
+            last_name = "unknown"
+            poet_name = dict(zip(new_keys, (last_name, first_name)))
+        elif poet_name == "kolednica":
+            first_name = "kolednica"
+            last_name = "kolednica"
+            poet_name = dict(zip(new_keys, (last_name, first_name)))
+        else:
+            poet_name = row["Tekstopisec"].split(" ")
+            poet_name = dict(zip(new_keys, poet_name))
+
+        poet_name.update({"role":"Poet"})
+
+        poet, _ = Poet.objects.update_or_create(**poet_name)
+
+        song_identity = {#"id":row["ID"],
+                         "title": row["Naslov"],
+                         "year": int(row["Leto"]) if row["Leto"].strip() else None,
+                         "number_of_voices": int(row["Št. glasov"]) if row["Št. glasov"].strip() else None,
+                         "number_of_pages": int(row["Št. strani"]) if row["Št. strani"].strip() else None,
+                         "number_of_copies": int(row["Št. kopij"]) if row["Št. kopij"].strip() else None,
+                         "additional_notes": row["Opombe"].strip() or None
+                         }
+
+        group_type = group_map.get(row.get("Zasedba", ""), None)
+        song_identity.update({"group": group_type,
+                              "composer": composer,
+                              "poet": poet})
+        Song.objects.update_or_create(
+            id=int(row["ID"]),
+            defaults=song_identity
+        )
+
 
 class ImportFileFormView(generic.FormView):
     form_class = ImportFileForm
@@ -477,137 +637,22 @@ class ImportFileFormView(generic.FormView):
         uploaded_file = self.request.FILES["file"]
 
         # TEST # -----  detected encoding: Windows-1250 ##################
+        lines = uploaded_file.read().decode("cp1250").splitlines()
+        reader = csv.DictReader(lines, delimiter=';')
 
         if import_mode == "members":
-            default_db_loc = settings.DATABASES['default']['NAME']
-            conn = sqlite3.connect(default_db_loc)
-            crsr = connection.cursor()
+            import_members(reader)
 
-            print("connected to the database")
-
-            lines = uploaded_file.read().decode("cp1250").splitlines()    # "cp1250"  "utf-8"    <------------ SET "decode"
-            reader = csv.DictReader(lines, delimiter=';')
-
-#            print("print post dictreader:", reader)    #  ->  TEST PRINT
-
-            new_keys = ("first_name", "last_name", "third_name")
-#            parts = {}
-
-            for row in reader:
-
-                # 1. check if ensemble exists  /  if not, create one (hardcoded)
-                # 2. check if conductor exists  /  if not, create one (hardcoded)
-                # 3. check if member exists  / if not, create one
-                # 4. check if activity exists  /  if not, add it (add multiple) !!! connect member conductor ensemble !!!
-
-#                print("TEST PRINT ROWS:", row)  #  ->     TEST PRINT
-                # 1. check if ensemble exists
-                crsr.execute("SELECT 1 FROM secondapp_ensemble WHERE name LIKE 'De Profundis'")
-                ensemble = crsr.fetchone()
-                print("return of fetchall", ensemble)
-                if ensemble is 1: continue
-                else: crsr.execute("INSERT INTO secondapp_ensemble(name, address, created_at, updated_at) VALUES('De Profundis', 'Kovačičeva 2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP")
-                conn.commit()
-
-                # 2. check if conductor exists
-                crsr.execute("SELECT 1 FROM secondapp_conductor WHERE first_name LIKE 'Branka' AND last_name LIKE 'Potočnik' AND third_name LIKE 'Krajnik'")
-                conductor = crsr.fetchone()
-                if conductor is 1: continue
-                else: crsr.execute("INSERT INTO secondapp_conductor")
-                #   DOKONČAJ ----------------------------------------------------------------------------------------------
-
-                if "Ime in priimek" in row:
-
-                    parts = row["Ime in priimek"].split(" ")
-
-#                    print("print post split row:", parts)    #  ->  TEST PRINT
-
-                    name_together = dict(zip(new_keys, parts))
-
-                    print("after zip:", name_together)     #  ->  TEST PRINT
-
-                else:
-                    print("no 'Ime in priimek' in row")   #  ->   TEST PRINT
-
-                addr_together = {"address":row["Naslov"], "email":row["e-pošta"], "phone_number":row["Telefon"], "mobile_number":row["Mobilc"]}
-
-                print("ADDRESS:", addr_together)    #  ->   TEST PRINT
-
-                bday = {"birth_date":row["Datum roj."]}
-
-                print("BDAY:", bday)    #   ->    TEST PRINT
-
-#                print("voice pre-IF:", row["Glas"])
-
-                if "Glas" in row:
-                    glas = row["Glas"]
-
-                    if glas == "Alt":
-                        voice_dict = {"voice":"Alto"}
-                    elif glas == "Sopran":
-                        voice_dict = {"voice":"Soprano"}
-                    elif glas == "Tenor":
-                        voice_dict = {"voice":"Tenor"}
-                    elif glas == "Bas":
-                        voice_dict = {"voice":"Bass"}
-                    else:
-                        voice_dict = {}
-                else:
-                    pass    #   --------------------
-
-                print("Voice post-IF:", voice_dict)
-
-                if "Aktiven" in row:
-                    date_range = row["Aktiven"].split(",")
-#                    print("first date split:", date_range)    #  ->   TEST PRINT
-                    trajanje = []
-                    for obdobje in date_range:
-                        seznam = obdobje.split("-")
-                        if len(seznam) >= 3:
-                            beginning = "-".join(seznam[0:3])
-                        else:
-                            beginning = None
-                        if len(seznam) >= 6:
-                            finish = "-".join(seznam[3:6])
-                        else:
-                            finish = None
-                        trajanje.append((beginning, finish))
-
-#                        print("trajanje pre-FOR:", trajanje)    #  ->   TEST PRINT
-#                    print("trajanje after FOR:", trajanje)    #  ->    TEST PRINT
-                    currently = False
-                    for (a,b) in trajanje:
-                        if a is not None and b is not None:
-                            continue
-                        elif a is None and b is None:
-                            continue
-                        else:
-                            currently = True
-#                    print("TEST currently:", currently)    #  ->    TEST PRINT
-                    if currently is True:
-                        right_now = {"is_active": True}
-                    else:
-                        right_now = {"is_active": False}
-                    print("TEST activity:", right_now)     #  ->    TEST PRINT
-
-#                print("trajanje level-ROW:", trajanje)
-
-    #      ------------------------------------------------------
-#            print("outside if loop:", new_keys)
-#            print("outside if loop:", parts)
-
-            conn.close()
-            print("connection closed")
+        elif import_mode == "songs":
+            import_songs(reader)
 
 
-
-            self.object = form.save()
-            uploaded_file.close()
+        uploaded_file.close()
 
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy("secondapp:import_detail", kwargs={"pk": self.object.pk})
+        return reverse_lazy("secondapp:import_list")
 
 
 class ImportFileDetailView(generic.DetailView):

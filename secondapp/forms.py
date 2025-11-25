@@ -192,7 +192,7 @@ class ActivityForm(BaseForm):
 
 class ImportFileForm(BaseForm):
     file = forms.FileField()
-    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",), ("rehearsals", "Rehearsals")], required=True)
+    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",)], required=True)  #,("rehearsals", "Rehearsals") - edited out
     class Meta:
         model = ImportFile
         fields = [

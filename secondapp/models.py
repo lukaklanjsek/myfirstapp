@@ -8,8 +8,7 @@ from enum import Enum
 from django.utils import timezone
 #from django.forms import ModelMultipleChoiceField
 from django.core.exceptions import ValidationError
-
-
+from sqlparse.engine.grouping import group
 
 
 class ShirtSize(Enum):
@@ -47,6 +46,13 @@ class Role(Enum):
     CONDUCTOR = "Conductor"
 
 
+class Group(Enum):
+    MIXED = "mixed"
+    FEMALE = "female"
+    MALE = "male"
+
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
     date_added = models.DateField(auto_now_add=True)
@@ -63,11 +69,11 @@ class Tag(models.Model):
 
 class Person(models.Model):
     first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100, db_index=True)
+    last_name = models.CharField(max_length=100, db_index=True, blank=True, null=True)
     third_name = models.CharField(max_length=100, blank=True, null=True)
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     address = models.CharField(max_length=250, blank=True, null=True)
-    email = models.EmailField(unique=True, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     mobile_number = models.CharField(max_length=17, blank=True, null=True)
     birth_date = models.DateField("birthday", blank=True, null=True)
@@ -249,13 +255,14 @@ class Conductor(Person):
 
 
 class Song(models.Model):
+    id = models.IntegerField(primary_key=True)
     title =  models.CharField(max_length=250)
     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     number_of_pages = models.IntegerField(blank=True, null=True)
     number_of_copies = models.IntegerField(blank=True, null=True)
     year = models.DateField("year of creation", blank=True, null=True)
-    group = models.CharField("mixed/male/female" , max_length=250, blank=True, null=True)
+    group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group], blank=True, null=True)
     number_of_voices = models.IntegerField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -348,9 +355,12 @@ class Activity(models.Model):
     end_date = models.DateField(blank=True, null=True)
     member = models.ForeignKey(Member, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
     conductor = models.ForeignKey(Conductor, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
-    ensemble = models.ForeignKey(Ensemble, on_delete=models.PROTECT, related_name="activity")
+    ensemble = models.ForeignKey(Ensemble, null=True, blank=True, on_delete=models.PROTECT, related_name="activity")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_date"]
 
     def get_absolute_url(self):     # this is supposed to point back to the person
         if self.member:
