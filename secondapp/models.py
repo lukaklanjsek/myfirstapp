@@ -68,9 +68,9 @@ class Tag(models.Model):
 
 
 class Person(models.Model):
-    first_name = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, db_index=True, blank=True, null=True)
-    third_name = models.CharField(max_length=100, blank=True, null=True)
+#    third_name = models.CharField(max_length=100, blank=True, null=True)
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     address = models.CharField(max_length=250, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -97,14 +97,14 @@ class Person(models.Model):
 
     def get_full_name(self):
         names = [self.first_name, self.last_name]
-        if self.third_name:
-            names.insert(1, self.third_name)
+#        if self.third_name:
+#            names.insert(1, self.third_name)
         return " ".join(names)
 
     def get_display_name(self):
         display_name = f"{self.last_name}, {self.first_name}"
-        if self.third_name:
-            display_name += f" {self.third_name}"
+#        if self.third_name:
+#            display_name += f" {self.third_name}"
         return display_name
 
     def get_role_name(self):
@@ -361,6 +361,9 @@ class Activity(models.Model):
 
     class Meta:
         ordering = ["start_date"]
+
+    def __str__(self):
+        return f"{self.member.first_name} {self.member.last_name} - {self.ensemble.name}: {self.start_date} - {self.end_date}"
 
     def get_absolute_url(self):     # this is supposed to point back to the person
         if self.member:

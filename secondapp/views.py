@@ -466,17 +466,19 @@ class ImportFileListView(generic.ListView):
 
 
 def import_members(reader):
-
-    new_keys = ("first_name", "last_name", "third_name")
+    conductor, _ = Conductor.objects.get_or_create(role="Conductor", defaults={"first_name": "Branka"})
+    ensemble, _ = Ensemble.objects.update_or_create(name="De profundis", address="address")
 
     for row in reader:
-        parts = row["Ime in priimek"].split(" ")
-        name_together = dict(zip(new_keys, parts))
+        name_together = {"first_name": row["Ime"], "last_name": row["Priimek"]}
         addr_together = {"address": row["Naslov"],
                          "email": row["e-pošta"],
                          "phone_number": row["Telefon"],
                          "mobile_number": row["Mobilc"]}
-        bday = {"birth_date": row["Datum roj."] if row["Datum roj."] and row["Datum roj."] != "0000-00-00" else None}
+        raw_date = row["Datum roj."].strip()
+        invalid_date = {"0000-00-00", "00.00.0000", "00. 00. 0000"}
+        bday = {"birth_date": None if not raw_date or raw_date in invalid_date
+                  else datetime.strptime(raw_date, "%d. %m. %Y").date()}
         glas = row["Glas"]
         if glas == "Alt":
             voice_dict = {"voice": "Alto"}
@@ -489,14 +491,10 @@ def import_members(reader):
         else:
             voice_dict = {}
 
-#        currently = False     # maybe this can go out
-        date_active = ""
         right_now = {"is_active": False}
-
         if "Aktiven" in row:
             date_range = row["Aktiven"].split(",")
             trajanje = []
-
 
             for obdobje in date_range:
                 if not obdobje or "-" not in obdobje:
@@ -532,22 +530,16 @@ def import_members(reader):
 
         member_data = {**name_together, **addr_together, **bday, **right_now}
 
-        conductor_name = "Branka"
-        conductor, _ = Conductor.objects.update_or_create(first_name=conductor_name, defaults={"role":"Conductor"})
-        ensemble, _ = Ensemble.objects.update_or_create(name="De profundis", address="address")
-
         if not voice_dict:
             member_data.update({"role":"Conductor"})
-            Conductor.objects.update_or_create(
-                first_name=member_data["first_name"],
-                last_name=member_data["last_name"],
-                third_name=member_data["third_name"],
-                address=member_data["address"],
-                email=member_data["email"],
-                mobile_number=member_data["mobile_number"],
-                birth_date=member_data["birth_date"],
-                defaults={"role": "Conductor"}
-            )
+            conductor.first_name = member_data.get("first_name", conductor.first_name)
+            conductor.last_name = member_data["last_name"]
+            conductor.address = member_data["address"]
+            conductor.email = member_data["email"]
+            conductor.mobile_number = member_data["mobile_number"]
+            conductor.birth_date = member_data["birth_date"]
+
+            conductor.save()
         else:
             member_data.update({"date_active":date_active, **voice_dict, "role":"Member"})
             member_obj, _ = Member.objects.update_or_create(
@@ -573,35 +565,35 @@ def import_members(reader):
 
 
 def import_songs(reader):
-    new_keys = ("last_name", "first_name", "third_name")
-    placeholders = ("-", "- Skladatelj neznan -", "-Brez tekstopisca-", )
+#    new_keys = ("last_name", "first_name")
+    placeholders = ("-", "- Skladatelj neznan -", "Brez tekstopisca")
     group_map = {"0":"mixed", "1":"female", "2":"male"}
     for row in reader:
         composer_name = row["Skladatelj"].strip()
-        if composer_name in placeholders or not composer_name:
-            first_name = "unknown"
-            last_name = "unknown"
-            composer_name = dict(zip(new_keys, (last_name, first_name)))
-        else:
-            composer_name = row["Skladatelj"].split(" ")
-            composer_name = dict(zip(new_keys, composer_name))
+#        if composer_name in placeholders or not composer_name:
+#            first_name = "unknown"
+#            last_name = "unknown"
+#            composer_name = dict(zip(new_keys, (last_name, first_name)))
+#        else:
+#            composer_name = row["Skladatelj"].split(" ")
+#            composer_name = dict(zip(new_keys, composer_name))
 
         composer_name.update({"role":"Composer"})
 
         composer, _ = Composer.objects.update_or_create(**composer_name)
 
         poet_name = row["Tekstopisec"].strip()
-        if poet_name in placeholders or not poet_name:
-            first_name = "unknown"
-            last_name = "unknown"
-            poet_name = dict(zip(new_keys, (last_name, first_name)))
-        elif poet_name == "kolednica":
-            first_name = "kolednica"
-            last_name = "kolednica"
-            poet_name = dict(zip(new_keys, (last_name, first_name)))
-        else:
-            poet_name = row["Tekstopisec"].split(" ")
-            poet_name = dict(zip(new_keys, poet_name))
+#        if poet_name in placeholders or not poet_name:
+#            first_name = "unknown"
+#            last_name = "unknown"
+#            poet_name = dict(zip(new_keys, (last_name, first_name)))
+#        elif poet_name == "kolednica":
+#            first_name = "kolednica"
+#            last_name = "kolednica"
+#            poet_name = dict(zip(new_keys, (last_name, first_name)))
+#        else:
+#            poet_name = row["Tekstopisec"].split(" ")
+#            poet_name = dict(zip(new_keys, poet_name))
 
         poet_name.update({"role":"Poet"})
 
@@ -636,9 +628,9 @@ class ImportFileFormView(generic.FormView):
         import_mode = form.cleaned_data["import_mode"]
         uploaded_file = self.request.FILES["file"]
 
-        # TEST # -----  detected encoding: Windows-1250 ##################
-        lines = uploaded_file.read().decode("cp1250").splitlines()
-        reader = csv.DictReader(lines, delimiter=';')
+        # TEST # -----  detected encoding: Windows-1250 ##################  cp1250   utf-8
+        lines = uploaded_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(lines, delimiter=',')
 
         if import_mode == "members":
             import_members(reader)

@@ -7,5 +7,5 @@
     {{ form.as_p }}
     <button type="submit">Save</button>
 </form>
-<p>You are {% if object %}editing {{ object }}{{object.pk}}{% else %}adding new {{ object }}{{object.pk}}{% endif %}</p>
+<p>You are {% if object %}editing {{ object }} - {{object.pk}}{% else %}adding new {{ object }} - {{object.pk}}{% endif %}</p>
 {% endblock %}

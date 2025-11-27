@@ -43,7 +43,7 @@
         {% if person.activity.exists %}
             {% for activity in person.activity.all %}
               <li>
-                {{ activity.ensemble.name }}: {{ activity.start_date }} - {{ activity.end_date }}
+                {{ activity }}
                 <a href="{% url 'secondapp:activity_update' role=role pk=activity.pk %}">UPDATE</a> -
                 <a href="{% url 'secondapp:activity_confirm_delete' role=role pk=activity.pk %}">DELETE</a>
               </li>

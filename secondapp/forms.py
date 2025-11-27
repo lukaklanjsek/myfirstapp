@@ -43,7 +43,7 @@ class PersonForm(BaseForm):
         fields = [
             "first_name",
             "last_name",
-            "third_name",
+            #"third_name",
             "address",
             "email",
             "phone_number",
@@ -192,7 +192,7 @@ class ActivityForm(BaseForm):
 
 class ImportFileForm(BaseForm):
     file = forms.FileField()
-    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",)], required=True)  #,("rehearsals", "Rehearsals") - edited out
+    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",)], required=True)
     class Meta:
         model = ImportFile
         fields = [
