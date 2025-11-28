@@ -11,21 +11,27 @@
     </a>
 </div>
 
-<h2>{{ person }}</h2>
-<p>Role: {{ role }}</p>
+<h3>Profile page</h3>
 
 <div class="person-details">
     <div class="basic-info">
-        <h2>{{ person.first_name }} {{ person.last_name }} {{ person.third_name }}</h2>
-        <p><strong>Role:</strong> {{ role }}</p>
-        <p><strong>Skill Level:</strong> {{ person.skill_level }}</p>
+        <h2>{{ person.first_name }} {{ person.last_name }}</h2>
+        <p><strong>Role:</strong> {{ person.voice|default:person.role }}</p>
+        <p>email: {{ person.email }}</p>
+        {% if person.mobile_number or person.phone_number %}
+            <p>phone: {{ person.mobile_number|default:person.phone_number }}</p>
+        {% endif %}
 
-        {% if person.is_active %}
+        {% if person.skill_level %}
+            <p>Skill Level: {{ person.skill_level }}</p>
+        {% endif %}
+
+        {% if person.is_active is not None %}
             <p><strong>Is Active:</strong>
                 {% if person.is_active %}YES{% else %}NO{% endif %}
             </p>
         {% endif %}
-        {% if person %}
+        {% if present or missing %}
             <h3>Rehearsal Attendance</h3>
             <h4>Present at Rehearsals ({{ present|length }}) </h4>
 
@@ -36,39 +42,42 @@
                 {% endfor %}
             </ul>
         {% endif %}
-        <p><strong>Date Joined:</strong> {{ person.date_joined }}</p>
+
+        {% if person.date_joined %} <p>Date Joined: {{ person.date_joined }}</p> {% endif %}
     </div>
 
     <div class="activity">
-        {% if person.activity.exists %}
+        {% if person.activity %}
             {% for activity in person.activity.all %}
               <li>
                 {{ activity }}
                 <a href="{% url 'secondapp:activity_update' role=role pk=activity.pk %}">UPDATE</a> -
                 <a href="{% url 'secondapp:activity_confirm_delete' role=role pk=activity.pk %}">DELETE</a>
               </li>
+            {% empty %}
+                <a href="{% url 'secondapp:activity_form' role=role pk=person.pk %}">Add Activity</a>
             {% endfor %}
-        <a href="{% url 'secondapp:activity_form' role=role pk=person.pk %}">Add Activity</a>
-        {% else %}
-            <a href="{% url 'secondapp:activity_form' role=role pk=person.pk %}">Add Activity</a>
         {% endif %}
     </div>
 
     <div class="personal-info">
-        <h3>Personal Information</h3>
-        {% if person.shirt_size %}
-        <p><strong>Shirt Size:</strong> {{ person.shirt_size }}</p>
-        {% endif %}
-        {% if person.messenger %}
-        <p><strong>Messenger:</strong> {{ person.messenger }}</p>
-        {% endif %}
-        {% if person.website %}
-            <p><strong>Website:</strong> <a href="{{ person.website }}">{{ person.website }}</a></p>
+        {% if person.shirt_size or person.messenger or person.website %}
+
+            <h3>Personal Information</h3>
+            {% if person.shirt_size %}
+            <p><strong>Shirt Size:</strong> {{ person.shirt_size }}</p>
+            {% endif %}
+            {% if person.messenger %}
+            <p><strong>Messenger:</strong> {{ person.messenger }}</p>
+            {% endif %}
+            {% if person.website %}
+                <p><strong>Website:</strong> <a href="{{ person.website }}">{{ person.website }}</a></p>
+            {% endif %}
         {% endif %}
     </div>
 
     <div class="musical-background">
-        <h3>Musical Background</h3>
+        <!-- <h3>Musical Background</h3> -->
         {% if person.biography %}
             <p><strong>Biography:</strong> {{ person.biography }}</p>
         {% endif %}

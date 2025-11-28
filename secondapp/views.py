@@ -279,7 +279,10 @@ class PersonDetailView(PersonRoleMixin, DetailView):
             attendance = person.get_rehearsal_attendance()
             context.update(attendance)
 
-        context["activity"] = person.activity.all()
+        if hasattr(person, "activity"):
+            context["activity"] = person.activity.all()
+        else:
+            context["activity"] = []
 
         return context
 
@@ -565,39 +568,21 @@ def import_members(reader):
 
 
 def import_songs(reader):
-#    new_keys = ("last_name", "first_name")
-    placeholders = ("-", "- Skladatelj neznan -", "Brez tekstopisca")
+
     group_map = {"0":"mixed", "1":"female", "2":"male"}
     for row in reader:
-        composer_name = row["Skladatelj"].strip()
-#        if composer_name in placeholders or not composer_name:
-#            first_name = "unknown"
-#            last_name = "unknown"
-#            composer_name = dict(zip(new_keys, (last_name, first_name)))
-#        else:
-#            composer_name = row["Skladatelj"].split(" ")
-#            composer_name = dict(zip(new_keys, composer_name))
 
-        composer_name.update({"role":"Composer"})
+        composer_name = {"last_name": row["Skladatelj priimek"].strip(),
+                         "first_name":row["Skladatelj ime"].strip()}
+        composer = None
+        if any(composer_name.values()):
+            composer, _ = Composer.objects.update_or_create(**composer_name, defaults={"role": "Composer"})
 
-        composer, _ = Composer.objects.update_or_create(**composer_name)
-
-        poet_name = row["Tekstopisec"].strip()
-#        if poet_name in placeholders or not poet_name:
-#            first_name = "unknown"
-#            last_name = "unknown"
-#            poet_name = dict(zip(new_keys, (last_name, first_name)))
-#        elif poet_name == "kolednica":
-#            first_name = "kolednica"
-#            last_name = "kolednica"
-#            poet_name = dict(zip(new_keys, (last_name, first_name)))
-#        else:
-#            poet_name = row["Tekstopisec"].split(" ")
-#            poet_name = dict(zip(new_keys, poet_name))
-
-        poet_name.update({"role":"Poet"})
-
-        poet, _ = Poet.objects.update_or_create(**poet_name)
+        poet_name = {"last_name": row["Tekstopisec priimek"].strip(),
+                     "first_name": row["Tekstopisec ime"].strip()}
+        poet = None
+        if any(poet_name.values()):
+            poet, _ = Poet.objects.update_or_create(**poet_name, defaults={"role": "Poet"})
 
         song_identity = {#"id":row["ID"],
                          "title": row["Naslov"],
@@ -608,7 +593,8 @@ def import_songs(reader):
                          "additional_notes": row["Opombe"].strip() or None
                          }
 
-        group_type = group_map.get(row.get("Zasedba", ""), None)
+
+        group_type = group_map.get(str(row["Zasedba"]))
         song_identity.update({"group": group_type,
                               "composer": composer,
                               "poet": poet})

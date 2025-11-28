@@ -3,7 +3,7 @@ from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Ta
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 #from .widgets import DateInput, DateTimeInput
 from django_select2 import forms as s2forms
-from django_select2.forms import ModelSelect2MultipleWidget
+from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
 from django_flatpickr.widgets import DatePickerInput, DateTimePickerInput
 
 
@@ -21,8 +21,13 @@ class SongWidget(ModelSelect2MultipleWidget):
     model = Song
     search_fields = [
         "title__icontains",
-        "composer__icontains",
+        "composer__first_name__icontains",
+        "composer__last_name__icontains",
+        "poet__first_name__icontains",
+        "poet__last_name__icontains"
+        #"id__exact"
     ]
+
 
 
 class BaseForm(forms.ModelForm):
@@ -137,9 +142,6 @@ class SongForm(BaseForm):
         model = Song
         fields = "__all__"
 
-        widgets = {
-            "year": DatePickerInput(),
-        }
 
 
 class RehearsalForm(BaseForm):

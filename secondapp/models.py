@@ -261,7 +261,7 @@ class Song(models.Model):
     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
     number_of_pages = models.IntegerField(blank=True, null=True)
     number_of_copies = models.IntegerField(blank=True, null=True)
-    year = models.DateField("year of creation", blank=True, null=True)
+    year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group], blank=True, null=True)
     number_of_voices = models.IntegerField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
