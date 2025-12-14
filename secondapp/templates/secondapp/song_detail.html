@@ -4,8 +4,8 @@
 <a href="{% url 'secondapp:song_list' %}"><button type="button">Songs - Back</button></a>
 <h1> detail of song {{ song.pk }}</h1>
 <h2>{{ song.title }}</h2>
-<p>Composer: {{ song.composer }}</p>
-<p>Poet: {{ song.poet }}</p>
+<p>Composer: <a href="{{ song.composer.get_absolute_url }}">{{ song.composer }}</a></p>
+<p>Poet: <a href="{{ song.poet.get_absolute_url }}">{{ song.poet }}</a></p>
 
 <p>Number of copies: {{ song.number_of_copies }}</p>
 <p>Number of pages: {{ song.number_of_pages }}</p>
@@ -15,6 +15,20 @@
 <p>Group: {{ song.group }}</p>
 
 <p>Additional notes: {{ song.additional_notes }} </p>
+
+<table>
+    <tr><th>songs in rehearsals:</th></tr>
+    {% for rehearsal in song.rehearsals.all %}
+    <tr>
+        <td>
+            <a href="{{ rehearsal.get_absolute_url }}">
+                {{ rehearsal.calendar|date:"j b Y, G:i" }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
 
 <a href="{% url 'secondapp:song_update' song.pk %}"><button type="button">UPDATE EDIT</button></a><br><br>
 <a href="{% url 'secondapp:song_delete' song.pk %}"><button type="button">Delete</button></a><br><br>

@@ -47,11 +47,18 @@
                 </li>
             </ul>
         </nav>
+<!-- Breadcrumbs Block -->
+
 
     <!--main -->
         <main class="main">
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+            <div class="breadcrumb">
+                {% for entry in navigation_history %}
+                        <a href="{{entry.url}}">{{entry.section}}/{{entry.page}}</a>>
+                {% endfor %}
+            </div>
             <div class="main-content">
                 {% block content %}
                 <!-- content goes here -->

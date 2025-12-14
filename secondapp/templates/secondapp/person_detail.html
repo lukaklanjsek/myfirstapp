@@ -100,6 +100,16 @@
             <p><strong>Additional Notes:</strong> {{ person.additional_notes }}</p>
         {% endif %}
     </div>
+    <div class="song">
+        <table>
+            <th>Songs:</th>
+            {% for song in song %}
+                <tr>
+                    <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
 </div>
 
 <div class="action-buttons-bottom">

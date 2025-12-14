@@ -6,6 +6,18 @@
     <a href="{% url 'secondapp:song_form' %}"><button type="button">+ Add New Song +</button></a><br><br>
 </div>
 <p>Here is a list of all songs:</p>
+    <form method="get">
+        <select name="sort_by" id="sort_by">
+            <option value="">-- Select --</option>
+            <option value="title_A">Title A-Z</option>
+            <option value="title_Z">Title Z-A</option>
+            <option value="composer_A">Composer A-Z</option>
+            <option value="composer_Z">Composer Z-A</option>
+            <option value="ID_first">Number first</option>
+            <option value="ID_last">Number last</option>
+        </select>
+        <button type="submit">Sort</button>
+    </form>
 <table>
     <tr>
         <th> number </th>
@@ -17,7 +29,7 @@
     <tr>
         <td> {{ song.pk }} </td>
         <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a></td>
-        <td> {{ song.composer.last_name }} {{song.composer.first_name }} </td>
+        <td> <a href="{{ song.composer.get_absolute_url }}">{{ song.composer.last_name }} {{song.composer.first_name }}</a> </td>
         <td>{{ song.number_of_copies }}</td>
     </tr>
 {% endfor %}

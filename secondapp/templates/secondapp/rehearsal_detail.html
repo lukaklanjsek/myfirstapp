@@ -1,56 +1,45 @@
 {% extends "secondapp/base.html" %}
 {% block title %}{{rehearsal.pk}} Rehearsal{% endblock %}
 {% block content %}
-
-<div class="navigation-top">
-    <a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals list (BACK)</a>
-</div>
-
 <div class="rehearsal-header">
     <h1> detail of rehearsal {{rehearsal.id}} </h1>
-    <p>
-        This is posted from templates. Follow me for more cooking recipes.
-    </p>
 </div>
-
 <div class="rehearsal-info">
     <div class="basic-info">
-        <p> {{ rehearsal.subtitle }} </p>
         <p> {{ rehearsal.calendar }}</p>
-        <p> {{ rehearsal.location }} </p>
-        <p> {{ rehearsal.parking }} </p>
+        <p>{{ rehearsal.additional_notes }}</p>
     </div>
 </div>
-
+<table>
 <div class="rehearsal-details">
     <div class="members-section">
-        <h2> Members missing </h2>
-        <ul>
+        <th> Members missing </th>
             {% for member in missing %}
-            <li> {{ member.voice }} {{ member.first_name }} </li>
+            <tr>
+            <td> {{ member.voice }} {{ member.first_name }} </td>
+            </tr>
             {% endfor %}
-        </ul>
-        <h2> Members present </h2>
-        <ul>
-            {% for member in present %}
-                <li>{{ member.voice }} {{ member.first_name}}
-                </li>
-            {% endfor %}
-        </ul>
+        <th> Members present </th>
+        
+        {% for member in present %}
+        <tr>
+                <td>{{ member.voice }} {{ member.first_name}}
+                </td>
+            </tr>
+        {% endfor %}
+            
     </div>
 
     <div class="songs-section">
-        <h2> Songs - work in progress: </h2>
-        <ul>
-            {% for song in rehearsal.songs.all %}
-                <li><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.pk }} - {{ song.title }} </a> - {{ song.composer }}</li>
-            {% endfor %}
-        </ul>
+        <th> Songs - work in progress: </th>
+        {% for song in rehearsal.songs.all %}
+        <tr>
+        <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.pk }} - {{ song.title }} </a>-
+            <a href="{{ song.composer.get_absolute_url }}"> {{ song.composer }}</a></td>
+        </tr>
+        {% endfor %}
     </div>
-    <div class="notes-section">
-            <h2> Additional notes and tags: </h2>
-                <div class="additional-notes">
-            <p>{{ rehearsal.additional_notes }}</p>
+    <div class="notes-section">            
         </div>
         <div class="tags-list">
             <ul>
@@ -61,7 +50,7 @@
         </div>
     </div>
 </div>
-
+</table>
 <div class="action-buttons">
     <a href="{% url 'secondapp:rehearsal_update' rehearsal.pk %}">
         <button type="button">++UPDATE - EDIT++</button>

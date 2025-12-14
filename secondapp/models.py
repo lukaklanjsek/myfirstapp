@@ -23,10 +23,10 @@ class ShirtSize(Enum):
 
 
 class VoiceType(Enum):
-    SOPRANO = 'Soprano'
-    ALTO = 'Alto'
-    TENOR = 'Tenor'
-    BASS = 'Bass'
+    Soprano = 'Soprano'
+    Alto = 'Alto'
+    Tenor = 'Tenor'
+    Bass = 'Bass'
 
 
 class SkillLevel(Enum):
@@ -114,9 +114,6 @@ class Person(models.Model):
 class Member(Person):
     voice = models.CharField(max_length=10, choices=[(voice.name, voice.value) for voice in VoiceType])
     is_active = models.BooleanField(default=True)
-#    skill_level = models.CharField(max_length=20, choices=[(skill.name, skill.value) for skill in SkillLevel])
-#    messenger = models.CharField(max_length=250, blank=True, null=True)
-#    shirt_size = models.CharField(max_length=4, choices=[(size.name, size.value) for size in ShirtSize], blank=True, null=True)
     date_active = models.TextField("date_active", blank=True, null=True)
 
     class Meta(Person.Meta):
@@ -132,7 +129,7 @@ class Member(Person):
         return  reverse("secondapp:person_detail", kwargs={"role": "member", "pk": self.pk})
 
     def get_rehearsal_attendance(self):
-        present_rehearsals = self.rehearsal_set.all()
+        present_rehearsals = self.rehearsals.all()
         all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
         missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
 
@@ -143,7 +140,8 @@ class Member(Person):
 
     def __str__(self):
         status = "(Inactive)" if not self.is_active else ""
-        return f"{self.get_display_name()} - {self.voice} {status}"
+        voice_display = self.get_voice_display()  # This gets the human-readable value
+        return f"{self.get_display_name()} - {voice_display} {status}"
 
 
 class Composer(Person):
@@ -197,7 +195,7 @@ class Arranger(Person):
         self.role = Role.ARRANGER.name
         super().save(*args, **kwargs)
 
-    def get_abslute_url(self):
+    def get_absolute_url(self):
         return reverse("secondapp:person_detail", kwargs={"role": "arranger", "pk": self.pk})
 
     def __str__(self):
@@ -216,7 +214,7 @@ class Musician(Person):
         self.role = Role.MUSICIAN.name
         super().save(*args, **kwargs)
 
-    def get_abslute_url(self):
+    def get_absolute_url(self):
         return reverse("secondapp:person_detail", kwargs={"role": "musician", "pk": self.pk})
 
     def __str__(self):
@@ -241,7 +239,7 @@ class Conductor(Person):
         return reverse("secondapp:person_detail", kwargs={"role": "conductor", "pk": self.pk})
 
     def get_rehearsal_attendance(self):
-        present_rehearsals = self.rehearsal_set.all()
+        present_rehearsals = self.rehearsals.all()
         all_rehearsals = Rehearsal.objects.filter(is_cancelled=False)
         missing_rehearsals = all_rehearsals.exclude(pk__in=present_rehearsals)
 
@@ -257,8 +255,8 @@ class Conductor(Person):
 class Song(models.Model):
     id = models.IntegerField(primary_key=True)
     title =  models.CharField(max_length=250)
-    composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
-    poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="songs", blank=True, null=True)
+    composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
+    poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
     number_of_pages = models.IntegerField(blank=True, null=True)
     number_of_copies = models.IntegerField(blank=True, null=True)
     year = models.IntegerField("year of creation", blank=True, null=True)
@@ -283,16 +281,11 @@ class Song(models.Model):
 
 
 class Rehearsal(models.Model):
-    subtitle = models.CharField(max_length=250)
-    location = models.CharField(max_length=250)
-    parking = models.CharField(max_length=250, blank=True, null=True)
     calendar = models.DateTimeField(unique=True)
     additional_notes = models.TextField(blank=True, null=True)
-    members = models.ManyToManyField(Member, blank=True, related_name= "rehearsal_set")
-    conductors = models.ManyToManyField(Conductor, blank=True, related_name="rehearsal_set")
-    songs = models.ManyToManyField(Song, blank=True)
-    duration_minutes = models.PositiveIntegerField(blank=True, null=True, help_text="Expected duration in minutes")
-    attendance_count = models.PositiveIntegerField(default=0, help_text="Actual attendance count")
+    members = models.ManyToManyField(Member, blank=True, related_name= "rehearsals")
+    conductors = models.ManyToManyField(Conductor, blank=True, related_name= "rehearsals")
+    songs = models.ManyToManyField(Song, blank=True, related_name= "rehearsals")
     is_cancelled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -335,8 +328,8 @@ class Rehearsal(models.Model):
 
     def __str__(self):
         status = "(Cancelled)" if self.is_cancelled else ""
-        calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M") #if self.calendar else "TBD"
-        return f"{calendar_display} - {self.subtitle} {status}"
+        calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M")
+        return f"{calendar_display} - {status}"
 
 
 class Ensemble(models.Model):

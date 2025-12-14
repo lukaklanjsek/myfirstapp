@@ -8,7 +8,6 @@
     {% if happening_now %}
         <div class="happening-now-alert">
             <h2>HAPPENING NOW! </h2>
-            <p><strong>{{ happening_now.subtitle }}</strong> at {{ happening_now.location }}</p>
             <a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
                 <button type="button">CLICK HERE</button>
             </a>
@@ -48,17 +47,18 @@
                 <div class="rehearsal-item upcoming">
                     <table>
                         <tr>
-                            <td>{{ rehearsal.calendar|date:"j b Y, G:i" }}
-                                <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
-                                    {{ rehearsal.subtitle }}
+                            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
+                                {{ rehearsal.calendar|date:"j b Y, G:i" }}
                                 </a>
                                 {% for song in rehearsal.songs.all %}
                                     {{ song.pk }} {{ song.title }}
                                 {% endfor %}
+                                
                                 |
                                 {% for member in rehearsal.member_status.missing %}
-                                    {{ member.first_name }} {{ member.voice }}
+                                    {{ member.first_name }} ({{ member.voice }}),
                                 {% endfor %}
+                                
                             </td>
                         </tr>
                     </table>
@@ -77,16 +77,18 @@
                 <div class="rehearsal-item past">
                     <table>
                         <tr>
-                            <td>{{ rehearsal.calendar|date:"j b Y, G:i" }}
-                                <a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
-                                    {{ rehearsal.subtitle }}
-                                </a> |
+                            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}">
+                                {{ rehearsal.calendar|date:"j b Y, G:i" }}
+                                </a>
+                                
+                                |
                                 {% for song in rehearsal.songs.all %}
                                     {{ song.pk }} {{ song.title }}
                                 {% endfor %}
+                            
                                 |
                                 {% for member in rehearsal.member_status.missing %}
-                                    {{ member.first_name }} {{ member.voice }}
+                                    {{ member.first_name }} ({{ member.voice }}),
                                 {% endfor %}
                             </td>
                         </tr>
