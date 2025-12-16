@@ -68,5 +68,20 @@ class PersonRoleMixin:
     
     
 class BreadcrumbMixin:
-    section_name = None 
-    page_name = None
+    def get_breadcrumbs(self):
+        parts = ['<a href="/">Home</a>']
+
+        if hasattr(self, 'section_name'):
+            section = self.section_name
+            parts.append(f'<a href="/{section}/">{section}</a>') #parts.append(f'<a href="/{section}/">{section.replace("_", " ").title()}s</a>')
+
+            if hasattr(self, 'page_name'):
+                page = self.page_name
+                parts.append(page) #parts.append(page.replace('_', ' ').title())
+                
+        return ' > '.join(parts)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = self.get_breadcrumbs()
+        return context

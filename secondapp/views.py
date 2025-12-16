@@ -27,13 +27,11 @@ from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, 
 from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin
 
-class IndexView(BreadcrumbMixin, generic.ListView):
+class IndexView(generic.ListView): #BreadcrumbMixin, 
     model = Rehearsal
     template_name = "secondapp/index.html"
     context_object_name = "rehearsal_list"
     queryset = Rehearsal.objects.filter(is_cancelled=False).order_by('-calendar')[:20]
-    section_name = "index"
-    page_name = "home"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -209,6 +207,10 @@ class SongListView(BreadcrumbMixin, generic.ListView):
                 queryset = queryset.order_by("pk")
             elif sort_by == "ID_last":
                 queryset = queryset.order_by("-pk")
+            elif sort_by == "copies_A":
+                queryset = queryset.order_by("copies")
+            elif sort_by == "copies_Z":
+                queryset = queryset.order_by("-copies")
         
         return queryset
 
@@ -277,7 +279,11 @@ class PersonListView(PersonRoleMixin, BreadcrumbMixin, ListView):
     page_name = "list"
 
     def get_section_name(self):
-        return self.kwargs["role"]
+        return self.kwargs.get("role")
+    
+    def get_breadcrumbs(self):
+        self.section_name = self.get_section_name()
+        return super().get_breadcrumbs()
 
     def get_base_queryset(self):
         model = self.get_model()
@@ -337,8 +343,12 @@ class PersonDetailView(PersonRoleMixin, BreadcrumbMixin, DetailView):
     page_name = "detail"
 
     def get_section_name(self):
-        return self.kwargs["role"]
-
+        return self.kwargs.get("role")
+    
+    def get_breadcrumbs(self):
+        self.section_name = self.get_section_name()
+        return super().get_breadcrumbs()
+    
     def get_object(self, queryset=None):
         return self.get_model().objects.get(pk=self.kwargs.get('pk'))
 
@@ -368,8 +378,12 @@ class PersonCreateView(PersonRoleMixin, BreadcrumbMixin, CreateView):
     page_name = "new"
 
     def get_section_name(self):
-        return self.kwargs["role"]
-
+        return self.kwargs.get("role")
+    
+    def get_breadcrumbs(self):
+        self.section_name = self.get_section_name()
+        return super().get_breadcrumbs()
+    
     def get_success_url(self):
         return reverse_lazy("secondapp:person_detail", kwargs={"role": self.kwargs.get('role'), "pk": self.object.pk})
 
@@ -380,8 +394,12 @@ class PersonUpdateView(PersonRoleMixin, BreadcrumbMixin, UpdateView):
     page_name = "update"
 
     def get_section_name(self):
-        return self.kwargs["role"]
-
+        return self.kwargs.get("role")
+    
+    def get_breadcrumbs(self):
+        self.section_name = self.get_section_name()
+        return super().get_breadcrumbs()
+    
     def get_object(self, queryset = None):
         return self.get_model().objects.get(pk=self.kwargs.get("pk"))
 
@@ -402,8 +420,12 @@ class PersonDeleteView(PersonRoleMixin, BreadcrumbMixin, DeleteView):
     page_name = "delete"
 
     def get_section_name(self):
-        return self.kwargs["role"]
-
+        return self.kwargs.get("role")
+    
+    def get_breadcrumbs(self):
+        self.section_name = self.get_section_name()
+        return super().get_breadcrumbs()
+    
     def dispatch(self, request, *args, **kwargs):
         self.model = self.get_model()
         return super().dispatch(request, *args, **kwargs)

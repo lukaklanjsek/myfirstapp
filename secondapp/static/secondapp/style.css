@@ -95,3 +95,26 @@
         padding: 1rem;
     }
 }
+
+@media (max-width: 600px) {
+    .table {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    th, td {
+        white-space: normal;
+        word-wrap: break-word;
+        border-radius: 4px;
+        padding: 8px;
+    }
+
+    th {
+        font-size: 12px;
+        padding: 10px;
+    }
+    
+    td {
+        font-size: 14px;
+    }
+}

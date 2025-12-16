@@ -55,9 +55,9 @@
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
             <div class="breadcrumb">
-                {% for entry in navigation_history %}
-                        <a href="{{entry.url}}">{{entry.section}}/{{entry.page}}</a>>
-                {% endfor %}
+                {% if breadcrumbs %}
+                    {{ breadcrumbs|safe }}
+                {% endif %}
             </div>
             <div class="main-content">
                 {% block content %}
