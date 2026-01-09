@@ -3,7 +3,7 @@ from django.http import Http404
 from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse
 from .models import Tag, Musician, Composer, Poet, Arranger, Member, Conductor
 from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, ConductorForm, MemberForm
 
@@ -64,4 +64,24 @@ class PersonRoleMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["role"] = self.kwargs.get("role")
+        return context
+    
+    
+class BreadcrumbMixin:
+    def get_breadcrumbs(self):
+        parts = ['<a href="/">Home</a>']
+
+        if hasattr(self, 'section_name'):
+            section = self.section_name
+            parts.append(f'<a href="/{section}/">{section}</a>') #parts.append(f'<a href="/{section}/">{section.replace("_", " ").title()}s</a>')
+
+            if hasattr(self, 'page_name'):
+                page = self.page_name
+                parts.append(page) #parts.append(page.replace('_', ' ').title())
+                
+        return ' > '.join(parts)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = self.get_breadcrumbs()
         return context

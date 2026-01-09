@@ -47,11 +47,18 @@
                 </li>
             </ul>
         </nav>
+<!-- Breadcrumbs Block -->
+
 
     <!--main -->
         <main class="main">
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+            <div class="breadcrumb">
+                {% if breadcrumbs %}
+                    {{ breadcrumbs|safe }}
+                {% endif %}
+            </div>
             <div class="main-content">
                 {% block content %}
                 <!-- content goes here -->

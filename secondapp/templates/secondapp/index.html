@@ -12,9 +12,7 @@
             <h2> REHEARSAL HAPPENING NOW! </h2>
             <div class="happening-details">
                 <p><a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
-                    {{ happening_now.subtitle }}</a></p>
-                <p> Location: {{ happening_now.location }}</p>
-                <p> Started: {{ happening_now.calendar|date:"j b Y, G:i" }}</p>
+                 Started: {{ happening_now.calendar|date:"j b Y, G:i" }}</a></p>
             </div>
         </div>
     </div>
@@ -24,16 +22,12 @@
     <table>
         <tr>
             <th> calendar </th>
-            <th> subtitle </th>
-            <th> location </th>
             <th> missing </th>
         </tr>
         {% for rehearsal in upcoming_rehearsals %}
         <tr>
-            <td> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
-            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.subtitle }} </a></td>
-            <td> {{ rehearsal.location }} </td>
-            <td> {% for singer in rehearsal.singer_status.missing %} {{ singer.first_name }} {% endfor %}</td>
+            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
+            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>
         </tr>
         {% empty %} Empty calendar.
         {% endfor %}
@@ -44,16 +38,12 @@
     <table>
         <tr>
             <th> calendar </th>
-            <th> subtitle </th>
-            <th> location </th>
             <th> not present </th>
         </tr>
         {% for rehearsal in past_rehearsals %}
         <tr>
-            <td> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
-            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.subtitle }} </a></td>
-            <td> {{ rehearsal.location }} </td>
-            <td> {% for singer in rehearsal.singer_status.missing %} {{ singer.first_name }} {% endfor %}</td>
+            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
+            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>
         </tr>
         {% empty %} Empty calendar.
         {% endfor %}

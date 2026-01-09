@@ -2,27 +2,22 @@ from django import forms
 from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 #from .widgets import DateInput, DateTimeInput
-from django_select2 import forms as s2forms
-from django_select2.forms import ModelSelect2MultipleWidget
+#from django_select2 import forms as s2forms
+from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
 from django_flatpickr.widgets import DatePickerInput, DateTimePickerInput
 
-
-class MemberWidget(ModelSelect2MultipleWidget):
-    model = Member
-    search_fields = [
-        "first_name__icontains",
-        "last_name__icontains",
-    ]
-
-    def get_queryset(self):
-        return Member.objects.filter(is_active=True)
 
 class SongWidget(ModelSelect2MultipleWidget):
     model = Song
     search_fields = [
         "title__icontains",
-        "composer__icontains",
+        "composer__first_name__icontains",
+        "composer__last_name__icontains",
+        "poet__first_name__icontains",
+        "poet__last_name__icontains"
+        #"id__exact"
     ]
+
 
 
 class BaseForm(forms.ModelForm):
@@ -43,7 +38,7 @@ class PersonForm(BaseForm):
         fields = [
             "first_name",
             "last_name",
-            "third_name",
+            #"third_name",
             "address",
             "email",
             "phone_number",
@@ -84,7 +79,6 @@ class ComposerForm(PersonForm):
         fields = PersonForm.Meta.fields + ["musical_era"]
         widgets = {
             "birth_date": DatePickerInput(),
-#            "death_date": DatePickerInput(),
         }
 
 
@@ -94,7 +88,6 @@ class PoetForm(PersonForm):
         fields = PersonForm.Meta.fields + ["writing_style", "literary_style"]
         widgets = {
             "birth_date": DatePickerInput(),
-#            "death_date": DatePickerInput(),
         }
 
 
@@ -104,7 +97,6 @@ class ArrangerForm(PersonForm):
         fields = PersonForm.Meta.fields + ["style"]
         widgets = {
             "birth_date": DatePickerInput(),
-#            "death_date": DatePickerInput(),
         }
 
 
@@ -114,7 +106,6 @@ class MusicianForm(PersonForm):
         fields = PersonForm.Meta.fields + ["instrument"]
         widgets = {
             "birth_date": DatePickerInput(),
-#            "death_date": DatePickerInput(),
         }
 
 class ConductorForm(PersonForm):
@@ -122,13 +113,10 @@ class ConductorForm(PersonForm):
         model = Conductor
         fields = PersonForm.Meta.fields + [
             "is_active",
-#            "messenger",
             "date_joined"
         ]
         widgets = {
-#                "activity": DatePickerInput(),
                 "birth_date": DatePickerInput(),
-#                "death_date": DatePickerInput(),
             }
 
 
@@ -137,33 +125,103 @@ class SongForm(BaseForm):
         model = Song
         fields = "__all__"
 
-        widgets = {
-            "year": DatePickerInput(),
-        }
 
 
 class RehearsalForm(BaseForm):
     class Meta:
         model = Rehearsal
-        fields = ["subtitle","location", "parking", "calendar", "additional_notes",
-                  "members", "conductors", "songs", "duration_minutes", "attendance_count",
+        fields = ["calendar", 
+                  "additional_notes",
+                  "songs",
                   "is_cancelled"]
         widgets = {
             'calendar': DateTimePickerInput(),
-            'duration_minutes': forms.NumberInput(attrs={'min': '1', 'placeholder': 'e.g. 180'}),
             'additional_notes': forms.Textarea(attrs={'rows': 3}),
-            'members': MemberWidget(attrs={'style': 'width: 100%;'}),
-            'conductors': ModelSelect2MultipleWidget(model=Conductor, search_fields=["first_name__icontains"], attrs={'style': 'width: 100%;'}),
             'songs': SongWidget(attrs={'style': 'width: 100%;'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.fields['songs'].required = False
         self.fields['is_cancelled'].label = "Mark as cancelled"
-        self.fields['duration_minutes'].label = "Expected duration (minutes) *"
-        self.fields['attendance_count'].label = "Actual attendance count"
+        
+        self.active_members = Member.objects.filter(is_active=True).order_by('last_name', 'first_name')
+        self.active_conductors = Conductor.objects.filter(is_active=True).order_by('last_name', 'first_name')
+        self._create_person_fields()
+
+        if instance := kwargs.get("instance"):
+            self._set_initial_values(instance)
+
+#            current_members = instance.members.all()
+#
+#            for member in self.active_members:
+#                field_name = f"member_{member.id}"
+#                if hasattr(self, "fields") and field_name in self.fields:
+#                    self.fields[field_name].initial = member in current_members
+
+    def _create_person_fields(self):
+        # making space for conductors as well as members
+        for member in self.active_members:
+            field_name = f'member_{member.id}'
+            self.fields[field_name] = forms.BooleanField(
+                required=False,
+                initial=True,
+                label=f"{member.first_name} {member.last_name}"
+            )
+        for conductor in self.active_conductors:
+            field_name = f'conductor_{conductor.id}'
+            self.fields[field_name] = forms.BooleanField(
+                required=False,
+                initial=True,
+                label=f"{conductor.first_name} {conductor.last_name} (Conductor)"
+            )
+
+    def _set_initial_values(self, instance):
+        # Set checkbox initial values based on pre-save
+        current_members = instance.members.all()
+        for member in self.active_members:
+            field_name = f"member_{member.id}"
+            if field_name in self.fields:
+                self.fields[field_name].initial = member in current_members
+        
+        current_conductors = instance.conductors.all()
+        for conductor in self.active_conductors:
+            field_name = f"conductor_{conductor.id}"
+            if field_name in self.fields:
+                self.fields[field_name].initial = conductor in current_conductors
+
+#    def clean(self):
+#        super().clean()
+#
+#        selected_members = []
+#        for member in self.active_members:
+#            field_name = f"member_{member.id}"
+#            if field_name in self.cleaned_data and self.cleaned_data[field_name]:
+#                selected_members.append(member)
+
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+
+        #clean and update
+        instance.members.clear()
+        selected_member_ids = [
+            member.id for member in self.active_members
+            if self.cleaned_data.get(f'member_{member.id}', False)
+        ]
+        if selected_member_ids:
+            instance.members.add(*selected_member_ids)
+        
+        #clean and update
+        instance.conductors.clear()
+        selected_conductor_ids = [
+            conductor.id for conductor in self.active_conductors
+            if self.cleaned_data.get(f'conductor_{conductor.id}', False)
+        ]
+        if selected_conductor_ids:
+            instance.conductors.add(*selected_conductor_ids)
+        
+        return instance
 
 
 class TagForm(forms.ModelForm):
@@ -192,7 +250,7 @@ class ActivityForm(BaseForm):
 
 class ImportFileForm(BaseForm):
     file = forms.FileField()
-    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",), ("rehearsals", "Rehearsals")], required=True)
+    import_mode = forms.ChoiceField(choices=[("songs", "Songs",), ("members", "Members",)], required=True)
     class Meta:
         model = ImportFile
         fields = [
