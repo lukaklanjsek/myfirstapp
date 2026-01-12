@@ -3,4 +3,4 @@
 from secondapp.views import PersonRoleMixin
 
 def roles_context(request):
-    return {"all_roles": list(PersonRoleMixin.role_model_form_map.keys())}
+    return {"all_roles": list(PersonRoleMixin.role_model_from_map.keys())}
