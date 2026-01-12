@@ -26,19 +26,27 @@
 
     <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
-            <h3>Menu</h3>
+
             <ul class="menu-links">
                 <li><a href="{% url 'secondapp:index' %}">Home</a></li>
                 <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
-                <li><a href="{% url 'secondapp:song_list' %}">Songs - Archive</a></li>
-                {% for role in all_roles %}
-                    <li>
-                        <a href="{% url 'secondapp:person_list' role=role %}">{{ role }}s</a>
-                    </li>
-                {% endfor %}
-                <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
-                <li><a href="{% url 'secondapp:tag' %}">Tags</a></li>
-                <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>
+                <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>
+                <ul>
+                    <li><a href="{% url 'secondapp:person_list' role='composers' %}">Composers</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='poets' %}">Poets</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='arrangers' %}">Arrangers</a></li>
+                </ul>
+                <li><a href="{% url 'secondapp:person_list' role='members' %}">Members</a></li>
+                <ul>
+                    <li><a href="{% url 'secondapp:person_list' role='conductors' %}">Conductors</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='musicians' %}">Musicians</a></li>
+                    <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
+                </ul>
+                Settings
+                <ul>
+                    <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>
+                </ul>
+
                 <li>
                     <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
                         {% csrf_token %}

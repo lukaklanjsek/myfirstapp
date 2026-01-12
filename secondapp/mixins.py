@@ -42,24 +42,24 @@ class TagListAndCreateMixin(FormMixin, ListView):
 
 
 class PersonRoleMixin:
-    role_model_form_map = {
-        "member": (Member, MemberForm),
-        "composer": (Composer, ComposerForm),
-        "poet": (Poet, PoetForm),
-        "arranger": (Arranger, ArrangerForm),
-        "musician": (Musician, MusicianForm),
-        "conductor": (Conductor, ConductorForm),
+    role_model_from_map = {
+        "members": (Member, MemberForm),
+        "conductors": (Conductor, ConductorForm),
+        "musicians": (Musician, MusicianForm),
+        "composers": (Composer, ComposerForm),
+        "poets": (Poet, PoetForm),
+        "arrangers": (Arranger, ArrangerForm),
     }
 
     def get_model(self):
         role = self.kwargs.get("role")
-        if role not in self.role_model_form_map:
+        if role not in self.role_model_from_map:
             raise Http404(f"invalid role {role}")
-        return self.role_model_form_map[role][0]
+        return self.role_model_from_map[role][0]
 
     def get_form_class(self):
         role = self.kwargs.get("role")
-        return self.role_model_form_map[role][1]
+        return self.role_model_from_map[role][1]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

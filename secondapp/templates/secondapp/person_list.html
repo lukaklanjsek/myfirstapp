@@ -4,7 +4,7 @@
 
 
 <div class="page-header">
-    <h1>{{ role }}s list</h1>
+    <h2>{{ role|title }}</h2>
 </div>
 
 <div class="action-buttons">
@@ -15,8 +15,6 @@
 
 <div class="person-content">
     <div class="is-active">
-        <h2>Active {{ role }} people:</h2>
-
         <table>
             <tr>
                 <th>num</th>
@@ -47,7 +45,7 @@
     </div>
     {% if inactive_people %}
         <div class="is-inactive">
-            <h2>Inactive {{ role }} people:</h2>
+            <h2>Inactive {{ role }}:</h2>
             <table>
             <tr>
                 <th>num</th>
