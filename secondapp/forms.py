@@ -2,7 +2,7 @@ from django import forms
 from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
-from django_flatpickr.widgets import DatePickerInput, DateTimePickerInput
+
 
 
 class SongWidget(ModelSelect2MultipleWidget):
@@ -54,7 +54,7 @@ class MemberForm(PersonForm):
             "date_active"
         ]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -63,7 +63,7 @@ class ComposerForm(PersonForm):
         model = Composer
         fields = PersonForm.Meta.fields + ["musical_era"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -72,7 +72,7 @@ class PoetForm(PersonForm):
         model = Poet
         fields = PersonForm.Meta.fields + ["writing_style", "literary_style"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -81,7 +81,7 @@ class ArrangerForm(PersonForm):
         model = Arranger
         fields = PersonForm.Meta.fields + ["style"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -90,7 +90,7 @@ class MusicianForm(PersonForm):
         model = Musician
         fields = PersonForm.Meta.fields + ["instrument"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 class ConductorForm(PersonForm):
@@ -101,7 +101,7 @@ class ConductorForm(PersonForm):
             "date_joined"
         ]
         widgets = {
-                "birth_date": DatePickerInput(),
+                "birth_date": forms.SelectDateWidget(),
             }
 
 
@@ -120,7 +120,9 @@ class RehearsalForm(BaseForm):
                   "songs",
                   "is_cancelled"]
         widgets = {
-            'calendar': DateTimePickerInput(),
+            'calendar': forms.DateTimeInput(
+                attrs={"type": "datetime-local"}
+            ),
             'additional_notes': forms.Textarea(attrs={'rows': 3}),
             'songs': SongWidget(attrs={'style': 'width: 100%;'}),
         }
@@ -213,8 +215,8 @@ class ActivityForm(BaseForm):
             "ensemble"
         ]
         widgets = {
-            "start_date": DatePickerInput(),
-            "end_date": DatePickerInput(),
+            "start_date": forms.SelectDateWidget(),
+            "end_date": forms.SelectDateWidget(),
         }
 
 class ImportFileForm(BaseForm):

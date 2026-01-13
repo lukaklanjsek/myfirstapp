@@ -8,15 +8,11 @@
 
     <link rel="stylesheet" href="{% static 'secondapp/style.css' %}">
 
-    <link rel="stylesheet" href="{% static 'secondapp/vendor/flatpickr/flatpickr.min.css' %}">
-
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
 
     <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
 
     <script src="{% static 'secondapp/jquery-3.7.1.min.js' %}"></script>
-
-    <script src="{% static 'secondapp/vendor/flatpickr/flatpickr.min.js' %}"></script>
 
     <script src="{% static 'django_select2/django_select2.js' %}"></script>
 
@@ -87,21 +83,7 @@
          </main>
 
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // - DateTimeField inputs:
-            flatpickr(".datetimepicker", {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i"
-            });
 
-            // - DateField inputs:
-            flatpickr(".datepicker", {
-                enableTime: false,
-                dateFormat: "Y-m-d"
-            });
-        });
-    </script>
     <script>
         function toggleMenu(){
             const container = document.querySelector(".grid-container");

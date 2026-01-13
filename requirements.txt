@@ -1,10 +1,9 @@
 asgiref
-django
+Django==6.*
 gunicorn
 packaging
 sqlparse
 python-decouple
 python-dotenv
 django-import-export
-django-flatpickr
 django-select2

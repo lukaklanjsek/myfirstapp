@@ -14,17 +14,18 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from django.conf.global_settings import LOGIN_REDIRECT_URL, STATICFILES_DIRS, DATE_FORMAT, DATETIME_FORMAT
 
 
-# BASE_DIR points to the project root (one level above django_app)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 load_dotenv(BASE_DIR / ".env")
+
+DB_PATH = os.getenv("DB_PATH", "db.sqlite3")
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
 
 # Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -48,7 +49,6 @@ INSTALLED_APPS = [
     "secondapp",
     "django_select2",
     "import_export",
-    "django_flatpickr",
 ]
 
 MIDDLEWARE = [
@@ -84,7 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                "secondapp.context_processors.roles_context",   #added this line for my new file
+                "secondapp.context_processors.roles_context",
             ],
         },
     },
@@ -99,8 +99,7 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        # Store db.sqlite3 at the project root (mounted via Docker)
-        'NAME': BASE_DIR / "db.sqlite3",   # lives in /app/db.sqlite3
+        'NAME': BASE_DIR / DB_PATH,
     }
 }
 
@@ -140,15 +139,18 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 86400
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+CSRF_COOKIE_HTTPONLY = True  # Prevents JavaScript from accessing the CSRF cookie
+SESSION_COOKIE_HTTPONLY = True  # Prevents JavaScript from accessing the session cookie
+X_FRAME_OPTIONS = 'DENY'  # Prevents clickjacking
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 86400
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
