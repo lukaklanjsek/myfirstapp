@@ -28,14 +28,14 @@
                 <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
                 <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>
                 <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='composers' %}">Composers</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='poets' %}">Poets</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='arrangers' %}">Arrangers</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='composer' %}">Composers</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='poet' %}">Poets</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='arranger' %}">Arrangers</a></li>
                 </ul>
-                <li><a href="{% url 'secondapp:person_list' role='members' %}">Members</a></li>
+                <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>
                 <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='conductors' %}">Conductors</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='musicians' %}">Musicians</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='conductor' %}">Conductors</a></li>
+                    <li><a href="{% url 'secondapp:person_list' role='musician' %}">Musicians</a></li>
                     <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
                 </ul>
                 Settings

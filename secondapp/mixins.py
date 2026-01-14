@@ -43,18 +43,18 @@ class TagListAndCreateMixin(FormMixin, ListView):
 
 class PersonRoleMixin:
     role_model_from_map = {
-        "members": (Member, MemberForm),
-        "conductors": (Conductor, ConductorForm),
-        "musicians": (Musician, MusicianForm),
-        "composers": (Composer, ComposerForm),
-        "poets": (Poet, PoetForm),
-        "arrangers": (Arranger, ArrangerForm),
+        "member": (Member, MemberForm),
+        "conductor": (Conductor, ConductorForm),
+        "musician": (Musician, MusicianForm),
+        "composer": (Composer, ComposerForm),
+        "poet": (Poet, PoetForm),
+        "arranger": (Arranger, ArrangerForm),
     }
 
     def get_model(self):
         role = self.kwargs.get("role")
         if role not in self.role_model_from_map:
-            raise Http404(f"invalid role {role}")
+            raise Http404(f"invalid role {role} mixin error")
         return self.role_model_from_map[role][0]
 
     def get_form_class(self):
@@ -73,11 +73,11 @@ class BreadcrumbMixin:
 
         if hasattr(self, 'section_name'):
             section = self.section_name
-            parts.append(f'<a href="/{section}/">{section}</a>') #parts.append(f'<a href="/{section}/">{section.replace("_", " ").title()}s</a>')
+            parts.append(f'<a href="/{section}/">{section}</a>')
 
             if hasattr(self, 'page_name'):
                 page = self.page_name
-                parts.append(page) #parts.append(page.replace('_', ' ').title())
+                parts.append(page)
                 
         return ' > '.join(parts)
     
