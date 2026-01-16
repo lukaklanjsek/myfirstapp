@@ -1,10 +1,8 @@
 from django import forms
 from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
-#from .widgets import DateInput, DateTimeInput
-#from django_select2 import forms as s2forms
 from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
-from django_flatpickr.widgets import DatePickerInput, DateTimePickerInput
+
 
 
 class SongWidget(ModelSelect2MultipleWidget):
@@ -15,7 +13,6 @@ class SongWidget(ModelSelect2MultipleWidget):
         "composer__last_name__icontains",
         "poet__first_name__icontains",
         "poet__last_name__icontains"
-        #"id__exact"
     ]
 
 
@@ -38,19 +35,11 @@ class PersonForm(BaseForm):
         fields = [
             "first_name",
             "last_name",
-            #"third_name",
             "address",
             "email",
             "phone_number",
             "mobile_number",
             "birth_date",
-#            "death_date",
-#            "nationality",
-#            "biography",
-#            "favorite_works",
-#            "influenced_by",
-#            "awards",
-#            "website",
             "additional_notes"
         ]
 
@@ -62,14 +51,10 @@ class MemberForm(PersonForm):
         fields = PersonForm.Meta.fields + [
             "voice",
             "is_active",
-#            "skill_level",
-#            "messenger",
-#            "shirt_size",
             "date_active"
         ]
-        widgets = {#"date_joined": DatePickerInput(),
-                   "birth_date": DatePickerInput(),
-                   #"death_date": DatePickerInput(),
+        widgets = {
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -78,7 +63,7 @@ class ComposerForm(PersonForm):
         model = Composer
         fields = PersonForm.Meta.fields + ["musical_era"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -87,7 +72,7 @@ class PoetForm(PersonForm):
         model = Poet
         fields = PersonForm.Meta.fields + ["writing_style", "literary_style"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -96,7 +81,7 @@ class ArrangerForm(PersonForm):
         model = Arranger
         fields = PersonForm.Meta.fields + ["style"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 
@@ -105,7 +90,7 @@ class MusicianForm(PersonForm):
         model = Musician
         fields = PersonForm.Meta.fields + ["instrument"]
         widgets = {
-            "birth_date": DatePickerInput(),
+            "birth_date": forms.SelectDateWidget(),
         }
 
 class ConductorForm(PersonForm):
@@ -116,7 +101,7 @@ class ConductorForm(PersonForm):
             "date_joined"
         ]
         widgets = {
-                "birth_date": DatePickerInput(),
+                "birth_date": forms.SelectDateWidget(),
             }
 
 
@@ -135,7 +120,9 @@ class RehearsalForm(BaseForm):
                   "songs",
                   "is_cancelled"]
         widgets = {
-            'calendar': DateTimePickerInput(),
+            'calendar': forms.DateTimeInput(
+                attrs={"type": "datetime-local"}
+            ),
             'additional_notes': forms.Textarea(attrs={'rows': 3}),
             'songs': SongWidget(attrs={'style': 'width: 100%;'}),
         }
@@ -151,13 +138,6 @@ class RehearsalForm(BaseForm):
 
         if instance := kwargs.get("instance"):
             self._set_initial_values(instance)
-
-#            current_members = instance.members.all()
-#
-#            for member in self.active_members:
-#                field_name = f"member_{member.id}"
-#                if hasattr(self, "fields") and field_name in self.fields:
-#                    self.fields[field_name].initial = member in current_members
 
     def _create_person_fields(self):
         # making space for conductors as well as members
@@ -189,15 +169,6 @@ class RehearsalForm(BaseForm):
             field_name = f"conductor_{conductor.id}"
             if field_name in self.fields:
                 self.fields[field_name].initial = conductor in current_conductors
-
-#    def clean(self):
-#        super().clean()
-#
-#        selected_members = []
-#        for member in self.active_members:
-#            field_name = f"member_{member.id}"
-#            if field_name in self.cleaned_data and self.cleaned_data[field_name]:
-#                selected_members.append(member)
 
 
     def save(self, *args, **kwargs):
@@ -244,8 +215,8 @@ class ActivityForm(BaseForm):
             "ensemble"
         ]
         widgets = {
-            "start_date": DatePickerInput(),
-            "end_date": DatePickerInput(),
+            "start_date": forms.SelectDateWidget(),
+            "end_date": forms.SelectDateWidget(),
         }
 
 class ImportFileForm(BaseForm):

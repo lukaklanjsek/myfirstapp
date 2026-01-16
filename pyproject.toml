@@ -1,0 +1,17 @@
+[project]
+name = "myfirstapp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "asgiref>=3.11.0",
+    "django==6.*",
+    "django-import-export>=4.4.0",
+    "django-select2>=8.4.8",
+    "gunicorn>=23.0.0",
+    "packaging>=25.0",
+    "python-decouple>=3.8",
+    "python-dotenv>=1.2.1",
+    "sqlparse>=0.5.5",
+]

@@ -2,8 +2,7 @@
 {% block title %}{{song.pk}}Song{% endblock %}
 {% block content %}<br>
 <a href="{% url 'secondapp:song_list' %}"><button type="button">Songs - Back</button></a>
-<h1> detail of song {{ song.pk }}</h1>
-<h2>{{ song.title }}</h2>
+<h1>{{ song.title }} | {{ song.pk }}</h1>
 <p>Composer: <a href="{{ song.composer.get_absolute_url }}">{{ song.composer }}</a></p>
 <p>Poet: <a href="{{ song.poet.get_absolute_url }}">{{ song.poet }}</a></p>
 

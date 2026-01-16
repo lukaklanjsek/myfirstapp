@@ -1,4 +1,3 @@
-from random import choices
 
 from django.db import models
 from django.urls import reverse
@@ -6,9 +5,7 @@ import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
-#from django.forms import ModelMultipleChoiceField
-from django.core.exceptions import ValidationError
-from sqlparse.engine.grouping import group
+
 
 
 class ShirtSize(Enum):
@@ -38,12 +35,12 @@ class SkillLevel(Enum):
 
 
 class Role(Enum):
-    MEMBER = "Member"
-    COMPOSER = "Composer"
-    ARRANGER = "Arranger"
-    POET = "Poet"
-    MUSICIAN = "Musician"
-    CONDUCTOR = "Conductor"
+    MEMBER = "member"
+    COMPOSER = "composer"
+    ARRANGER = "arranger"
+    POET = "poet"
+    MUSICIAN = "musician"
+    CONDUCTOR = "conductor"
 
 
 class Group(Enum):
@@ -56,7 +53,7 @@ class Group(Enum):
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
     date_added = models.DateField(auto_now_add=True)
-    # this might clash between all stamps but right now doing update for the footer
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -70,20 +67,14 @@ class Tag(models.Model):
 class Person(models.Model):
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, db_index=True, blank=True, null=True)
-#    third_name = models.CharField(max_length=100, blank=True, null=True)
+
     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
     address = models.CharField(max_length=250, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=17, blank=True, null=True)
     mobile_number = models.CharField(max_length=17, blank=True, null=True)
     birth_date = models.DateField("birthday", blank=True, null=True)
-#    death_date = models.DateField("death day", blank=True, null=True)
-#    nationality = models.CharField("nationality", max_length=100, blank=True, null=True)
-#    biography = models.TextField("short bio", blank=True, null=True)
-#    favorite_works = models.TextField(blank=True, null=True)
-#    influenced_by = models.TextField(blank=True, null=True)
-#    awards = models.TextField(blank=True, null=True)
-#    website = models.TextField(blank=True, null=True)
+
     additional_notes = models.TextField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -97,14 +88,12 @@ class Person(models.Model):
 
     def get_full_name(self):
         names = [self.first_name, self.last_name]
-#        if self.third_name:
-#            names.insert(1, self.third_name)
+
         return " ".join(names)
 
     def get_display_name(self):
         display_name = f"{self.last_name}, {self.first_name}"
-#        if self.third_name:
-#            display_name += f" {self.third_name}"
+
         return display_name
 
     def get_role_name(self):
