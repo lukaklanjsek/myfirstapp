@@ -41,8 +41,6 @@ Thumbs.db
 
 .sh
 
-.idea/misc.xml
-#.gitignore
-
 .continue/
 imports/
+uv.lock

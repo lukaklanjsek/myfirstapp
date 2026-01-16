@@ -1,27 +1,24 @@
 # Songs and singers participation tracker
 
-## Installation
-
-1. ```sudo apt install python3-venv```
-2. ```python3 -m venv venv``` Create new virtual environment for the application
-3. ```source venv/bin/activate```
-4. ```pip install -r requirements.txt```
-
-Minimal settings for running the app locally:
-
-6. Copy .env.example to .env
-7. Edit .env file, generate a new 32-character secret key and put it in the
-   "your-secret-key-here-generate-new-one"
-8. ```python manage.py migrate```
-9. ```python manage.py createsuperuser``` and follow instructions in the
-   terminal (email can be blank)
-10. ```python manage.py runserver```
-
-Congratulations, this is it!
-
 ## Requirements
 
-- Python 3.14+
+- uv 0.9+
+
+## Installation
+
+Minimal settings to run the app locally:
+
+1. Copy .env.example to .env
+2. Edit .env file, generate a new 32-character secret key and put it in the
+   "your-secret-key-here-generate-new-one"
+3. `uv sync`
+4. `uv run manage.py migrate`
+5. `uv run manage.py createsuperuser`
+   - follow cli instructions; email can be blank
+
+6. `uv run manage.py runserver`
+
+Congratulations, this is now running!
 
 ## Usage
 
@@ -66,8 +63,3 @@ Feel free to open issue on github.
 ## Licence
 
 Apache 2.0.
-
-## Known issues
-
-- Order of the songs in specific rehearsal is not preserved yet.
-- Activity of the members is not yet connected to the status of "is active".

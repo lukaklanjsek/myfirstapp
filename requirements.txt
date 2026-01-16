@@ -1,9 +1,0 @@
-asgiref
-Django==6.*
-gunicorn
-packaging
-sqlparse
-python-decouple
-python-dotenv
-django-import-export
-django-select2
