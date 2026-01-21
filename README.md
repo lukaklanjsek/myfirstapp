@@ -20,6 +20,12 @@ Minimal settings to run the app locally:
 
 Congratulations, this is now running!
 
+### Docker
+
+Docker image also exists:
+
+`docker run -p 8000:8000 ghcr.io/lukaklanjsek/myfirstapp:latest`
+
 ## Usage
 
 ### Managing songs
