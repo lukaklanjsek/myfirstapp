@@ -5,18 +5,7 @@ import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
-
-
-
-class ShirtSize(Enum):
-    XXS = '2x Extra Small'
-    XS = 'Extra Small'
-    S = 'Small'
-    M = 'Medium'
-    L = 'Large'
-    XL = 'Extra Large'
-    XXL = '2x Extra Large'
-    XXXL = '3x Extra Large'
+from django.contrib.auth.models import AbstractUser
 
 
 class VoiceType(Enum):
@@ -26,12 +15,6 @@ class VoiceType(Enum):
     Bass = 'Bass'
 
 
-class SkillLevel(Enum):
-    BEGINNER = "Beginner"
-    ENTHUSIAST = "Enthusiast"
-    EXPERIENCED = "Experienced"
-    SCHOOLED = "Schooled"
-    PROFESSIONAL = "Professional"
 
 
 class Role(Enum):
@@ -49,6 +32,10 @@ class Group(Enum):
     MALE = "male"
 
 
+class Position(Enum):
+    STAFF = "staff"
+    PARTICIPANT = "participant"
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -62,6 +49,43 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AuthUser(AbstractUser):
+    ACCOUNT_TYPES = (
+        ("individual", "Individual"),
+        ("organisation", "Organisation"),
+    )
+
+    account_type = models.CharField(
+        max_length=20,
+        choices=ACCOUNT_TYPES
+    )
+
+
+class Organisation(models.Model):
+    auth_user = models.OneToOneField(
+        AuthUser,
+        on_delete=models.CASCADE,
+        related_name="organisation"
+    )
+
+    name = models.CharField(max_length=250)
+    slug = models.SlugField(unique=True)
+
+class Individual(models.Model):
+    auth_user = models.OneToOneField(
+        AuthUser,
+        on_delete=models.CASCADE,
+        related_name="individual"
+    )
+
+    display_name = models.CharField(max_length=250)
+
+    def __str__(self):
+        return self.display_name
+
+
 
 
 class Person(models.Model):
@@ -249,7 +273,7 @@ class Song(models.Model):
     number_of_pages = models.IntegerField(blank=True, null=True)
     number_of_copies = models.IntegerField(blank=True, null=True)
     year = models.IntegerField("year of creation", blank=True, null=True)
-    group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group], blank=True, null=True)
+    group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group])
     number_of_voices = models.IntegerField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

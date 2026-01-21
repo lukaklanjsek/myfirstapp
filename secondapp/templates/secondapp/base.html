@@ -25,15 +25,19 @@
 
             <ul class="menu-links">
                 <li><a href="{% url 'secondapp:index' %}">Home</a></li>
-                <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
+                Events
+                <ul>
+                    <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
+                </ul>
                 <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>
                 <ul>
                     <li><a href="{% url 'secondapp:person_list' role='composer' %}">Composers</a></li>
                     <li><a href="{% url 'secondapp:person_list' role='poet' %}">Poets</a></li>
                     <li><a href="{% url 'secondapp:person_list' role='arranger' %}">Arrangers</a></li>
                 </ul>
-                <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>
+                Groups
                 <ul>
+                    <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>
                     <li><a href="{% url 'secondapp:person_list' role='conductor' %}">Conductors</a></li>
                     <li><a href="{% url 'secondapp:person_list' role='musician' %}">Musicians</a></li>
                     <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
