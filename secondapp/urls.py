@@ -7,6 +7,8 @@ app_name = 'secondapp'
 
 urlpatterns = [
 
+    path("login/", views.AccountLoginView.as_view(), name="login"),
+
     path("", views.IndexView.as_view(), name="index"),
 
     path("rehearsal/", views.RehearsalListView.as_view(), name="rehearsal_list"),

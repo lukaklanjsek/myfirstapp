@@ -2,7 +2,7 @@ from django import forms
 from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
-
+from django.contrib.auth.forms import AuthenticationForm
 
 
 class SongWidget(ModelSelect2MultipleWidget):

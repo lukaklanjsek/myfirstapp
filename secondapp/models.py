@@ -52,38 +52,8 @@ class Tag(models.Model):
 
 
 class AuthUser(AbstractUser):
-    ACCOUNT_TYPES = (
-        ("individual", "Individual"),
-        ("organisation", "Organisation"),
-    )
+    pass
 
-    account_type = models.CharField(
-        max_length=20,
-        choices=ACCOUNT_TYPES
-    )
-
-
-class Organisation(models.Model):
-    auth_user = models.OneToOneField(
-        AuthUser,
-        on_delete=models.CASCADE,
-        related_name="organisation"
-    )
-
-    name = models.CharField(max_length=250)
-    slug = models.SlugField(unique=True)
-
-class Individual(models.Model):
-    auth_user = models.OneToOneField(
-        AuthUser,
-        on_delete=models.CASCADE,
-        related_name="individual"
-    )
-
-    display_name = models.CharField(max_length=250)
-
-    def __str__(self):
-        return self.display_name
 
 
 

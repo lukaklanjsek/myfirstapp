@@ -25,8 +25,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    "secondapp.apps.SecondappConfig",
     "polls.apps.PollsConfig",
-    "secondapp",
+
     "django_select2",
     "import_export",
 ]
@@ -96,6 +98,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "secondapp.AuthUser"
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Europe/Ljubljana'
