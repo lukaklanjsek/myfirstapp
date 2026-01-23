@@ -1,11 +1,14 @@
 
 from django.db import models
+from django.db.models import PROTECT, CASCADE
+from django.db import transaction
 from django.urls import reverse
 import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 
 
 class VoiceType(Enum):
@@ -52,10 +55,103 @@ class Tag(models.Model):
 
 
 class AuthUser(AbstractUser):
+    """Global auth. User is only login. Profile is identity. Organisation is context."""
     pass
 
 
+class Organisation(models.Model):
+    name = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.name
+
+
+class Status(models.Model):
+    """Catalogue of possible profile attributes.
+    Ex. admin, member, supporter"""
+    key = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.label
+
+
+class OrganisationProfile(models.Model):
+    """Through model between org and user."""
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name="profiles"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="profiles"
+    )
+    display_name = models.CharField(max_length=255)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organisation", "user"],
+                condition=models.Q(user__isnull=False),
+                name="unique_user_profile_per_org",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.display_name} @ {self.organisation}"
+
+    def get_status(self, key) -> Optional[bool]:
+        """True/False is explicitly existing"""
+        try:
+            return self.statuses.get(status__key=key).value
+        except ProfileStatus.DoesNotExist:
+            return None
+
+    def has_status(self, key: str) -> bool:
+        """Checks if status True"""
+        return self.get_status(key) is True
+
+    def set_status(self, key, value: bool):
+        """ Set status True/False.
+        If value=None, deletes status."""
+        status_obj, _ = Status.objects.get_or_create(key=key, defaults={"label": key})
+
+        if value is None:
+            self.statuses.filter(status=status_obj).delete()
+        else:
+            ProfileStatus.objects.update_or_create(
+                profile=self,
+                status=status_obj,
+                defaults={"value": value},
+            )
+
+
+class ProfileStatus(models.Model):
+    """Through model for status and org-profile."""
+    profile = models.ForeignKey(
+        OrganisationProfile,
+        on_delete=models.CASCADE,
+        related_name="statuses"
+    )
+    status = models.ForeignKey(
+        Status,
+        on_delete=models.CASCADE,
+        related_name="profile_values"
+    )
+    value = models.BooleanField(
+        null=True,
+        help_text="NULL = not defined, True = yes, False = no"
+    )
+
+    class Meta:
+        unique_together = ("profile", "status")
+
+    def __str__(self):
+        return f"{self.profile} :: {self.status.key} = {self.value}"
 
 
 class Person(models.Model):
