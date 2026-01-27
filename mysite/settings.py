@@ -44,9 +44,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-LOGIN_URL = "/accounts/login/"
+LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "login/"
 
 LOGIN_REQUIRED_IGNORE_PATHS = [
     "/accounts/login/",
@@ -66,7 +66,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                "secondapp.context_processors.roles_context",
+                #"secondapp.context_processors.roles_context",
             ],
         },
     },
@@ -124,3 +124,4 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

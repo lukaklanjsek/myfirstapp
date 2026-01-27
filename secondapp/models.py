@@ -38,6 +38,7 @@ class Group(Enum):
 #class Position(Enum):
 #    STAFF = "staff"
 #    PARTICIPANT = "participant"
+
 class Role(Enum):
     ADMIN = "admin"
     MEMBER = "member"
@@ -59,11 +60,20 @@ class Role(Enum):
 
 class AuthUser(AbstractUser):
     """Global auth. User is only login. Identity is through Person. Organization is context."""
-    pass
+#    email = models.EmailField(unique=True)
+#    phone_number = models.CharField(max_length=19, blank=True, null=True)
+    first_name = None
+    last_name = None    # override to make them unused, hidden
+
+    # REQUIRED_FIELDS = ['username']
+
+    def __str__(self):
+        return self.username
 
 
 class Organization(models.Model):
     name = models.CharField(max_length=255)
+    address = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -111,8 +121,8 @@ class Membership(models.Model):
 class MembershipPeriod(models.Model):
     """Tracks activity periods for each role assignment."""
     membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="periods")
-    started_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateField(auto_now_add=True)
+    ended_at = models.DateField(null=True, blank=True)
 
 
 # class Status(models.Model):
@@ -375,86 +385,86 @@ class MembershipPeriod(models.Model):
 #    def __str__(self):
 #        return f"{self.get_display_name()}"
 #
-
-class Song(models.Model):
-    id = models.IntegerField(primary_key=True)
-    title =  models.CharField(max_length=250)
-    composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
-    poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
-    number_of_pages = models.IntegerField(blank=True, null=True)
-    number_of_copies = models.IntegerField(blank=True, null=True)
-    year = models.IntegerField("year of creation", blank=True, null=True)
-    group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group])
-    number_of_voices = models.IntegerField(blank=True, null=True)
-    additional_notes = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["title"]
-        indexes = [
-            models.Index(fields=["title"]),
-        ]
-
-    def get_absolute_url(self):
-        return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
-
-    def __str__(self):
-        composer_name = self.composer.last_name if self.composer else "Unknown"
-        return f"{self.title} - {composer_name}"
-
-
-class Rehearsal(models.Model):
-    calendar = models.DateTimeField(unique=True)
-    additional_notes = models.TextField(blank=True, null=True)
-    members = models.ManyToManyField(Member, blank=True, related_name= "rehearsals")
-    conductors = models.ManyToManyField(Conductor, blank=True, related_name= "rehearsals")
-    songs = models.ManyToManyField(Song, blank=True, related_name= "rehearsals")
-    is_cancelled = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name_plural = "Rehearsals"
-        ordering = ["-calendar"]
-        indexes = [
-            models.Index(fields=["calendar"]),
-            models.Index(fields=["is_cancelled"]),
-        ]
-
-    def recent(self):
-        return self.calendar >= timezone.now() - datetime.timedelta()
-
-    def is_upcoming(self):
-        if self.calendar:
-            return self.calendar > timezone.now()
-        return False
-
-    def get_member_count(self):
-        return self.members.count()
-
-    def get_song_count(self):
-        return self.songs.count()
-
-    def get_absolute_url(self):
-        return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
-
-    def get_member_status(self):
-        now = timezone.now()
-        active_members = Member.objects.filter(is_active=True)
-        present_members = self.members.all()
-        missing_members = active_members.exclude(pk__in=present_members)
-
-        return {
-            "present": present_members,
-            "missing": missing_members,
-        }
-
-    def __str__(self):
-        status = "(Cancelled)" if self.is_cancelled else ""
-        calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M")
-        return f"{calendar_display} - {status}"
-
+#
+# class Song(models.Model):
+#     id = models.IntegerField(primary_key=True)
+#     title =  models.CharField(max_length=250)
+#     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
+#     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
+#     number_of_pages = models.IntegerField(blank=True, null=True)
+#     number_of_copies = models.IntegerField(blank=True, null=True)
+#     year = models.IntegerField("year of creation", blank=True, null=True)
+#     group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group])
+#     number_of_voices = models.IntegerField(blank=True, null=True)
+#     additional_notes = models.TextField(blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         ordering = ["title"]
+#         indexes = [
+#             models.Index(fields=["title"]),
+#         ]
+#
+#     def get_absolute_url(self):
+#         return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
+#
+#     def __str__(self):
+#         composer_name = self.composer.last_name if self.composer else "Unknown"
+#         return f"{self.title} - {composer_name}"
+#
+#
+# class Rehearsal(models.Model):
+#     calendar = models.DateTimeField(unique=True)
+#     additional_notes = models.TextField(blank=True, null=True)
+#     members = models.ManyToManyField(Member, blank=True, related_name= "rehearsals")
+#     conductors = models.ManyToManyField(Conductor, blank=True, related_name= "rehearsals")
+#     songs = models.ManyToManyField(Song, blank=True, related_name= "rehearsals")
+#     is_cancelled = models.BooleanField(default=False)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         verbose_name_plural = "Rehearsals"
+#         ordering = ["-calendar"]
+#         indexes = [
+#             models.Index(fields=["calendar"]),
+#             models.Index(fields=["is_cancelled"]),
+#         ]
+#
+#     def recent(self):
+#         return self.calendar >= timezone.now() - datetime.timedelta()
+#
+#     def is_upcoming(self):
+#         if self.calendar:
+#             return self.calendar > timezone.now()
+#         return False
+#
+#     def get_member_count(self):
+#         return self.members.count()
+#
+#     def get_song_count(self):
+#         return self.songs.count()
+#
+#     def get_absolute_url(self):
+#         return reverse("secondapp:rehearsal_detail", kwargs={"pk": self.pk})
+#
+#     def get_member_status(self):
+#         now = timezone.now()
+#         active_members = Member.objects.filter(is_active=True)
+#         present_members = self.members.all()
+#         missing_members = active_members.exclude(pk__in=present_members)
+#
+#         return {
+#             "present": present_members,
+#             "missing": missing_members,
+#         }
+#
+#     def __str__(self):
+#         status = "(Cancelled)" if self.is_cancelled else ""
+#         calendar_display = self.calendar.strftime("%Y-%m-%d %H:%M")
+#         return f"{calendar_display} - {status}"
+#
 
 # class Ensemble(models.Model):
 #     name = models.CharField(max_length=250)
