@@ -46,13 +46,15 @@ MIDDLEWARE = [
 
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "login/"
+LOGOUT_REDIRECT_URL = "/"
 
-LOGIN_REQUIRED_IGNORE_PATHS = [
-    "/accounts/login/",
-    "/accounts/logout/",
-    "/accounts/password_reset/",
-]
+# LOGIN_REQUIRED_IGNORE_PATHS = [
+#     "/password_reset/",
+#     "/register/",
+#     "/login/",
+#     "/logout/",
+#     "/logged_out/",
+# ]
 
 ROOT_URLCONF = 'mysite.urls'
 

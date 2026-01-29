@@ -1,52 +1,52 @@
-{% extends "secondapp/base.html" %}
+<!--{% extends "secondapp/base.html" %}-->
 
-{% block title %}index{% endblock %}
+<!--{% block title %}index{% endblock %}-->
 
-{% block content %}
-<h1> Index.html </h1>
+<!--{% block content %}-->
+<!--<h1> Index.html </h1>-->
 
-<!--  "HAPPENING NOW" Feature -->
-{% if happening_now %}
-    <div class="happening-now-banner">
-        <div class="urgent-alert">
-            <h2> REHEARSAL HAPPENING NOW! </h2>
-            <div class="happening-details">
-                <p><a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">
-                 Started: {{ happening_now.calendar|date:"j b Y, G:i" }}</a></p>
-            </div>
-        </div>
-    </div>
-{% endif %}
-<h2>Upcoming rehearsals:</h2>
-<div class="rehearsal-table">
-    <table>
-        <tr>
-            <th> calendar </th>
-            <th> missing </th>
-        </tr>
-        {% for rehearsal in upcoming_rehearsals %}
-        <tr>
-            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
-            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>
-        </tr>
-        {% empty %} Empty calendar.
-        {% endfor %}
-    </table>
-</div>
-<h2>Past rehearsals:</h2>
-<div class="rehearsal-table">
-    <table>
-        <tr>
-            <th> calendar </th>
-            <th> not present </th>
-        </tr>
-        {% for rehearsal in past_rehearsals %}
-        <tr>
-            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>
-            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>
-        </tr>
-        {% empty %} Empty calendar.
-        {% endfor %}
-    </table>
-</div>
-{% endblock %}
+<!--&lt;!&ndash;  "HAPPENING NOW" Feature &ndash;&gt;-->
+<!--{% if happening_now %}-->
+<!--    <div class="happening-now-banner">-->
+<!--        <div class="urgent-alert">-->
+<!--            <h2> REHEARSAL HAPPENING NOW! </h2>-->
+<!--            <div class="happening-details">-->
+<!--                <p><a href="{% url 'secondapp:rehearsal_detail' happening_now.pk %}">-->
+<!--                 Started: {{ happening_now.calendar|date:"j b Y, G:i" }}</a></p>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--{% endif %}-->
+<!--<h2>Upcoming rehearsals:</h2>-->
+<!--<div class="rehearsal-table">-->
+<!--    <table>-->
+<!--        <tr>-->
+<!--            <th> calendar </th>-->
+<!--            <th> missing </th>-->
+<!--        </tr>-->
+<!--        {% for rehearsal in upcoming_rehearsals %}-->
+<!--        <tr>-->
+<!--            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>-->
+<!--            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>-->
+<!--        </tr>-->
+<!--        {% empty %} Empty calendar.-->
+<!--        {% endfor %}-->
+<!--    </table>-->
+<!--</div>-->
+<!--<h2>Past rehearsals:</h2>-->
+<!--<div class="rehearsal-table">-->
+<!--    <table>-->
+<!--        <tr>-->
+<!--            <th> calendar </th>-->
+<!--            <th> not present </th>-->
+<!--        </tr>-->
+<!--        {% for rehearsal in past_rehearsals %}-->
+<!--        <tr>-->
+<!--            <td><a href="{% url 'secondapp:rehearsal_detail' rehearsal.pk %}"> {{ rehearsal.calendar|date:"j b Y, G:i" }} </td>-->
+<!--            <td> {% for member in rehearsal.member_status.missing %} {{ member.first_name }}, {% endfor %}</a></td>-->
+<!--        </tr>-->
+<!--        {% empty %} Empty calendar.-->
+<!--        {% endfor %}-->
+<!--    </table>-->
+<!--</div>-->
+<!--{% endblock %}-->

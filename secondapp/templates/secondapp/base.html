@@ -10,55 +10,62 @@
 
     <link rel="icon" href="{% static 'secondapp/images/favicon.ico' %}" type="image/x-icon" >
 
-    <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
+<!--    <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">-->
 
-    <script src="{% static 'secondapp/jquery-3.7.1.min.js' %}"></script>
+<!--    <script src="{% static 'secondapp/jquery-3.7.1.min.js' %}"></script>-->
 
-    <script src="{% static 'django_select2/django_select2.js' %}"></script>
+<!--    <script src="{% static 'django_select2/django_select2.js' %}"></script>-->
 
 </head>
 <body>
-    <div class="grid-container">
+<!--    <div class="grid-container">-->
 
-    <!-- toggle button -->
-        <nav class="sidebar" id="sidebar">
+<!--    &lt;!&ndash; toggle button &ndash;&gt;-->
+<!--        <nav class="sidebar" id="sidebar">-->
 
-            <ul class="menu-links">
-                <li><a href="{% url 'secondapp:index' %}">Home</a></li>
-                Events
-                <ul>
-                    <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
-                </ul>
-                <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>
-                <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='composer' %}">Composers</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='poet' %}">Poets</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='arranger' %}">Arrangers</a></li>
-                </ul>
-                Groups
-                <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='conductor' %}">Conductors</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='musician' %}">Musicians</a></li>
-                    <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
-                </ul>
-                Settings
-                <ul>
-                    <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>
-                </ul>
+<!--            <ul class="menu-links">-->
+<!--                <li><a href="{% url 'secondapp:index' %}">Home</a></li>-->
+<!--                Events-->
+<!--                <ul>-->
+<!--                    <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>-->
+<!--                </ul>-->
+<!--                <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>-->
+<!--                <ul>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='composer' %}">Composers</a></li>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='poet' %}">Poets</a></li>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='arranger' %}">Arrangers</a></li>-->
+<!--                </ul>-->
+<!--                Groups-->
+<!--                <ul>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='conductor' %}">Conductors</a></li>-->
+<!--                    <li><a href="{% url 'secondapp:person_list' role='musician' %}">Musicians</a></li>-->
+<!--                    <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>-->
+<!--                </ul>-->
+<!--                Settings-->
+<!--                <ul>-->
+<!--                    <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>-->
+<!--                </ul>-->
 
-                <li>
-                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
-                        {% csrf_token %}
-                        <button type="submit">Logout</button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
+<!--                <li>-->
+<!--                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">-->
+<!--                        {% csrf_token %}-->
+<!--                        <button type="submit">Logout</button>-->
+<!--                    </form>-->
+<!--                </li>-->
+<!--            </ul>-->
+<!--        </nav>-->
 <!-- Breadcrumbs Block -->
 
+{% if user.is_authenticated %}
+    <p>Welcome, {{ user.username }}!</p>
+    <a href="{% url 'logout' %}">Logout</a>
+{% else %}
+    <a href="{% url 'secondapp:register' %}">Register</a>
+    <a href="{% url 'login' %}">Login</a>
+{% endif %}
 
-    <!--main -->
+<!--    main -->
         <main class="main">
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>

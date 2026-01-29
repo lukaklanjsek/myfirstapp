@@ -3,6 +3,8 @@ from dataclasses import field
 from fileinput import filename
 import sqlite3
 
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 from django.core.files.uploadedfile import UploadedFile
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, Http404, HttpResponseRedirect
@@ -15,33 +17,138 @@ from datetime import datetime, timedelta, date
 from django.utils import timezone
 from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView, TemplateView
 from django.views.generic.edit import DeleteView
 from django.db.models import Q
 from django.apps import apps
 from django.conf import settings
 import os
+from django.contrib.auth import login
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 
 
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
-# from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin
+# from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import AuthUser, Organization
-from .forms import RegisterForm
+from .models import AuthUser, Organization, Person, Membership, Role
+from .forms import RegisterForm, OrganizationForm, PersonForm
 
 
 class RegisterView(FormView):
     template_name = "secondapp/register.html"
     form_class = RegisterForm
-    success_url = reverse_lazy("/")
+    success_url = reverse_lazy("secondapp:person_form2")
 
     def form_valid(self, form):
         user = form.save()
-        login(self.request, user)
+        login(self.request, user)  # to log user immediately after registering
         return super().form_valid(form)
 
 
+class LogoutView(View):
+    def post(self, request):
+        logout(request)
+        return redirect('secondapp:register')
+
+
+class LoggedOutView(TemplateView):
+    template_name = "secondapp/logged_out.html"
+
+
+class PersonCreateView(LoginRequiredMixin, CreateView):
+    template_name = "secondapp/person_form2.html"
+    form_class = PersonForm
+    context_object_name = "person_create"
+    success_url = reverse_lazy("secondapp:index2")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        existing_person = Person.objects.filter(user=self.request.user).first()
+        if existing_person:
+            context['page_title'] = "Add Another Profile"
+            context['has_existing_person'] = True
+        else:
+            context['page_title'] = "Complete Your Profile"
+            context['unclaimed_persons'] = Person.objects.filter(
+                email=self.request.user.email,
+                user__isnull=True
+            )
+
+        return context
+
+    def form_valid(self, form):
+        person = form.save(commit=False)
+
+        # Auto-assign to user only if they don't have a Person yet
+        if not Person.objects.filter(user=self.request.user).exists():
+            person.user = self.request.user
+            person.save()
+            self.merge_unclaimed_persons(person)
+        else:
+            person.user = None
+            person.save()
+
+        return super().form_valid(form)
+
+    def merge_unclaimed_persons(self, claimed_person):
+        unclaimed = Person.objects.filter(
+            email=claimed_person.email,
+            user__isnull=True
+        ).exclude(id=claimed_person.id)
+
+        for old_person in unclaimed:
+            old_person.memberships.update(person=claimed_person)
+            old_person.delete()
+
+
+class IndexView(LoginRequiredMixin, TemplateView):
+    template_name = "secondapp/index2.html"
+    model = Person
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context["memberships"] = Membership.objects.filter(person__user=user).select_related("organization")
+        return context
+
+
+class OrganizationCreateView(LoginRequiredMixin, CreateView):
+    template_name = "secondapp/organization_form.html"
+    form_class = OrganizationForm
+    context_object_name = "org_create"
+    success_url = reverse_lazy("secondapp:index2")
+
+    def form_valid(self, form):
+        # atomic transaction - creates everything at once:
+        with transaction.atomic():
+            person = Person.objects.filter(user=self.request.user).first()
+
+            # create auth user for org
+            org_user = AuthUser.objects.create(
+                username=form.cleaned_data["name"],
+                email=form.cleaned_data["email"],
+            )
+            org_user.set_unusable_password()
+            org_user.save()
+
+            # create org
+            organization = form.save(commit=False)
+            organization.user = org_user
+            organization.save()
+
+
+            Membership.objects.create(
+                organization=organization,
+                person=person,
+                role=Role.ADMIN.name,
+                is_active=True,
+            )
+        return super().form_valid(form)
+
+# -----------------------------------------------------
 # class IndexView(generic.ListView): #BreadcrumbMixin,
 #     model = Rehearsal
 #     template_name = "secondapp/index.html"

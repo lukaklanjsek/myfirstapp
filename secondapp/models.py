@@ -11,61 +11,56 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 
 
-#class VoiceType(Enum):
-#    Soprano = 'Soprano'
-#    Alto = 'Alto'
-#    Tenor = 'Tenor'
-#    Bass = 'Bass'
-
-
-
-
-#class Role(Enum):
-#    MEMBER = "member"
-#    COMPOSER = "composer"
-#    ARRANGER = "arranger"
-#    POET = "poet"
-#    MUSICIAN = "musician"
-#    CONDUCTOR = "conductor"
-
-
-class Group(Enum):
-    MIXED = "mixed"
-    FEMALE = "female"
-    MALE = "male"
-
-
-#class Position(Enum):
-#    STAFF = "staff"
-#    PARTICIPANT = "participant"
+# class VoiceType(Enum):
+#     Soprano = 'Soprano'
+#     Alto = 'Alto'
+#     Tenor = 'Tenor'
+#     Bass = 'Bass'
+#
+#
+#
+#
+# class Role(Enum):
+#     MEMBER = "member"
+#     COMPOSER = "composer"
+#     ARRANGER = "arranger"
+#     POET = "poet"
+#     MUSICIAN = "musician"
+#     CONDUCTOR = "conductor"
+#
+#
+# class Group(Enum):
+#     MIXED = "mixed"
+#     FEMALE = "female"
+#     MALE = "male"
+#
+#
+# class Position(Enum):
+#     STAFF = "staff"
+#     PARTICIPANT = "participant"
 
 class Role(Enum):
     ADMIN = "admin"
     MEMBER = "member"
     SUPPORTER = "supporter"
 
-#class Tag(models.Model):
-#    name = models.CharField(max_length=100, unique=True)
-#    date_added = models.DateField(auto_now_add=True)
-
-#    created_at = models.DateTimeField(auto_now_add=True)
-#    updated_at = models.DateTimeField(auto_now=True)
-
-#    class Meta:
-#        ordering = ["name"]
-
-#    def __str__(self):
-#        return self.name
+# class Tag(models.Model):
+#     name = models.CharField(max_length=100, unique=True)
+#     date_added = models.DateField(auto_now_add=True)
+#
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         ordering = ["name"]
+#
+#     def __str__(self):
+#         return self.name
 
 
 class AuthUser(AbstractUser):
-    """Global auth. User is only login. Identity is through Person. Organization is context."""
-#    email = models.EmailField(unique=True)
-#    phone_number = models.CharField(max_length=19, blank=True, null=True)
     first_name = None
-    last_name = None    # override to make them unused, hidden
-
-    # REQUIRED_FIELDS = ['username']
+    last_name = None
 
     def __str__(self):
         return self.username
@@ -73,15 +68,23 @@ class AuthUser(AbstractUser):
 
 class Organization(models.Model):
     name = models.CharField(max_length=255)
+    email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False,
+        related_name="organizations"
+    )
 
     def __str__(self):
         return self.name
 
 
 class Person(models.Model):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    first_name = models.CharField("name", max_length=100)
+    last_name = models.CharField("surname", max_length=100)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
@@ -125,6 +128,32 @@ class MembershipPeriod(models.Model):
     ended_at = models.DateField(null=True, blank=True)
 
 
+# class Song(models.Model):
+#     title =  models.CharField(max_length=250)
+#     composer =  models.ForeignKey(Composer, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
+#     poet = models.ForeignKey(Poet, on_delete=models.PROTECT,  related_name="song", blank=True, null=True)
+#     number_of_pages = models.IntegerField(blank=True, null=True)
+#     number_of_copies = models.IntegerField(blank=True, null=True)
+#     year = models.IntegerField("year of creation", blank=True, null=True)
+#     group = models.CharField(max_length=15, choices=[(group.name, group.value) for group in Group])
+#     number_of_voices = models.IntegerField(blank=True, null=True)
+#     additional_notes = models.TextField(blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         ordering = ["title"]
+#         indexes = [
+#             models.Index(fields=["title"]),
+#         ]
+#
+#     def get_absolute_url(self):
+#         return reverse("secondapp:song_detail", kwargs={"pk": self.pk})
+#
+#     def __str__(self):
+#         composer_name = self.composer.last_name if self.composer else "Unknown"
+#         return f"{self.title} - {composer_name}"
+#
 # class Status(models.Model):
 #    """Catalogue of possible profile attributes.
 #    Ex. admin, member, supporter"""

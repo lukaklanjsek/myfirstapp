@@ -1,0 +1,16 @@
+{% block title %}Create Org{% endblock %}
+
+{% block content %}
+
+<h2>Create Organization</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Create</button>
+</form>
+
+<form method="post" action="{% url 'secondapp:logout' %}">
+  {% csrf_token %}
+  <button type="submit">Logout</button>
+</form>
+{% endblock %}

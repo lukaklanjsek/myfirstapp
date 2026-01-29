@@ -4,7 +4,7 @@ from django import forms
 from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm
-from .models import AuthUser
+from .models import AuthUser, Organization, Person
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -20,7 +20,26 @@ from .models import AuthUser
 class RegisterForm(UserCreationForm):
     class Meta:
         model = AuthUser
-        fields = ("email", "username")
+        fields = "__all__"
+
+
+class PersonForm(forms.ModelForm):
+    class Meta:
+        model = Person
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "address",
+            "phone",
+            "birth_date"
+        ]
+
+
+class OrganizationForm(forms.ModelForm):
+    class Meta:
+        model = Organization
+        fields = ["name", "email", "address"]
 
 
 # class BaseForm(forms.ModelForm):
