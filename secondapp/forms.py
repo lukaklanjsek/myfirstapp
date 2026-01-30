@@ -1,10 +1,11 @@
 from django import forms
 # from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 # from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
-from django_select2.forms import ModelSelect2MultipleWidget #It is advised to always setup a separate cache server for Select2.
+from django_select2.forms import ModelSelect2MultipleWidget
+#It is advised to always setup a separate cache server for Select2.
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.forms import UserCreationForm
-from .models import AuthUser, Organization, Person
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from .models import CustomUser, Organization, Person
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -17,9 +18,21 @@ from .models import AuthUser, Organization, Person
 #     ]
 
 
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = CustomUser
+        fields = ("email", "username",)
+
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = CustomUser
+        fields = ("email",)
+
+
 class RegisterForm(UserCreationForm):
     class Meta:
-        model = AuthUser
+        model = CustomUser
         fields = "__all__"
 
 
@@ -34,6 +47,10 @@ class PersonForm(forms.ModelForm):
             "phone",
             "birth_date"
         ]
+        widgets = {
+            "birth_date": forms.DateInput(),
+            "phone": forms.TelInput(),
+        }
 
 
 class OrganizationForm(forms.ModelForm):

@@ -9,14 +9,46 @@ from import_export.admin import ImportExportModelAdmin
 # from .models import Rehearsal
 # from .models import Member, Composer, Arranger, Poet, Musician, Conductor, Ensemble, Activity
 from django.contrib.auth.admin import UserAdmin
-from .models import AuthUser
+
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+
+# class CustomUserAdmin(UserAdmin):
+#     model = CustomUser
+#     list_display = ['email', 'username', 'is_staff']
+#     search_fields = ['email', 'username']
+#
+# admin.site.register(CustomUser, CustomUserAdmin)
+
+
 
 class CustomUserAdmin(UserAdmin):
-    model = AuthUser
-    list_display = ['email', 'first_name', 'last_name', 'is_staff']
-    search_fields = ['email']
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
+    list_display = ("email", "is_staff", "is_active",)
+    list_filter = ("email", "is_staff", "is_active",)
+    fieldsets = (
+        (None, {"fields": ("email", "password")}),
+        ("Permissions", {"fields": ("is_staff", "is_active", "groups", "user_permissions")}),
+    )
+    add_fieldsets = (
+        (None, {
+            "classes": ("wide",),
+            "fields": (
+                "email", "password1", "password2", "is_staff",
+                "is_active", "groups", "user_permissions"
+            )}
+        ),
+    )
+    search_fields = ("email",)
+    ordering = ("email",)
 
-admin.site.register(AuthUser, CustomUserAdmin)
+
+admin.site.register(CustomUser, CustomUserAdmin)
+
 
 # classes
 

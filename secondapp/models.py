@@ -7,9 +7,8 @@ import datetime
 from datetime import date
 from enum import Enum
 from django.utils import timezone
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
-
 
 # class VoiceType(Enum):
 #     Soprano = 'Soprano'
@@ -58,12 +57,52 @@ class Role(Enum):
 #         return self.name
 
 
-class AuthUser(AbstractUser):
-    first_name = None
-    last_name = None
+class UserManager(BaseUserManager):
+    """Custom user model manager for authentication."""
+    def create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError("Email is required")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields["is_staff"] is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields["is_superuser"] is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+        return self.create_user(email, password, **extra_fields)
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=250, unique=True)
+    date_joined = models.DateTimeField("date joined", default=timezone.now)
+
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "username"
+
+    REQUIRED_FIELDS = ['email']
 
     def __str__(self):
-        return self.username
+        return f"{self.username} - {self.email}"
+
+
+
+# class AuthUser(AbstractUser):
+#     first_name = None
+#     last_name = None
+#
+#     def __str__(self):
+#         return self.username
 
 
 class Organization(models.Model):

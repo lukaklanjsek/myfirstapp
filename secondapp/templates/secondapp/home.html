@@ -1,0 +1,17 @@
+{% if user.is_authenticated %}
+  Welcome, {{ user.username }} @ {{ user.email }}!
+{% if not user.profile %}
+<a href="{% url 'secondapp:person_create' %}">Please complete your profile</a>
+{% else %}
+<a href="{% url 'secondapp:org_create' %}">Create organization</a>
+{% endif %}
+
+<p><form method="post" action="{% url 'secondapp:logout' %}">
+  {% csrf_token %}
+  <button type="submit">Logout</button>
+</form></p>
+{% else %}
+  <p>You are not logged in</p>
+  <a href="{% url 'secondapp:login' %}">Log In</a> |
+  <a href="{% url 'secondapp:signup' %}">Sign Up</a>
+{% endif %}

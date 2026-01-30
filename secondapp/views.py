@@ -23,8 +23,9 @@ from django.db.models import Q
 from django.apps import apps
 from django.conf import settings
 import os
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, LogoutView
 from django.db import transaction
 
 
@@ -32,8 +33,20 @@ from django.db import transaction
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import AuthUser, Organization, Person, Membership, Role
+from .models import CustomUser, Organization, Person, Membership, Role
 from .forms import RegisterForm, OrganizationForm, PersonForm
+from .forms import CustomUserCreationForm
+
+
+class SignUp(generic.CreateView):
+    form_class = CustomUserCreationForm
+    success_url = reverse_lazy("login")
+    template_name = "secondapp/signup.html"
+
+
+class HomeView(generic.TemplateView):
+    template_name = "secondapp/home.html"
+
 
 
 class RegisterView(FormView):
@@ -47,14 +60,11 @@ class RegisterView(FormView):
         return super().form_valid(form)
 
 
-class LogoutView(View):
-    def post(self, request):
-        logout(request)
-        return redirect('secondapp:register')
+class UserLogoutView(LogoutView):
+    next_page = reverse_lazy("secondapp:home")
 
-
-class LoggedOutView(TemplateView):
-    template_name = "secondapp/logged_out.html"
+class UserLoginView(LoginView):
+    template_name = "registration/login.html"
 
 
 class PersonCreateView(LoginRequiredMixin, CreateView):
@@ -126,8 +136,8 @@ class OrganizationCreateView(LoginRequiredMixin, CreateView):
         with transaction.atomic():
             person = Person.objects.filter(user=self.request.user).first()
 
-            # create auth user for org
-            org_user = AuthUser.objects.create(
+            # create custom auth base user for org
+            org_user = CustomUser.objects.create(
                 username=form.cleaned_data["name"],
                 email=form.cleaned_data["email"],
             )
