@@ -1,17 +1,42 @@
 {% if user.is_authenticated %}
-  Welcome, {{ user.username }} @ {{ user.email }}!
-{% if not user.profile %}
-<a href="{% url 'secondapp:person_create' %}">Please complete your profile</a>
-{% else %}
-<a href="{% url 'secondapp:org_create' %}">Create organization</a>
-{% endif %}
 
-<p><form method="post" action="{% url 'secondapp:logout' %}">
-  {% csrf_token %}
-  <button type="submit">Logout</button>
-</form></p>
+  <p>Welcome, {{ user.username }} @ {{ user.email }}!</p>
+
+  {% with person=user.persons.first %}
+  {% if person %}
+    <p>{{ person.first_name }} {{ person.last_name }}</p>
+<p><a href="{% url 'secondapp:org_create' %}">Create organization</a></p>
+
+    {% if person.memberships.all %}
+      <h2>Organizations</h2>
+      <ul>
+        {% for membership in person.memberships.all %}
+          <li>
+            {{ membership.organization.name }}
+            ({{ membership.role }})
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>You are not member of any organization.</p>
+    {% endif %}
+
+  {% else %}
+    <a href="{% url 'secondapp:person_create' %}">
+      Please complete your profile
+    </a>
+  {% endif %}
+{% endwith %}
+
+  <form method="post" action="{% url 'secondapp:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+  </form>
+
 {% else %}
+
   <p>You are not logged in</p>
   <a href="{% url 'secondapp:login' %}">Log In</a> |
   <a href="{% url 'secondapp:signup' %}">Sign Up</a>
+
 {% endif %}

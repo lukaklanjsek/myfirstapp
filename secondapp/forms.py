@@ -1,4 +1,5 @@
 from django import forms
+import datetime
 # from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 # from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
 from django_select2.forms import ModelSelect2MultipleWidget
@@ -37,21 +38,36 @@ class RegisterForm(UserCreationForm):
 
 
 class PersonForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+
     class Meta:
         model = Person
         fields = [
             "first_name",
             "last_name",
-            "email",
             "address",
             "phone",
-            "birth_date"
+            "birth_date",
         ]
         widgets = {
-            "birth_date": forms.DateInput(),
-            "phone": forms.TelInput(),
+            "birth_date": forms.SelectDateWidget(
+                years=range(datetime.date.today().year, 1930, -1)
+            ),
         }
 
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        if user and user.is_authenticated:
+            has_person = user.persons.exists()
+            if has_person:  # user has existing person
+                self.fields["email"].disabled = False
+            else:  # user lacks person
+                self.fields["email"].disabled = True
+                self.fields["email"].initial = user.email
+        else:
+            self.fields["email"].disabled = False # another person email editable
 
 class OrganizationForm(forms.ModelForm):
     class Meta:
@@ -160,7 +176,7 @@ class OrganizationForm(forms.ModelForm):
 #         fields = ["calendar",
 #                   "additional_notes",
 #                   "songs",
-#                   "is_cancelled"]
+#                   "is_canceled"]
 #         widgets = {
 #             'calendar': forms.DateTimeInput(
 #                 attrs={"type": "datetime-local"}

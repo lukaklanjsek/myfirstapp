@@ -4,10 +4,46 @@ from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
+from .models import Organization, Role
 # from .models import Tag, Musician, Composer, Poet, Arranger, Member, Conductor
 # from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, ConductorForm, MemberForm
+from django.core.exceptions import PermissionDenied
 
 
+class RoleRequiredMixin:
+    """
+    Role based rendering.
+    """
+
+    allowed_roles = [Role.ADMIN]
+
+    def dispatch(self, request, *args, **kwargs):
+        org_id = self.kwargs.get("org_id")
+        if not org_id:
+            raise PermissionDenied("Organization not specified.")
+        try:
+            self.organization = Organization.objects.get(id=org_id)
+        except Organization.DoesNotExist:
+            raise PermissionDenied("Organization not found.")
+
+        # check user role
+        self.user_role = self.organization.get_role(request.user)
+
+        if not self.role_allowed(self.user_role):
+            raise PermissionDenied(f"Your role '{self.user_role}' does not have access.")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def role_allowed(self, user_role):  # Admin has access
+        if user_role == Role.ADMIN:
+            return True
+        return user_role in self.allowed_roles
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user_role'] = self.user_role
+        context['organization'] = self.organization
+        return context
 
 
 

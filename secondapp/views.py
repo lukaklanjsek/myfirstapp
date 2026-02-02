@@ -27,6 +27,8 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import transaction
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
 
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
@@ -44,44 +46,81 @@ class SignUp(generic.CreateView):
     template_name = "secondapp/signup.html"
 
 
-class HomeView(generic.TemplateView):
-    template_name = "secondapp/home.html"
-
-
-
-class RegisterView(FormView):
-    template_name = "secondapp/register.html"
-    form_class = RegisterForm
-    success_url = reverse_lazy("secondapp:person_form2")
-
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)  # to log user immediately after registering
-        return super().form_valid(form)
-
-
 class UserLogoutView(LogoutView):
     next_page = reverse_lazy("secondapp:home")
+
 
 class UserLoginView(LoginView):
     template_name = "registration/login.html"
 
 
+class HomeView(generic.TemplateView):
+    template_name = "secondapp/home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        if user.is_authenticated:
+            context["memberships"] = Membership.objects.filter(
+                person__user=user
+            ).select_related("organization")
+
+            context["person"] = Person.objects.filter(user=user).first()
+            context["has_existing_person"] = bool(context["person"])
+        else:
+            context["memberships"] = []
+            context["person"] = None
+            context["has_existing_person"] = False
+
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
 class PersonCreateView(LoginRequiredMixin, CreateView):
     template_name = "secondapp/person_form2.html"
     form_class = PersonForm
     context_object_name = "person_create"
-    success_url = reverse_lazy("secondapp:index2")
+    success_url = reverse_lazy("secondapp:home")
+
+    def dispatch(self, request, *args, **kwargs):
+        # Admin can create new persons
+        self.org_id = self.kwargs.get("org_id")
+        self.organization = None
+        if self.org_id:
+            from .models import Organization
+            try:
+                self.organization = Organization.objects.get(id=self.org_id)
+            except Organization.DoesNotExist:
+                pass
+
+        self.user_role = None
+        if self.organization:
+            self.user_role = self.organization.get_role(request.user)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        if self.organization:
+            kwargs["organization"] = self.organization
+        return kwargs
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         existing_person = Person.objects.filter(user=self.request.user).first()
+        context['has_existing_person'] = bool(existing_person)
+        context['user_role'] = self.user_role
+        context['organization'] = self.organization
+
         if existing_person:
             context['page_title'] = "Add Another Profile"
-            context['has_existing_person'] = True
         else:
             context['page_title'] = "Complete Your Profile"
+            # unclaimed persons
             context['unclaimed_persons'] = Person.objects.filter(
                 email=self.request.user.email,
                 user__isnull=True
@@ -90,20 +129,28 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        person = form.save(commit=False)
+        self.object = form.save(commit=False)
 
-        # Auto-assign to user only if they don't have a Person yet
-        if not Person.objects.filter(user=self.request.user).exists():
-            person.user = self.request.user
-            person.save()
-            self.merge_unclaimed_persons(person)
+        # Admin can make new persons
+        if self.user_role == Role.ADMIN and self.organization:
+            self.object.user = None
+            self.object.save()
+            Membership.objects.create(
+                organization=self.organization,
+                person=self.object,
+                role=Role.MEMBER,
+                is_active=True
+            )
         else:
-            person.user = None
-            person.save()
+            # non-admin access
+            self.object.user = self.request.user
+            self.object.save()
+            self.merge_unclaimed_persons(self.object)
 
-        return super().form_valid(form)
+        return redirect(self.get_success_url())
 
     def merge_unclaimed_persons(self, claimed_person):
+        # all unclaimed persons with same email except the just claimed one
         unclaimed = Person.objects.filter(
             email=claimed_person.email,
             user__isnull=True
@@ -111,7 +158,6 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
 
         for old_person in unclaimed:
             old_person.memberships.update(person=claimed_person)
-            old_person.delete()
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -125,6 +171,7 @@ class IndexView(LoginRequiredMixin, TemplateView):
         return context
 
 
+@method_decorator(login_required, name='dispatch')
 class OrganizationCreateView(LoginRequiredMixin, CreateView):
     template_name = "secondapp/organization_form.html"
     form_class = OrganizationForm

@@ -117,6 +117,12 @@ class Organization(models.Model):
         related_name="organizations"
     )
 
+    def get_role(self, user): # find active memberships
+        membership = self.memberships.filter(person__user=user, is_active=True).first()
+        if membership:
+            return membership.role
+        return None
+
     def __str__(self):
         return self.name
 
