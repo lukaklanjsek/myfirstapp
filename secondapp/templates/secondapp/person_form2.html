@@ -1,8 +1,6 @@
-
-<h2>Complete Your Profile</h2>
-<p>Please complete your profile to continue.</p>
+<h2>Update Your Profile</h2>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Complete Profile</button>
+    <button type="submit">Update Profile</button>
 </form>

@@ -75,6 +75,48 @@ class OrganizationForm(forms.ModelForm):
         fields = ["name", "email", "address"]
 
 
+class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
+    # Person
+    first_name = forms.CharField(max_length=100)
+    last_name = forms.CharField(max_length=100)
+    email = forms.EmailField()
+    phone = forms.CharField(max_length=23, required=False)
+    address = forms.CharField(required=False, widget=forms.Textarea)
+    # Role checkboxes
+    role_admin = forms.BooleanField(required=False, label="Admin")
+    role_member = forms.BooleanField(required=False, label="Member")
+    role_supporter = forms.BooleanField(required=False, label="Supporter")
+    # Active checkboxes
+    active_admin = forms.BooleanField(required=False, label="Active")
+    active_member = forms.BooleanField(required=False, label="Active")
+    active_supporter = forms.BooleanField(required=False, label="Active")
+
+    def clean(self):
+        cleaned_data = super().clean()  # for multiple fields
+
+        has_any_role = (
+                cleaned_data.get("role_admin")
+                or cleaned_data.get("role_member")
+                or cleaned_data.get("role_supporter")
+        )
+        # if none of them are checked, show an error
+        if not has_any_role:
+            raise forms.ValidationError(
+                "At least one role must be selected."
+            )
+
+        # role_admin = unchecked but active_admin = checked
+        if not cleaned_data.get("role_admin"):
+            cleaned_data["active_admin"] = False
+        if not cleaned_data.get("role_member"):
+            cleaned_data["active_member"] = False
+        if not cleaned_data.get("role_supporter"):
+            cleaned_data["active_supporter"] = False
+
+        return cleaned_data
+
+
+
 # class BaseForm(forms.ModelForm):
 #     # required field indicator
 #     def __init__(self, *args, **kwargs):

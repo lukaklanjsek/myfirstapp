@@ -12,7 +12,7 @@ urlpatterns = [
 
     path("signup/", views.SignUp.as_view(), name="signup"),
 
-    path("person_form2/", views.PersonCreateView.as_view(), name="person_create"),
+    path("person_form2/", views.PersonUpdateView.as_view(), name="person_update"),
     path("logout/", views.UserLogoutView.as_view(), name="logout"),
     path("login/", views.UserLoginView.as_view(), name="login"),
 
@@ -20,6 +20,22 @@ urlpatterns = [
 
     path("", views.IndexView.as_view(), name="index2"),
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
+
+    path(
+        "<str:org_username>/members/",
+        views.OrgMemberListView.as_view(),
+        name="org_member_list"
+    ),
+    path(
+        "<str:org_username>/members/add/",
+        views.OrgMemberAddView.as_view(),
+        name="org_member_add"
+    ),
+    path(
+        "<str:org_username>/members/edit/<int:pk>/",
+        views.OrgMemberEditView.as_view(),
+        name="org_member_edit"
+    ),
 
 #    path("", include("django.contrib.auth.urls")),
 

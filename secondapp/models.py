@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
 
+
 # class VoiceType(Enum):
 #     Soprano = 'Soprano'
 #     Alto = 'Alto'
