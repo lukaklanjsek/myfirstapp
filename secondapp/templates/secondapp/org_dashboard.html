@@ -1,0 +1,13 @@
+{% extends "secondapp/base.html" %}
+
+{% block title %}{{ organization.name }}{% endblock %}
+
+{% block content %}
+Welcome, {{ user.username }}
+
+<p>Name: {{ organization.name }}</p>
+<p>Email: {{ organization.email }}</p>
+<p>Address: {{ organization.address }}</p>
+
+
+{% endblock %}

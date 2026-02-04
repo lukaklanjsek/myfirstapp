@@ -1,6 +1,9 @@
-{% if user.is_authenticated %}
+{% extends "secondapp/base.html" %}
 
-  <p>Welcome, {{ user.username }} @ {{ user.email }}!</p>
+{% block title %}Home{% endblock %}
+
+{% block content %}
+  <p>Welcome, {{ user.username }} /@/ {{ user.email }}!</p>
 
   {% with person=user.persons.first %}
   {% if person %}
@@ -22,21 +25,9 @@
     {% endif %}
 
   {% else %}
-    <a href="{% url 'secondapp:person_create' %}">
+    <a href="{% url 'secondapp:person_update' %}">
       Please complete your profile
     </a>
   {% endif %}
 {% endwith %}
-
-  <form method="post" action="{% url 'secondapp:logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-  </form>
-
-{% else %}
-
-  <p>You are not logged in</p>
-  <a href="{% url 'secondapp:login' %}">Log In</a> |
-  <a href="{% url 'secondapp:signup' %}">Sign Up</a>
-
-{% endif %}
+{% endblock %}

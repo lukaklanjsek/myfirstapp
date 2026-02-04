@@ -47,13 +47,6 @@ LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/home/"
 LOGOUT_REDIRECT_URL = "/login/"
 
-# LOGIN_REQUIRED_IGNORE_PATHS = [
-#     "/password_reset/",
-#     "/register/",
-#     "/login/",
-#     "/logout/",
-#     "/logged_out/",
-# ]
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -67,7 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                #"secondapp.context_processors.roles_context",
+                "secondapp.context_processors.user_person",
             ],
         },
     },

@@ -21,21 +21,10 @@ urlpatterns = [
     path("", views.IndexView.as_view(), name="index2"),
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
 
-    path(
-        "<str:org_username>/members/",
-        views.OrgMemberListView.as_view(),
-        name="org_member_list"
-    ),
-    path(
-        "<str:org_username>/members/add/",
-        views.OrgMemberAddView.as_view(),
-        name="org_member_add"
-    ),
-    path(
-        "<str:org_username>/members/edit/<int:pk>/",
-        views.OrgMemberEditView.as_view(),
-        name="org_member_edit"
-    ),
+    path("<str:org_username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
+    path("<str:org_username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
+    path("<str:org_username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
+    path("<str:org_username>/members/edit/<int:pk>/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
 
 #    path("", include("django.contrib.auth.urls")),
 

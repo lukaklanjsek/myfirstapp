@@ -63,7 +63,7 @@ class SignUp(generic.CreateView):
         email=self.object.email,
         first_name="",
         last_name="",
-        ) #  create a Person and link it
+        )
 
         return response
 
@@ -79,23 +79,6 @@ class UserLoginView(LoginView):
 class HomeView(generic.TemplateView):
     template_name = "secondapp/home.html"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-
-        if user.is_authenticated:
-            context["memberships"] = Membership.objects.filter(
-                person__user=user
-            ).select_related("organization")
-
-            context["person"] = Person.objects.filter(user=user).first()
-            context["has_existing_person"] = bool(context["person"])
-        else:
-            context["memberships"] = []
-            context["person"] = None
-            context["has_existing_person"] = False
-
-        return context
 
 
 @method_decorator(login_required, name='dispatch')
@@ -155,6 +138,10 @@ class PersonUpdateView(UpdateView):
     def form_valid(self, form):
         self.object = form.save(commit=False)
 
+        if self.object.user:
+            self.object.user.email = self.object.email
+            self.object.user.save()
+
         # Admin can make new persons
         if self.user_role == Role.ADMIN and self.organization:
             self.object.user = None
@@ -169,19 +156,19 @@ class PersonUpdateView(UpdateView):
             # non-admin access
             self.object.user = self.request.user
             self.object.save()
-            self.merge_unclaimed_persons(self.object)
+            #self.merge_unclaimed_persons(self.object)
 
         return redirect(self.get_success_url())
 
-    def merge_unclaimed_persons(self, claimed_person):
-        # all unclaimed persons with same email except the just claimed one
-        unclaimed = Person.objects.filter(
-            email=claimed_person.email,
-            user__isnull=True
-        ).exclude(id=claimed_person.id)
-
-        for old_person in unclaimed:
-            old_person.memberships.update(person=claimed_person)
+    # def merge_unclaimed_persons(self, claimed_person):
+    #     # all unclaimed persons with same email except the just claimed one
+    #     unclaimed = Person.objects.filter(
+    #         email=claimed_person.email,
+    #         user__isnull=True
+    #     ).exclude(id=claimed_person.id)
+    #
+    #     for old_person in unclaimed:
+    #         old_person.memberships.update(person=claimed_person)
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -196,11 +183,33 @@ class IndexView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrganizationCreateView(LoginRequiredMixin, CreateView):
+class OrganizationDashboard(TemplateView):
+    """Home page for specific organizations."""
+    template_name = "secondapp/org_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        org_username = self.kwargs["org_username"]
+        organization = get_object_or_404(
+            Organization,
+            user__username=org_username
+        )
+
+        context["organization"] = organization
+        context["memberships"] = Membership.objects.filter(
+            organization=organization
+        )
+
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+class OrganizationCreateView(CreateView):
     template_name = "secondapp/organization_form.html"
     form_class = OrganizationForm
     context_object_name = "org_create"
-    success_url = reverse_lazy("secondapp:index2")
+    success_url = reverse_lazy("secondapp:home")
 
     def form_valid(self, form):
         # atomic transaction - creates everything at once:
@@ -231,9 +240,7 @@ class OrganizationCreateView(LoginRequiredMixin, CreateView):
 
 
 class OrgMemberMixin:
-    """
-    This is a helper that all three views below will use.
-    """
+    """This is a helper that all three views below will use."""
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated: # is the user logged in?
             return redirect("secondapp:login")
@@ -250,15 +257,13 @@ class OrgMemberMixin:
         if self.user_role != Role.ADMIN.name: # if user !== ADMIN?
             return HttpResponseForbidden("You are not an admin of this organization")
 
-        # continue
+        # continue if all passed
         return super().dispatch(request, *args, **kwargs)
 
 
 @method_decorator(login_required, name='dispatch')
 class OrgMemberListView(OrgMemberMixin, TemplateView):
-    """
-    Shows all members of an organization.
-    """
+    """Shows all members of an organization."""
     template_name = "secondapp/org_member_list.html"
 
     def get_context_data(self, **kwargs):
@@ -275,9 +280,7 @@ class OrgMemberListView(OrgMemberMixin, TemplateView):
 
 @method_decorator(login_required, name='dispatch')
 class OrgMemberAddView(OrgMemberMixin, FormView):
-    """
-    Form to add a NEW member to the org.
-    """
+    """Add new member."""
     template_name = "secondapp/org_member_form.html"
     form_class = OrgMemberForm
 
@@ -288,72 +291,56 @@ class OrgMemberAddView(OrgMemberMixin, FormView):
         return context
 
     def form_valid(self, form):
-        data = form.cleaned_data
+        person_data = form.get_person_data()
 
         with transaction.atomic():
             # find or create Person
             person = Person.objects.filter(
-                email=data["email"],
+                email=person_data["email"],
                 memberships__organization=self.organization
-            ).first() # if this email already exists
+            ).first()
 
-            if not person: # create new person
-                person = Person.objects.create(
-                    first_name=data["first_name"],
-                    last_name=data["last_name"],
-                    email=data["email"],
-                    phone=data["phone"],
-                    address=data["address"],
-                    user=None,
-                )
-            else: # person exists, update
-                person.first_name = data["first_name"]
-                person.last_name = data["last_name"]
-                person.phone = data["phone"]
-                person.address = data["address"]
+            if not person:
+                person = Person.objects.create(**person_data, user=None)
+            else: # update existing person
+                for field, value in person_data.items():
+                    if field != "email":  # don't update email
+                        setattr(person, field, value)
                 person.save()
 
-            # create Memberships + MembershipPeriods
-            ROLE_MAP = {
-                "admin":     ("role_admin",     "active_admin"),
-                "member":    ("role_member",    "active_member"),
-                "supporter": ("role_supporter", "active_supporter"),
-            }
+            # create memberships for selected roles
+            for role_name, is_active in form.get_selected_roles():
+                membership, created = Membership.objects.get_or_create(
+                    organization=self.organization,
+                    person=person,
+                    role=role_name,
+                    defaults={"is_active": is_active}
+                )
 
-            for role_key, (role_field, active_field) in ROLE_MAP.items():
-                if data[role_field]:  # if this role checkbox is checked
-                    membership, created = Membership.objects.get_or_create(
-                        organization=self.organization,
-                        person=person,
-                        role=role_key.upper(),  # ADMIN, MEMBER, SUPPORTER
-                        defaults={"is_active": data[active_field]}
-                    )
-
-                    if created: # brand new membership
-                        MembershipPeriod.objects.create(
-                            membership=membership,
-                        )
-                    else: # update is_active
-                        membership.is_active = data[active_field]
-                        membership.save()
+                if created:
+                    MembershipPeriod.objects.create(membership=membership)
+                else:
+                    membership.is_active = is_active
+                    membership.save()
 
         return redirect("secondapp:org_member_list", org_username=self.kwargs["org_username"])
 
-
 @method_decorator(login_required, name='dispatch')
 class OrgMemberEditView(OrgMemberMixin, FormView):
-    """
-    Form to EDIT an existing member.
-    """
+    """Edit existing member."""
     template_name = "secondapp/org_member_form.html"
     form_class = OrgMemberForm
 
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
 
-        # if mixin blocked access, stop here
-        if response.status_code in (403, 404):
-            return response
+        self.org_id = self.kwargs.get("org_username")  # ali id, odvisno od URL
+        self.organization = None
+        if self.org_id:
+            try:
+                self.organization = Organization.objects.get(user__username=self.org_id)
+            except Organization.DoesNotExist:
+                raise Http404("Organization not found")
 
         try:
             self.person = Person.objects.get(
@@ -362,6 +349,21 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
             )
         except Person.DoesNotExist:
             raise Http404("Member not found in this organization")
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+
+        try:
+            self.person = Person.objects.get(
+                pk=self.kwargs["pk"],
+                memberships__organization=self.organization
+            )
+        except Person.DoesNotExist:
+            raise Http404("Member not found in this organization")
+
+        # if mixin blocked access, stop here
+        if response.status_code in (403, 404):
+            return response
 
         return response
 
@@ -409,60 +411,59 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
         return context
 
     def form_valid(self, form):
-        data = form.cleaned_data
+        person_data = form.get_person_data()
 
-        with transaction.atomic(): # update Person
-            self.person.first_name = data["first_name"]
-            self.person.last_name = data["last_name"]
-            self.person.phone = data["phone"]
-            self.person.address = data["address"]
+        with transaction.atomic():
+            # update person (exclude email)
+            for field, value in person_data.items():
+                if field != "email":
+                    setattr(self.person, field, value)
             self.person.save()
-            # note: we do NOT update email here
 
-            # role
-            ROLE_MAP = {
-                "admin":     ("role_admin",     "active_admin"),
-                "member":    ("role_member",    "active_member"),
-                "supporter": ("role_supporter", "active_supporter"),
-            }
+            # get all selected roles from form
+            selected_roles = {role_name: is_active for role_name, is_active in form.get_selected_roles()}
 
-            for role_key, (role_field, active_field) in ROLE_MAP.items():
+            # handle each possible role
+            for role_name in ["ADMIN", "MEMBER", "SUPPORTER"]:
                 membership = Membership.objects.filter(
                     organization=self.organization,
                     person=self.person,
-                    role=role_key.upper(),
+                    role=role_name,
                 ).first()
 
-                if data[role_field]: # checkbox IS checked
+                if role_name in selected_roles:
+                    # role is checked
+                    is_active = selected_roles[role_name]
+
                     if not membership:
-                        # role is new, create membership + period
+                        # new role
                         membership = Membership.objects.create(
                             organization=self.organization,
                             person=self.person,
-                            role=role_key.upper(),
-                            is_active=data[active_field],
+                            role=role_name,
+                            is_active=is_active,
                         )
                         MembershipPeriod.objects.create(membership=membership)
-                    else: # role already existed
-                        if membership.is_active != data[active_field]:
-                            # active status changed
-                            membership.is_active = data[active_field]
+                    else:
+                        # existing role, check if activity changed
+                        if membership.is_active != is_active:
+                            membership.is_active = is_active
                             membership.save()
 
-                            if not data[active_field]:
-                                # was active, now inactive
+                            if not is_active:
+                                # deactivated
                                 MembershipPeriod.objects.filter(
                                     membership=membership,
-                                    ended_at__isnull=True,  # find the open period
+                                    ended_at__isnull=True,
                                 ).update(ended_at=datetime.date.today())
-
                             else:
-                                # was inactive, now active again
+                                # reactivated
                                 MembershipPeriod.objects.create(membership=membership)
 
                 else:
-                    if membership: # checkbox is NOT checked
-                        # role existed before but now unchecked
+                    # role is NOT checked
+                    if membership and membership.is_active:
+                        # deactivate it
                         membership.is_active = False
                         membership.save()
 
@@ -472,7 +473,6 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
                         ).update(ended_at=datetime.date.today())
 
         return redirect("secondapp:org_member_list", org_username=self.kwargs["org_username"])
-
 
 
 

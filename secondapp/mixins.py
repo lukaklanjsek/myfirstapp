@@ -11,9 +11,7 @@ from django.core.exceptions import PermissionDenied
 
 
 class RoleRequiredMixin:
-    """
-    Role based rendering.
-    """
+    """Role based rendering."""
 
     allowed_roles = [Role.ADMIN]
 

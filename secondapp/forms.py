@@ -45,6 +45,7 @@ class PersonForm(forms.ModelForm):
         fields = [
             "first_name",
             "last_name",
+            "email",
             "address",
             "phone",
             "birth_date",
@@ -59,15 +60,12 @@ class PersonForm(forms.ModelForm):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
-        if user and user.is_authenticated:
-            has_person = user.persons.exists()
-            if has_person:  # user has existing person
-                self.fields["email"].disabled = False
-            else:  # user lacks person
-                self.fields["email"].disabled = True
-                self.fields["email"].initial = user.email
-        else:
-            self.fields["email"].disabled = False # another person email editable
+        if self.instance.pk:
+            # editing current user
+            self.fields["email"].initial = self.instance.email
+        elif user and user.is_authenticated:
+            # new user - grab email from user
+            self.fields["email"].initial = user.email
 
 class OrganizationForm(forms.ModelForm):
     class Meta:
@@ -115,6 +113,31 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 
         return cleaned_data
 
+    def get_selected_roles(self):
+        """role_name, is_active."""
+        ROLE_MAP = {
+            "ADMIN": ("role_admin", "active_admin"),
+            "MEMBER": ("role_member", "active_member"),
+            "SUPPORTER": ("role_supporter", "active_supporter"),
+        }
+
+        selected_roles = []
+        for role_name, (role_field, active_field) in ROLE_MAP.items():
+            if self.cleaned_data.get(role_field):
+                is_active = self.cleaned_data.get(active_field)
+                selected_roles.append((role_name, is_active))
+
+        return selected_roles
+
+    def get_person_data(self):
+        """Person fields."""
+        return {
+            "first_name": self.cleaned_data["first_name"],
+            "last_name": self.cleaned_data["last_name"],
+            "email": self.cleaned_data["email"],
+            "phone": self.cleaned_data["phone"],
+            "address": self.cleaned_data["address"],
+        }
 
 
 # class BaseForm(forms.ModelForm):

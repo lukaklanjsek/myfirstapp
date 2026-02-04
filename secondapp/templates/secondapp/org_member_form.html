@@ -1,12 +1,14 @@
 {% extends "secondapp/base.html" %}
-
-{% block title %}Update{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<h2>Update Your Profile</h2>
+<h1>{{ page_title }}</h1>
+
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Update Profile</button>
+    <button type="submit">Save</button>
 </form>
+
+
 {% endblock %}

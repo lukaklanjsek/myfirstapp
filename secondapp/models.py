@@ -44,19 +44,6 @@ class Role(Enum):
     MEMBER = "member"
     SUPPORTER = "supporter"
 
-# class Tag(models.Model):
-#     name = models.CharField(max_length=100, unique=True)
-#     date_added = models.DateField(auto_now_add=True)
-#
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
-#
-#     class Meta:
-#         ordering = ["name"]
-#
-#     def __str__(self):
-#         return self.name
-
 
 class UserManager(BaseUserManager):
     """Custom user model manager for authentication."""
@@ -95,15 +82,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.username} - {self.email}"
-
-
-
-# class AuthUser(AbstractUser):
-#     first_name = None
-#     last_name = None
-#
-#     def __str__(self):
-#         return self.username
 
 
 class Organization(models.Model):
