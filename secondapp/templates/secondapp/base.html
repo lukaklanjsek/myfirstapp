@@ -28,7 +28,7 @@
                 <ul class="menu-links"><li>
                     <li><a href="{% url 'secondapp:person_update' %}">Update profile</a></li>
                 <li><a href="{% url 'secondapp:home' %}">Home</a></li>
-                    {% if person.memberships.all %}
+                    {% if person.memberships %}
                       <p>Organizations:</p>
                       <ul>
                         {% for membership in memberships %}

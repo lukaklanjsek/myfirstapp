@@ -17,7 +17,7 @@
     <tr>
         <td>{{ x.person.first_name }} {{ x.person.last_name }}</td>
         <td>{{ x.person.email }}</td>
-        {% for role in role
+
         <td>{{ x.role }}</td>
         <td>
             <a href="{% url 'secondapp:org_member_edit' organization.user.username x.person.id %}">
@@ -27,7 +27,7 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="4">No members yet</td>
+        <td>No members yet</td>
     </tr>
     {% endfor %}
 </table>

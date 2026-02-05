@@ -25,7 +25,7 @@ from django.conf import settings
 import os
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordContextMixin
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -91,59 +91,28 @@ class PersonUpdateView(UpdateView):
     def get_object(self, queryset=None):
         return Person.objects.get(user=self.request.user)
 
-    def dispatch(self, request, *args, **kwargs):
-        # Admin can create new persons
-        self.org_id = self.kwargs.get("org_id")
-        self.organization = None
-        if self.org_id:
-            try:
-                self.organization = Organization.objects.get(id=self.org_id)
-            except Organization.DoesNotExist:
-                pass
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-        self.user_role = None
-        if self.organization:
-            self.user_role = self.organization.get_role(request.user)
-
-        return super().dispatch(request, *args, **kwargs)
+        return context
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
-        if self.organization:
-            kwargs["organization"] = self.organization
         return kwargs
-
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        existing_person = Person.objects.filter(user=self.request.user).first()
-        context['has_existing_person'] = bool(existing_person)
-        context['user_role'] = self.user_role
-        context['organization'] = self.organization
-
-        if existing_person:
-            context['page_title'] = "Add Another Profile"
-        else:
-            context['page_title'] = "Complete Your Profile"
-            # unclaimed persons
-            context['unclaimed_persons'] = Person.objects.filter(
-                email=self.request.user.email,
-                user__isnull=True
-            )
-
-        return context
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
+        user = self.request.user
+        organization = getattr(user, "organization", None)
+        user_role = getattr(user, "role", None)
 
         if self.object.user:
             self.object.user.email = self.object.email
             self.object.user.save()
 
         # Admin can make new persons
-        if self.user_role == Role.ADMIN and self.organization:
+        if organization and user_role == Role.ADMIN:
             self.object.user = None
             self.object.save()
             Membership.objects.create(
@@ -159,16 +128,6 @@ class PersonUpdateView(UpdateView):
             #self.merge_unclaimed_persons(self.object)
 
         return redirect(self.get_success_url())
-
-    # def merge_unclaimed_persons(self, claimed_person):
-    #     # all unclaimed persons with same email except the just claimed one
-    #     unclaimed = Person.objects.filter(
-    #         email=claimed_person.email,
-    #         user__isnull=True
-    #     ).exclude(id=claimed_person.id)
-    #
-    #     for old_person in unclaimed:
-    #         old_person.memberships.update(person=claimed_person)
 
 
 class IndexView(LoginRequiredMixin, TemplateView):

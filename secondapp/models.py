@@ -107,6 +107,10 @@ class Organization(models.Model):
 
 
 class Person(models.Model):
+    """
+    One Person is under CustomUser, different Persons are owned by organizations.
+    The CustomUser-Person has owner, the Org-Membership-Persons are many and fk to owner's Person.
+    """
     first_name = models.CharField("name", max_length=100)
     last_name = models.CharField("surname", max_length=100)
     email = models.EmailField(blank=True, null=True)
@@ -116,11 +120,13 @@ class Person(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="persons"
     )
+
+    owner = models.ForeignKey("self",related_name="owned_persons",on_delete=models.PROTECT,blank=True,null=True,)
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -143,6 +149,10 @@ class Membership(models.Model):
                 name="unique_membership_per_org_person"
             )
         ]
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.person} {self.organization} {self.role} {status}"
 
 
 class MembershipPeriod(models.Model):
