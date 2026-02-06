@@ -96,10 +96,19 @@ class Organization(models.Model):
         related_name="organizations"
     )
 
-    def get_role(self, user): # find active memberships
-        membership = self.memberships.filter(person__user=user, is_active=True).first()
-        if membership:
-            return membership.role
+    def get_role(self, user):
+        """Return the user's role in this organization."""
+        person = user.persons.first()
+        if not person:
+            return None
+
+        # Check memberships of owned persons
+        owned_persons = person.owned_persons.all()
+        for owned_person in owned_persons:
+            owned_membership = self.memberships.filter(person=owned_person, is_active=True).first()
+            if owned_membership:
+                return owned_membership.role
+
         return None
 
     def __str__(self):

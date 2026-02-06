@@ -6,6 +6,7 @@ import sqlite3
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.core.files.uploadedfile import UploadedFile
+from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
@@ -19,7 +20,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView, TemplateView
 from django.views.generic.edit import DeleteView
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.apps import apps
 from django.conf import settings
 import os
@@ -48,6 +49,7 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role
 from .models import CustomUser, Organization, Person, Membership, Role
 from .forms import RegisterForm, OrganizationForm, PersonForm
 from .forms import CustomUserCreationForm
+from .mixins import RoleRequiredMixin
 
 
 class SignUp(generic.CreateView):
@@ -125,7 +127,6 @@ class PersonUpdateView(UpdateView):
             # non-admin access
             self.object.user = self.request.user
             self.object.save()
-            #self.merge_unclaimed_persons(self.object)
 
         return redirect(self.get_success_url())
 
@@ -188,35 +189,42 @@ class OrganizationCreateView(CreateView):
             organization.user = org_user
             organization.save()
 
+            person_admin = Person.objects.create(
+                owner=person,
+                email=person.email,
+                first_name=person.first_name,
+                last_name=person.last_name,
+            )
 
             Membership.objects.create(
                 organization=organization,
-                person=person,
+                person=person_admin,
                 role=Role.ADMIN.name,
                 is_active=True,
             )
+
         return super().form_valid(form)
 
 
-class OrgMemberMixin:
-    """This is a helper that all three views below will use."""
+class OrgMemberMixin(RoleRequiredMixin):
+    """Mixin for organization member views."""
+    allowed_roles = [Role.ADMIN.name, Role.MEMBER.name]  # changed added members
+
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated: # is the user logged in?
-            return redirect("secondapp:login")
+        # Get org_username from URL
+        org_username = self.kwargs.get("org_username")
 
-        org_username = self.kwargs["org_username"] # org exists? username
-        try:
-            self.organization = Organization.objects.get(
-                user__username=org_username
-            )
-        except Organization.DoesNotExist: # org not found
-            raise Http404("Organization not found")
+        # Find the organization
+        self.organization = Organization.objects.get(user__username=org_username)
 
+        # Get the user's Person
+        person = request.user.persons.first()
+
+        # Get the user's role in this organization
         self.user_role = self.organization.get_role(request.user)
-        if self.user_role != Role.ADMIN.name: # if user !== ADMIN?
-            return HttpResponseForbidden("You are not an admin of this organization")
+        if not self.role_allowed(self.user_role):
+            raise PermissionDenied(f"Your role '{self.user_role}' does not have access.")
 
-        # continue if all passed
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -227,13 +235,10 @@ class OrgMemberListView(OrgMemberMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["organization"] = self.organization
-
-        # all members
         context["memberships"] = Membership.objects.filter(
-            organization=self.organization
+            organization=self.organization,
+            is_active=True
         ).select_related("person").order_by("person__last_name")
-
         return context
 
 
@@ -245,7 +250,7 @@ class OrgMemberAddView(OrgMemberMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["organization"] = self.organization
+        # context["organization"] = self.organization
         context["page_title"] = f"Add Member to {self.organization.name}"
         return context
 
@@ -290,41 +295,23 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
     template_name = "secondapp/org_member_form.html"
     form_class = OrgMemberForm
 
+
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
+        org_username = self.kwargs.get("org_username")
+        self.organization = Organization.objects.get(user__username=org_username)
 
-        self.org_id = self.kwargs.get("org_username")  # ali id, odvisno od URL
-        self.organization = None
-        if self.org_id:
-            try:
-                self.organization = Organization.objects.get(user__username=self.org_id)
-            except Organization.DoesNotExist:
-                raise Http404("Organization not found")
-
-        try:
-            self.person = Person.objects.get(
-                pk=self.kwargs["pk"],
-                memberships__organization=self.organization
-            )
-        except Person.DoesNotExist:
-            raise Http404("Member not found in this organization")
-
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-
-        try:
-            self.person = Person.objects.get(
-                pk=self.kwargs["pk"],
-                memberships__organization=self.organization
-            )
-        except Person.DoesNotExist:
-            raise Http404("Member not found in this organization")
-
-        # if mixin blocked access, stop here
-        if response.status_code in (403, 404):
-            return response
-
-        return response
+        self.person = get_object_or_404(
+            Person.objects.prefetch_related(
+                Prefetch(
+                    "memberships",
+                    queryset=Membership.objects.filter(
+                        organization=self.organization
+                    )
+                )
+            ),
+            pk=self.kwargs["pk"]
+        )
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
