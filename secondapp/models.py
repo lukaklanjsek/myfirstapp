@@ -18,8 +18,6 @@ from django.conf import settings
 #     Bass = 'Bass'
 #
 #
-#
-#
 # class Role(Enum):
 #     MEMBER = "member"
 #     COMPOSER = "composer"
@@ -73,7 +71,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-
+    is_service_account = models.BooleanField(default=False, help_text="True if this belongs to the organization")
     objects = UserManager()
 
     USERNAME_FIELD = "username"
@@ -81,6 +79,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['email']
 
     def __str__(self):
+        if self.is_service_account:
+            return f"[service account] {self.username}"
         return f"{self.username} - {self.email}"
 
 
@@ -88,13 +88,26 @@ class Organization(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+
+    # The organization's own service/auth account
+    service_account = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="organization_profile",
+        help_text="System account representing this organization"
+    )
+
+    # The creator of this organization
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=False,
         blank=False,
-        related_name="organizations"
+        related_name="organizations_created",
+        help_text="Original user who created this organization"
     )
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def get_role(self, user):
         """Return the user's role in this organization."""
@@ -169,6 +182,53 @@ class MembershipPeriod(models.Model):
     membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="periods")
     started_at = models.DateField(auto_now_add=True)
     ended_at = models.DateField(null=True, blank=True)
+
+
+class Song(models.Model):
+    title = models.CharField(max_length=250)
+    number_of_pages = models.IntegerField(blank=True, null=True)
+    number_of_copies = models.IntegerField(blank=True, null=True)
+
+    composer = models.CharField(max_length=250)
+    poet = models.CharField(max_length=250)
+
+    year = models.IntegerField("year of creation", blank=True, null=True)
+    group = models.CharField("type of song", max_length=250)
+    number_of_voices = models.IntegerField(blank=True, null=True)
+
+    additional_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="songs"
+    )
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def is_organizational(self):
+        """Check if this song belongs to an organization"""
+        return self.user.is_service_account
+
+    @property
+    def organization(self):
+        """Get the organization if this is an org song."""
+        if self.user.is_service_account and hasattr(self.user, 'organization_profile'):
+            return self.user.organization_profile
+        return None
+
+    @property
+    def owner_display(self):
+        """Display Owner"""
+        if self.is_organizational:
+            return f"Organization: {self.organization.name}"
+        return f"Personal: {self.user.username}"
 
 
 # class Song(models.Model):

@@ -46,8 +46,8 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import CustomUser, Organization, Person, Membership, Role
-from .forms import RegisterForm, OrganizationForm, PersonForm
+from .models import CustomUser, Organization, Person, Membership, Role, Song
+from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm
 from .forms import CustomUserCreationForm
 from .mixins import RoleRequiredMixin
 
@@ -420,6 +420,28 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
 
         return redirect("secondapp:org_member_list", org_username=self.kwargs["org_username"])
 
+@method_decorator(login_required, name='dispatch')
+class SongListView(ListView):
+    model = Song
+    template_name = "secondapp/song_dashboard.html"
+
+
+@method_decorator(login_required, name='dispatch')
+class SongDetailView(DetailView):
+    model = Song
+    template_name = "secondapp/song_page.html"
+
+
+@method_decorator(login_required, name='dispatch')
+class SongCreateView(CreateView):
+    form_class = SongForm
+    template_name = "secondapp/song_form2.html"
+
+
+@method_decorator(login_required, name='dispatch')
+class SongUpdateView(UpdateView):
+    form_class = SongForm
+    template_name = "secondapp/song_form2.html"
 
 
 # -----------------------------------------------------

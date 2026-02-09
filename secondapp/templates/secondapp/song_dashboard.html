@@ -1,0 +1,21 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Songs2{% endblock %}
+{% block content %}
+
+<div>
+    <a href="{% url 'secondapp:song_form2' %}"><button type="button">+ Add New Song +</button></a>
+<p>Here is a list of all songs:</p>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>title</th>
+        <th>composer</th>
+        <th>copies</th>
+    </tr>
+    <tr>
+        <td>{{    }}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
