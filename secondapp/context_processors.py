@@ -21,7 +21,6 @@ def user_person(request):
                 )
                 memberships.extend(owned_person_memberships)
 
-
             # detect active org from URL
             resolver_match = request.resolver_match
             if resolver_match and "org_username" in resolver_match.kwargs:
@@ -34,7 +33,6 @@ def user_person(request):
                     ),
                     None
                 )
-
 
     return {
         "person": person,

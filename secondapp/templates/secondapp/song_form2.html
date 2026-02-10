@@ -1,0 +1,19 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
+{% block content %}
+
+<h1>{% if object %}Edit{% else %}Add{% endif %} Song</h1>
+<form method="POST">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+{% if object %}
+    <a href="{% url 'secondapp:song_page' object.pk %}">
+        <button type="button">Cancel Edit</button>
+    </a>
+{% else %}
+    <a href="{% url 'secondapp:song_dashboard' %}">
+        <button type="button">Cancel & Return to List</button>
+    </a>
+{% endif %}
+{% endblock %}

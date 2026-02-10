@@ -12,10 +12,15 @@
         <th>composer</th>
         <th>copies</th>
     </tr>
-    <tr>
-        <td>{{    }}</td>
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>
+    {% if user.is_authenticated %}
+        <tr>
+            <td>{{ song.pk }}</td>
+            <td>{{ song.title }}</td>
+            <td>{{ song.composer }}</td>
+            <td>{{ song.number_of_copies }}</td>
+        </tr>
+    {% endif %}
 </table>
+
+
+    {% endblock %}

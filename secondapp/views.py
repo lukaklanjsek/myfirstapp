@@ -176,7 +176,7 @@ class OrganizationCreateView(CreateView):
         with transaction.atomic():
             person = Person.objects.filter(user=self.request.user).first()
 
-            # create custom auth base user for org
+            # create auth account for org
             org_user = CustomUser.objects.create(
                 username=slugify(form.cleaned_data["name"]),
                 email=form.cleaned_data["email"],
@@ -189,6 +189,7 @@ class OrganizationCreateView(CreateView):
             organization.user = org_user
             organization.save()
 
+            # create first admin person of the org
             person_admin = Person.objects.create(
                 owner=person,
                 email=person.email,
@@ -215,7 +216,7 @@ class OrgMemberMixin(RoleRequiredMixin):
         org_username = self.kwargs.get("org_username")
 
         # Find the organization
-        self.organization = Organization.objects.get(user__username=org_username)
+        self.organization = get_object_or_404(Organization, user__username=org_username)
 
         # Get the user's Person
         person = request.user.persons.first()
@@ -425,6 +426,14 @@ class SongListView(ListView):
     model = Song
     template_name = "secondapp/song_dashboard.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # context["memberships"] = Membership.objects.filter(
+        #     organization=self.organization,
+        #     is_active=True
+        # ).select_related("person").order_by("person__last_name")
+        return context
+
 
 @method_decorator(login_required, name='dispatch')
 class SongDetailView(DetailView):
@@ -437,11 +446,23 @@ class SongCreateView(CreateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
 
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_page")
+
 
 @method_decorator(login_required, name='dispatch')
 class SongUpdateView(UpdateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
+
+
+@method_decorator(login_required, name="dispatch")
+class SongDeleteView(DeleteView):
+    model = Song
+    template_name = "secondapp/song_confirm_delete.html"
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_dashboard")
 
 
 # -----------------------------------------------------

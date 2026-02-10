@@ -12,9 +12,7 @@
         <div class="item-details">
             <p>Title: {{ song.title }}</p>
             <p>Song ID: {{song.pk}}</p>
-            {% if song.composer %}
-                <p>Composer: {{song.composer}}</p>
-            {% endif %}
+            <p>Composer: {{song.composer}}</p>
         </div>
         <div class="warning-note">
             <p>️ This action cannot be undone.</p>
@@ -29,20 +27,13 @@
                     <button type="submit" class="delete-btn">Yes, delete</button>
                 </div>
                 <div class="safe-action">
-                    <a href="{% url 'secondapp:song_detail' song.pk %}">
+                    <a href="{% url 'secondapp:song_page' song.pk %}">
                         <button type="button" class="cancel-btn">Cancel</button>
                     </a>
                 </div>
             </div>
         </form>
     </div>
-
-    <div class="navigation-footer">
-        <a href="{% url 'secondapp:index' %}">
-            <button type="button" class="home-btn">Home - Index</button>
-        </a>
-    </div>
-
     <div class="additional-info">
         <p>This will remove the song from all rehearsals where it was scheduled.</p>
     </div>

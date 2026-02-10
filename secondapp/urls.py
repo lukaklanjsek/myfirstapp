@@ -21,10 +21,23 @@ urlpatterns = [
     path("", views.IndexView.as_view(), name="index2"),
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
 
+    path("songs/", views.SongListView.as_view(), name="song_dashboard"),
+    path("songs/create/", views.SongCreateView.as_view(), name="song_form2"),
+    path("songs/<int:pk>/", views.SongDetailView.as_view(), name="song_page"),
+    path("songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="song_form2"),
+    path("songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="song_delete"),
+
     path("<str:org_username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
     path("<str:org_username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
     path("<str:org_username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
     path("<str:org_username>/members/edit/<int:pk>/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
+
+    path("<str:org_username>/songs/", views.SongListView.as_view(), name="org_song_dashboard"),
+    path("<str:org_username>/songs/create/", views.SongCreateView.as_view(), name="org_song_form2"),
+    path("<str:org_username>/songs/<int:pk>/", views.SongDetailView.as_view(), name="org_song_page"),
+    path("<str:org_username>/songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="org_song_form2"),
+    path("<str:org_username>/songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="org_song_delete"),
+
 
 #    path("", include("django.contrib.auth.urls")),
 

@@ -71,7 +71,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    is_service_account = models.BooleanField(default=False, help_text="True if this belongs to the organization")
     objects = UserManager()
 
     USERNAME_FIELD = "username"
@@ -79,8 +78,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['email']
 
     def __str__(self):
-        if self.is_service_account:
-            return f"[service account] {self.username}"
         return f"{self.username} - {self.email}"
 
 
@@ -89,22 +86,14 @@ class Organization(models.Model):
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 
-    # The organization's own service/auth account
-    service_account = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="organization_profile",
-        help_text="System account representing this organization"
-    )
-
-    # The creator of this organization
+    # auth account of the organization
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=False,
         blank=False,
-        related_name="organizations_created",
-        help_text="Original user who created this organization"
+        related_name="organizations",
+        help_text="Organization auth hook"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
