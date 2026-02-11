@@ -12,7 +12,7 @@
         <button type="button">Cancel Edit</button>
     </a>
 {% else %}
-    <a href="{% url 'secondapp:song_dashboard' %}">
+    <a href="{% url 'secondapp:song_dashboard' active_username %}">
         <button type="button">Cancel & Return to List</button>
     </a>
 {% endif %}

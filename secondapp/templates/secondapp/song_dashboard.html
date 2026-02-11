@@ -3,7 +3,7 @@
 {% block content %}
 
 <div>
-    <a href="{% url 'secondapp:song_form2' %}"><button type="button">+ Add New Song +</button></a>
+    <a href="{% url 'secondapp:song_form2' active_username %}"><button type="button">+ Add New Song +</button></a>
 <p>Here is a list of all songs:</p>
 <table>
     <tr>
@@ -12,15 +12,16 @@
         <th>composer</th>
         <th>copies</th>
     </tr>
-    {% if user.is_authenticated %}
+    {% for song in songs %}
         <tr>
             <td>{{ song.pk }}</td>
-            <td>{{ song.title }}</td>
+            <td><a href="{% url 'secondapp:song_page' active_username song.pk %}">
+                    {{ song.title }}
+                </a></td>
             <td>{{ song.composer }}</td>
             <td>{{ song.number_of_copies }}</td>
         </tr>
-    {% endif %}
+    {% endfor %}
 </table>
-
 
     {% endblock %}

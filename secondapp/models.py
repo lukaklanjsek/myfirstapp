@@ -33,9 +33,6 @@ from django.conf import settings
 #     MALE = "male"
 #
 #
-# class Position(Enum):
-#     STAFF = "staff"
-#     PARTICIPANT = "participant"
 
 class Role(Enum):
     ADMIN = "admin"
@@ -137,7 +134,13 @@ class Person(models.Model):
         related_name="persons"
     )
 
-    owner = models.ForeignKey("self",related_name="owned_persons",on_delete=models.PROTECT,blank=True,null=True,)
+    owner = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name="owned_persons"
+    )
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -162,8 +165,8 @@ class Membership(models.Model):
         ]
 
     def __str__(self):
-        status = "Active" if self.is_active else "Inactive"
-        return f"{self.person} {self.organization} {self.role} {status}"
+        # status = "Active" if self.is_active else "Inactive"
+        return f"{self.person} {self.organization}"
 
 
 class MembershipPeriod(models.Model):
@@ -171,6 +174,39 @@ class MembershipPeriod(models.Model):
     membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="periods")
     started_at = models.DateField(auto_now_add=True)
     ended_at = models.DateField(null=True, blank=True)
+
+
+class Skill(models.Model):
+    """
+    Title of the skill that each member has.
+    Example: conductor, singer, musician, composer, poet, translator...
+    """
+    title = models.CharField("name of skill",max_length=250)
+    additional_notes = models.TextField("explanation of skill", blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class PersonSkill(models.Model):
+    """
+    Relationship between Person(member) and Skill.
+    Each Person(member) can have multiple skill entries.
+    """
+    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_skill")
+    skill = models.ForeignKey(Skill, on_delete=models.PROTECT, related_name="person_skill")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["person", "skill"],
+                name="unique_skill_per_org_person"
+            )
+        ]
 
 
 class Song(models.Model):
@@ -192,32 +228,31 @@ class Song(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
         related_name="songs"
     )
 
     def __str__(self):
         return self.title
 
-    @property
-    def is_organizational(self):
-        """Check if this song belongs to an organization"""
-        return self.user.is_service_account
 
-    @property
-    def organization(self):
-        """Get the organization if this is an org song."""
-        if self.user.is_service_account and hasattr(self.user, 'organization_profile'):
-            return self.user.organization_profile
-        return None
-
-    @property
-    def owner_display(self):
-        """Display Owner"""
-        if self.is_organizational:
-            return f"Organization: {self.organization.name}"
-        return f"Personal: {self.user.username}"
+    # @property
+    # def is_organizational(self):
+    #     """Check if this song belongs to an organization"""
+    #     return self.user.organizations
+    #
+    # @property
+    # def organization(self):
+    #     """Get the organization if this is an org song."""
+    #     if self.user and hasattr(self.user, 'organization_profile'):
+    #         return self.user.organization_profile
+    #     return None
+    #
+    # @property
+    # def owner_display(self):
+    #     """Display Owner"""
+    #     if self.is_organizational:
+    #         return f"Organization: {self.organization.username}"
+    #     return f"Personal: {self.user.username}"
 
 
 # class Song(models.Model):

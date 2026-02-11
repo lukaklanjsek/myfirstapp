@@ -3,7 +3,7 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-  <p>Welcome, {{ user.username }} /@/ {{ user.email }}!</p>
+  <p>Welcome, {{ user.username }} at the email of: {{ user.email }}!</p>
 
   {% with person=user.persons.first %}
   {% if person %}
@@ -25,7 +25,7 @@
     {% endif %}
 
   {% else %}
-    <a href="{% url 'secondapp:person_update' %}">
+    <a href="{% url 'secondapp:person_update' active_username %}">
       Please complete your profile
     </a>
   {% endif %}

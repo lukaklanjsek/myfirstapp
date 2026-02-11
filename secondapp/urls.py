@@ -12,7 +12,7 @@ urlpatterns = [
 
     path("signup/", views.SignUp.as_view(), name="signup"),
 
-    path("person_form2/", views.PersonUpdateView.as_view(), name="person_update"),
+    path("<str:username>/person_form2/", views.PersonUpdateView.as_view(), name="person_update"),
     path("logout/", views.UserLogoutView.as_view(), name="logout"),
     path("login/", views.UserLoginView.as_view(), name="login"),
 
@@ -21,22 +21,16 @@ urlpatterns = [
     path("", views.IndexView.as_view(), name="index2"),
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
 
-    path("songs/", views.SongListView.as_view(), name="song_dashboard"),
-    path("songs/create/", views.SongCreateView.as_view(), name="song_form2"),
-    path("songs/<int:pk>/", views.SongDetailView.as_view(), name="song_page"),
-    path("songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="song_form2"),
-    path("songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="song_delete"),
+    path("<str:username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
+    path("<str:username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
+    path("<str:username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
+    path("<str:username>/members/edit/<int:pk>/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
 
-    path("<str:org_username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
-    path("<str:org_username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
-    path("<str:org_username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
-    path("<str:org_username>/members/edit/<int:pk>/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
-
-    path("<str:org_username>/songs/", views.SongListView.as_view(), name="org_song_dashboard"),
-    path("<str:org_username>/songs/create/", views.SongCreateView.as_view(), name="org_song_form2"),
-    path("<str:org_username>/songs/<int:pk>/", views.SongDetailView.as_view(), name="org_song_page"),
-    path("<str:org_username>/songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="org_song_form2"),
-    path("<str:org_username>/songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="org_song_delete"),
+    path("<str:username>/songs/", views.SongListView.as_view(), name="song_dashboard"),
+    path("<str:username>/songs/create/", views.SongCreateView.as_view(), name="song_form2"),
+    path("<str:username>/songs/<int:pk>/", views.SongDetailView.as_view(), name="song_page"),
+    path("<str:username>/songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="song_form2"),
+    path("<str:username>/songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="song_delete"),
 
 
 #    path("", include("django.contrib.auth.urls")),

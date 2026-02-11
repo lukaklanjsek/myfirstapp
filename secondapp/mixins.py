@@ -16,11 +16,11 @@ class RoleRequiredMixin:
     allowed_roles = [Role.ADMIN]
 
     def dispatch(self, request, *args, **kwargs):
-        org_username = self.kwargs.get("org_username")
-        if not org_username:
+        username = self.kwargs.get("username")
+        if not username:
             raise PermissionDenied("Organization not specified.")
         try:
-            self.organization = Organization.objects.get(user__username=org_username)
+            self.organization = Organization.objects.get(user__username=username)
         except Organization.DoesNotExist:
             raise PermissionDenied("Organization not found.")
 

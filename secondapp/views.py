@@ -150,10 +150,10 @@ class OrganizationDashboard(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        org_username = self.kwargs["org_username"]
+        username = self.kwargs["username"]
         organization = get_object_or_404(
             Organization,
-            user__username=org_username
+            user__username=username
         )
 
         context["organization"] = organization
@@ -212,11 +212,11 @@ class OrgMemberMixin(RoleRequiredMixin):
     allowed_roles = [Role.ADMIN.name, Role.MEMBER.name]  # changed added members
 
     def dispatch(self, request, *args, **kwargs):
-        # Get org_username from URL
-        org_username = self.kwargs.get("org_username")
+        # Get username from URL
+        username = self.kwargs.get("username")
 
         # Find the organization
-        self.organization = get_object_or_404(Organization, user__username=org_username)
+        self.organization = get_object_or_404(Organization, user__username=username)
 
         # Get the user's Person
         person = request.user.persons.first()
@@ -288,7 +288,7 @@ class OrgMemberAddView(OrgMemberMixin, FormView):
                     membership.is_active = is_active
                     membership.save()
 
-        return redirect("secondapp:org_member_list", org_username=self.kwargs["org_username"])
+        return redirect("secondapp:org_member_list", username=self.kwargs["username"])
 
 @method_decorator(login_required, name='dispatch')
 class OrgMemberEditView(OrgMemberMixin, FormView):
@@ -299,8 +299,8 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        org_username = self.kwargs.get("org_username")
-        self.organization = Organization.objects.get(user__username=org_username)
+        username = self.kwargs.get("username")
+        self.organization = Organization.objects.get(user__username=username)
 
         self.person = get_object_or_404(
             Person.objects.prefetch_related(
@@ -419,26 +419,27 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
                             ended_at__isnull=True,
                         ).update(ended_at=datetime.date.today())
 
-        return redirect("secondapp:org_member_list", org_username=self.kwargs["org_username"])
+        return redirect("secondapp:org_member_list", username=self.kwargs["username"])
 
 @method_decorator(login_required, name='dispatch')
 class SongListView(ListView):
     model = Song
     template_name = "secondapp/song_dashboard.html"
+    context_object_name = "songs"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # context["memberships"] = Membership.objects.filter(
-        #     organization=self.organization,
-        #     is_active=True
-        # ).select_related("person").order_by("person__last_name")
-        return context
+    def get_queryset(self):
+        username = self.kwargs["username"]
+        return Song.objects.filter(
+            user__username=username
+        ).order_by("title")
 
 
 @method_decorator(login_required, name='dispatch')
 class SongDetailView(DetailView):
     model = Song
     template_name = "secondapp/song_page.html"
+    context_object_name = "song"
+
 
 
 @method_decorator(login_required, name='dispatch')
@@ -446,8 +447,20 @@ class SongCreateView(CreateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
 
+    def form_valid(self, form):
+        username = self.kwargs["username"]
+        # if username == self.request.user.username:
+        #     form.instance.user = self.request.user
+        # else:
+        #     form.instance.user = get_object_or_404(CustomUser, username=username)
+
+        return super().form_valid(form)
+
     def get_success_url(self):
-        return reverse_lazy("secondapp:song_page")
+        return reverse_lazy("secondapp:song_page",kwargs={
+            "username": self.kwargs["username"],
+            "pk": self.object.pk
+        })
 
 
 @method_decorator(login_required, name='dispatch')
@@ -462,7 +475,7 @@ class SongDeleteView(DeleteView):
     template_name = "secondapp/song_confirm_delete.html"
 
     def get_success_url(self):
-        return reverse_lazy("secondapp:song_dashboard")
+        return reverse_lazy("secondapp:song_dashboard", kwargs={"username":self.kwargs["username"]})
 
 
 # -----------------------------------------------------

@@ -1,4 +1,5 @@
 # utils.py
+from .models import Song, Membership
 
 class SongQueryHelper:
     @staticmethod
