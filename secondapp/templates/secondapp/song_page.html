@@ -1,8 +1,17 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Details2{% endblock %}
 {% block content %}
-<p>Missing content</p>
-<p>Please add content.</p>
-<p>{{ song.title }}</p>
+<p> TEST PRINT: song is owned by {{ song.user }}</p>
+<p>Follow me for more cooking recipes.</p>
+<p>Song ID: {{ song.pk }}</p>
+<p>Title: {{ song.title }}</p>
+<p>Number of copies: {{ song.number_of_copies }}</p>
+<p>Number of voices: {{ song.nubmer_of_voices }}</p>
+<p>Composer: {{ song.composer }}</p>
+<p>Poet: {{ song.poet }}</p>
+<p>Type of song: {{ song.group }}</p>
+<p>Number of pages: {{ song.number_of_pages }}</p>
+<p>Year of creation: {{ song.year }}</p>
+<p>Additional notes: {{ song.additional_notes }}</p>
 
 {% endblock %}

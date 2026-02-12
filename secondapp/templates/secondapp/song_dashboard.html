@@ -2,8 +2,9 @@
 {% block title %}Songs2{% endblock %}
 {% block content %}
 
-<div>
+{% if membership.role == "ADMIN" %}
     <a href="{% url 'secondapp:song_form2' active_username %}"><button type="button">+ Add New Song +</button></a>
+{% endif %}
 <p>Here is a list of all songs:</p>
 <table>
     <tr>

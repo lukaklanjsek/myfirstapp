@@ -197,13 +197,14 @@ class PersonSkill(models.Model):
     """
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_skill")
     skill = models.ForeignKey(Skill, on_delete=models.PROTECT, related_name="person_skill")
+    # organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="person_skill")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["person", "skill"],
+                fields=["person", "skill"], # , "organization"],
                 name="unique_skill_per_org_person"
             )
         ]
@@ -214,8 +215,8 @@ class Song(models.Model):
     number_of_pages = models.IntegerField(blank=True, null=True)
     number_of_copies = models.IntegerField(blank=True, null=True)
 
-    composer = models.CharField(max_length=250)
-    poet = models.CharField(max_length=250)
+    composer = models.ForeignKey(Person, on_delete=PROTECT, related_name="composer")
+    poet = models.ForeignKey(Person, on_delete=PROTECT, related_name="poet")
 
     year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField("type of song", max_length=250)
@@ -231,10 +232,29 @@ class Song(models.Model):
         related_name="songs"
     )
 
+    internal_id = models.IntegerField("internal ID", blank=True, null=True)
+
     def __str__(self):
         return self.title
 
+#
+# class SongOrganization(models.Model):
+#     """Relationship between song.pk and its org so each org only manages its own songs."""
+#     song = models.ForeignKey(Song, on_delete=PROTECT, related_name="song_org")
+#     organization = models.ForeignKey(Organization, on_delete=PROTECT, related_name="song_org")
+#
+#     created_at = models.DateTimeField(auto_now_add=True)
+#
+#     class Meta:
+#         constraints = [
+#             models.UniqueConstraint(
+#                 fields=["song", "organization"],
+#                 name="unique_song_per_org"
+#             )
+#         ]
 
+
+########################################################################################################
     # @property
     # def is_organizational(self):
     #     """Check if this song belongs to an organization"""

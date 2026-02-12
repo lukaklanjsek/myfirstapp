@@ -433,6 +433,10 @@ class SongListView(ListView):
             user__username=username
         ).order_by("title")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
 
 @method_decorator(login_required, name='dispatch')
 class SongDetailView(DetailView):
@@ -448,12 +452,10 @@ class SongCreateView(CreateView):
     template_name = "secondapp/song_form2.html"
 
     def form_valid(self, form):
-        username = self.kwargs["username"]
-        # if username == self.request.user.username:
-        #     form.instance.user = self.request.user
-        # else:
-        #     form.instance.user = get_object_or_404(CustomUser, username=username)
-
+        active_username = self.kwargs["username"]
+        # get auth user from active username
+        active_user = get_object_or_404(CustomUser, username=active_username)
+        form.instance.user = active_user # assign song to active user (org or individual)
         return super().form_valid(form)
 
     def get_success_url(self):
