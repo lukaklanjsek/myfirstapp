@@ -1,0 +1,1 @@
+[{"model": "secondapp.skill", "pk": 1, "fields": {"title": "composer", "additional_notes": "composer", "created_at": "2026-02-13T11:43:46.347Z"}}, {"model": "secondapp.skill", "pk": 2, "fields": {"title": "poet", "additional_notes": "poet", "created_at": "2026-02-13T11:44:00.026Z"}}]

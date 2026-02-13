@@ -46,10 +46,10 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import CustomUser, Organization, Person, Membership, Role, Song
-from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm
+from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
+from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
 from .forms import CustomUserCreationForm
-from .mixins import RoleRequiredMixin
+from .mixins import RoleRequiredMixin, SkillListAndCreateMixin
 
 
 class SignUp(generic.CreateView):
@@ -452,10 +452,10 @@ class SongCreateView(CreateView):
     template_name = "secondapp/song_form2.html"
 
     def form_valid(self, form):
-        active_username = self.kwargs["username"]
-        # get auth user from active username
-        active_user = get_object_or_404(CustomUser, username=active_username)
-        form.instance.user = active_user # assign song to active user (org or individual)
+        owner_username = self.kwargs["username"]
+        # get auth user owner from username
+        active_user = get_object_or_404(CustomUser, username=owner_username)
+        form.instance.user = active_user # assign song to owner user (org or individual)
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -478,6 +478,11 @@ class SongDeleteView(DeleteView):
 
     def get_success_url(self):
         return reverse_lazy("secondapp:song_dashboard", kwargs={"username":self.kwargs["username"]})
+
+
+class SkillListAndCreateView(SkillListAndCreateMixin, View):
+    pass
+
 
 
 # -----------------------------------------------------

@@ -3,7 +3,7 @@
 {% block content %}
 
 {% if membership.role == "ADMIN" %}
-    <a href="{% url 'secondapp:song_form2' active_username %}"><button type="button">+ Add New Song +</button></a>
+    <a href="{% url 'secondapp:song_form2' owner_username %}"><button type="button">+ Add New Song +</button></a>
 {% endif %}
 <p>Here is a list of all songs:</p>
 <table>
@@ -15,8 +15,8 @@
     </tr>
     {% for song in songs %}
         <tr>
-            <td>{{ song.pk }}</td>
-            <td><a href="{% url 'secondapp:song_page' active_username song.pk %}">
+            <td>{{ song.internal_id }}</td>
+            <td><a href="{% url 'secondapp:song_page' owner_username song.pk %}">
                     {{ song.title }}
                 </a></td>
             <td>{{ song.composer }}</td>

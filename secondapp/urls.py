@@ -31,7 +31,7 @@ urlpatterns = [
     path("<str:username>/songs/<int:pk>/", views.SongDetailView.as_view(), name="song_page"),
     path("<str:username>/songs/<int:pk>/update/", views.SongUpdateView.as_view(), name="song_form2"),
     path("<str:username>/songs/<int:pk>/delete/", views.SongDeleteView.as_view(), name="song_delete"),
-
+    path("skill/", views.SkillListAndCreateView.as_view(), name="skill"),
 
 #    path("", include("django.contrib.auth.urls")),
 

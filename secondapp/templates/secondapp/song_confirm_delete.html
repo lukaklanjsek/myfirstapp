@@ -27,7 +27,7 @@
                     <button type="submit" class="delete-btn">Yes, delete</button>
                 </div>
                 <div class="safe-action">
-                    <a href="{% url 'secondapp:song_page' active_username song.pk %}">
+                    <a href="{% url 'secondapp:song_page' owner_username song.pk %}">
                         <button type="button" class="cancel-btn">Cancel</button>
                     </a>
                 </div>

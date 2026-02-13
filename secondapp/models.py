@@ -181,8 +181,8 @@ class Skill(models.Model):
     Title of the skill that each member has.
     Example: conductor, singer, musician, composer, poet, translator...
     """
-    title = models.CharField("name of skill",max_length=250)
-    additional_notes = models.TextField("explanation of skill", blank=True, null=True)
+    title = models.CharField("name of skill",max_length=50, unique=True)
+    additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -212,15 +212,15 @@ class PersonSkill(models.Model):
 
 class Song(models.Model):
     title = models.CharField(max_length=250)
-    number_of_pages = models.IntegerField(blank=True, null=True)
-    number_of_copies = models.IntegerField(blank=True, null=True)
+    number_of_pages = models.PositiveIntegerField(blank=True, null=True)
+    number_of_copies = models.PositiveIntegerField(blank=True, null=True)
 
     composer = models.ForeignKey(Person, on_delete=PROTECT, related_name="composer")
     poet = models.ForeignKey(Person, on_delete=PROTECT, related_name="poet")
 
     year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField("type of song", max_length=250)
-    number_of_voices = models.IntegerField(blank=True, null=True)
+    number_of_voices = models.PositiveIntegerField(blank=True, null=True)
 
     additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -232,7 +232,7 @@ class Song(models.Model):
         related_name="songs"
     )
 
-    internal_id = models.IntegerField("internal ID", blank=True, null=True)
+    internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
 
     def __str__(self):
         return self.title

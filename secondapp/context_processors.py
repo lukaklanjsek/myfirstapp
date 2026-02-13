@@ -6,7 +6,7 @@ def user_person(request):
     owned_persons = []
     memberships = []
     active_org = None
-    active_username = None
+    owner_username = None
 
     if request.user.is_authenticated:
         person = request.user.persons.first()
@@ -38,14 +38,14 @@ def user_person(request):
 
         # if active user page is org or individual
         if active_org:
-            active_username = active_org.user.username
+            owner_username = active_org.user.username
         elif request.user:
-            active_username = request.user.username
+            owner_username = request.user.username
 
     return {
         "person": person,
         "owned_persons": owned_persons,
         "memberships": memberships,
         "active_org": active_org,
-        "active_username": active_username,
+        "owner_username": owner_username,
     }

@@ -9,24 +9,24 @@
   {% if person %}
     <p>{{ person.first_name }} {{ person.last_name }}</p>
 <p><a href="{% url 'secondapp:org_create' %}">Create organization</a></p>
-{% if owned_persons %}
-  {% for owned_person in owned_persons %}
+{% if memberships %}
+
 <p>Your memberships:</p>
-        {% for membership in owned_person.memberships.all %}
+        {% for memberships in username.owned_persons.memberships.all %}
           <ul>
             <li>
-            {{ membership.organization.name }}
-            ({{ membership.role }})
+            {{ memberships.organization.name }}
+            ({{ memberships.role }})
           </li>
         {% endfor %}
           </ul>
-  {% endfor %}
+
 {% else %}
   <p>You are not member of any organization.</p>
 {% endif %}
 
   {% else %}
-    <a href="{% url 'secondapp:person_update' active_username %}">
+    <a href="{% url 'secondapp:person_update' owner_username %}">
       Please complete your profile
     </a>
   {% endif %}

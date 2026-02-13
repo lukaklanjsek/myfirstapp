@@ -1,0 +1,27 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Skills{% endblock %}
+{% block content %}
+<h1>Skills</h1>
+<h2> Add new skill </h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add new skill</button>
+</form>
+
+<h2> Skill list </h2>
+<ul>
+{% for skill in skills %}
+    <p>{{ skill.title }}
+    - info: {{ skill.additional_notes }} - added  {{ skill.created_at }}
+    <form method="post" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="skill_id" value="{{ skill.id }}">
+        <button type="submit" name="delete_skill" onclick="return confirm('Are you sure?')">Delete</button>
+      </form>
+    </p>
+{% endfor %}
+</ul>
+
+
+{% endblock %}

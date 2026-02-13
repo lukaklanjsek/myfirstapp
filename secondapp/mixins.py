@@ -4,7 +4,8 @@ from django.views.generic import ListView, DeleteView, CreateView, UpdateView
 from django.views.generic.edit import FormMixin
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
-from .models import Organization, Role
+from .models import Organization, Role, Skill
+from .forms import SkillForm
 # from .models import Tag, Musician, Composer, Poet, Arranger, Member, Conductor
 # from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, ConductorForm, MemberForm
 from django.core.exceptions import PermissionDenied
@@ -49,38 +50,39 @@ class RoleRequiredMixin:
 
 
 
-# class TagListAndCreateMixin(FormMixin, ListView):
-#     model = Tag
-#     form_class = TagForm
-#     template_name = "secondapp/tag_list_create.html"
-#     context_object_name = "tags"
-#
-#     def get_success_url(self):
-#         return self.request.path
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["form"] = self.get_form()
-#         return context
-#
-#     def post(self, request, *args, **kwargs):
-#         if "delete_tag" in request.POST:
-#             tag_id = request.POST.get("tag_id")
-#             print("Tag ID:", tag_id)
-#             tag = get_object_or_404(Tag, id=tag_id)
-#             tag.delete()
-#             return redirect(self.get_success_url())
-#         else:
-#             form = self.get_form()
-#             if form.is_valid():
-#                 return self.form_valid(form)
-#             else:
-#                 return self.form_invalid(form)
-#
-#     def form_valid(self, form):
-#         form.save()
-#         return super().form_valid(form)
-#
+class SkillListAndCreateMixin(FormMixin, ListView):
+    model = Skill
+    form_class = SkillForm
+    template_name = "secondapp/skill_list_create.html"
+    context_object_name = "skills"
+
+    def get_success_url(self):
+        return self.request.path
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form"] = self.get_form()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        if "delete_skill" in request.POST:
+            skill_id = request.POST.get("skill_id")
+            print("Skill ID:", skill_id)
+            skill = get_object_or_404(Skill, id=skill_id)
+            skill.delete()
+            return redirect(self.get_success_url())
+        else:
+            form = self.get_form()
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
 #
 # class PersonRoleMixin:
 #     role_model_from_map = {
