@@ -38,6 +38,7 @@ class Role(Enum):
     ADMIN = "admin"
     MEMBER = "member"
     SUPPORTER = "supporter"
+    EXTERNAL = "external"
 
 
 class UserManager(BaseUserManager):
@@ -114,6 +115,33 @@ class Organization(models.Model):
         return self.name
 
 
+class PersonQuerySet(models.QuerySet):
+    def with_skill(self, skill_id):
+        """Filter persons who have a specific skill"""
+        return self.filter(person_skill__skill_id=skill_id).distinct()
+
+    def in_user_organizations(self, user):
+        """Filter persons in user's organizations"""
+        owner_person = user.persons.first()
+        if not owner_person:
+            return self.none()
+
+        owned_person_ids = owner_person.owned_persons.values_list('id', flat=True)
+        org_ids = Membership.objects.filter(
+            person_id__in=owned_person_ids,
+            is_active=True
+        ).values_list('organization_id', flat=True)
+
+        return self.filter(
+            memberships__organization_id__in=org_ids,
+            memberships__is_active=True
+        ).distinct()
+
+    def for_user_with_skill(self, user, skill_id):
+        """Generic method - any skill any organization"""
+        return self.in_user_organizations(user).with_skill(skill_id)
+
+
 class Person(models.Model):
     """
     One Person is under CustomUser, different Persons are owned by organizations.
@@ -141,6 +169,8 @@ class Person(models.Model):
         null=True,
         related_name="owned_persons"
     )
+
+    objects = PersonQuerySet.as_manager()
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -181,6 +211,13 @@ class Skill(models.Model):
     Title of the skill that each member has.
     Example: conductor, singer, musician, composer, poet, translator...
     """
+    COMPOSER = 1
+    POET = 2
+    ARRANGER = 3
+    SINGER = 4
+    INSTRUMENTALIST = 5
+    CONDUCTOR = 6
+
     title = models.CharField("name of skill",max_length=50, unique=True)
     additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
 
@@ -215,8 +252,8 @@ class Song(models.Model):
     number_of_pages = models.PositiveIntegerField(blank=True, null=True)
     number_of_copies = models.PositiveIntegerField(blank=True, null=True)
 
-    composer = models.ForeignKey(Person, on_delete=PROTECT, related_name="composer")
-    poet = models.ForeignKey(Person, on_delete=PROTECT, related_name="poet")
+    composer = models.ForeignKey(Person, on_delete=PROTECT, related_name="composed_songs")
+    poet = models.ForeignKey(Person, on_delete=PROTECT, related_name="written_songs")
 
     year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField("type of song", max_length=250)
@@ -236,6 +273,8 @@ class Song(models.Model):
 
     def __str__(self):
         return self.title
+
+
 
 #
 # class SongOrganization(models.Model):

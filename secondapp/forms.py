@@ -84,10 +84,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     role_admin = forms.BooleanField(required=False, label="Admin")
     role_member = forms.BooleanField(required=False, label="Member")
     role_supporter = forms.BooleanField(required=False, label="Supporter")
+    role_external = forms.BooleanField(required=False, label="External")
     # Active checkboxes
     active_admin = forms.BooleanField(required=False, label="Active")
     active_member = forms.BooleanField(required=False, label="Active")
     active_supporter = forms.BooleanField(required=False, label="Active")
+    active_external = forms.BooleanField(required=False, label="Active")
 
     def clean(self):
         cleaned_data = super().clean()  # for multiple fields
@@ -96,6 +98,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
                 cleaned_data.get("role_admin")
                 or cleaned_data.get("role_member")
                 or cleaned_data.get("role_supporter")
+                or cleaned_data.get("role_external")
         )
         # if none of them are checked, show an error
         if not has_any_role:
@@ -110,6 +113,8 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
             cleaned_data["active_member"] = False
         if not cleaned_data.get("role_supporter"):
             cleaned_data["active_supporter"] = False
+        if not cleaned_data.get("role_external"):
+            cleaned_data["active_external"] = False
 
         return cleaned_data
 
@@ -119,6 +124,7 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
             "ADMIN": ("role_admin", "active_admin"),
             "MEMBER": ("role_member", "active_member"),
             "SUPPORTER": ("role_supporter", "active_supporter"),
+            "EXTERNAL": ("role_external", "active_external"),
         }
 
         selected_roles = []
@@ -140,6 +146,14 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         }
 
 class SongForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user:
+            # for more skills later just add one line
+            self.fields['composer'].queryset = Person.objects.for_user_with_skill(user, Skill.COMPOSER)
+            self.fields['poet'].queryset = Person.objects.for_user_with_skill(user, Skill.POET)
+
     class Meta:
         model = Song
         fields = [

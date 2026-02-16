@@ -32,38 +32,31 @@
                     <li>
                         <p>Groups:</p>
                         <ul>
-                            <!-- User's Own Memberships -->
-                                <!-- If user has no direct memberships, check owned persons -->
-                                {% if owned_persons %}
-                                    {% for owned_person in owned_persons %}
-                                        {% for membership in owned_person.memberships.all %}
-                                            {% with org=membership.organization %}
-                                                <li class="org-item {% if active_org == org %}active{% endif %}">
-                                                    <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
-                                                        {{ org.name }} ({{ owned_person }} - {{ membership.role }})
-                                                    </a>
-                                                    <!-- Submenu for active org -->
-                                                    {% if active_org == org %}
-                                                        <ul class="org-submenu">
-                                                            <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">songs</a></li>
-                                                            {% if membership.role == "ADMIN" %}
-                                                                <li><a href="{% url 'secondapp:song_form2' org.user.username %}">add song</a></li>
-                                                                <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
-                                                                <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
-                                                            {% endif %}
+                        <!-- User's Own Memberships -->
+                            <!-- If user has no direct memberships, check owned persons -->
+                            {% for membership in memberships %}
+                                {% with org=membership.organization %}
+                                <li class="org-item {% if active_org == org %}active{% endif %}">
+                                    <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
+                                        {{ org.name }} ({{ owned_person }} - {{ membership.role }})
+                                    </a>
+                                   <ul class="org-submenu">
+                                        <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">songs</a></li>
+                                        {% if membership.role == "ADMIN" %}
+                                            <li><a href="{% url 'secondapp:song_form2' org.user.username %}">add song</a></li>
+                                            <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
+                                            <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
+                                        {% endif %}
+                                        </ul>
 
-                                                        </ul>
-                                                    {% endif %}
-                                                </li>
-                                            {% endwith %}
-                                        {% empty %}
-                                            <!-- No memberships for this owned person -->
-                                        {% endfor %}
-                                    {% endfor %}
-                                {% else %}
-                                    <li>You are not a member of any organization.</li>
-                                {% endif %}
-                        </ul>
+                                </li>
+                                {% endwith %}
+                            {% empty %}
+                                <!-- No memberships for this owned person -->
+                            {% endfor %}
+
+
+                </ul>
                     </li>
 
 
@@ -74,10 +67,10 @@
                         </form>
                     </li>
                 </ul>
-            {% else %}
+{% else %}
                 <a href="{% url 'secondapp:signup' %}">Sign Up</a>
-                <a href="{% url 'login' %}">Login</a>
-            {% endif %}
+                <a href="{% url 'secondapp:login' %}">Login</a>
+{% endif %}
         </nav>
 
 <!--    main -->

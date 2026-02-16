@@ -13,14 +13,14 @@
         <th>Actions</th>
     </tr>
 
-    {% for x in memberships %}
+    {% for membership in memberships %}
     <tr>
-        <td>{{ x.person.first_name }} {{ x.person.last_name }}</td>
-        <td>{{ x.person.email }}</td>
+        <td>{{ membership.person.first_name }} {{ membership.person.last_name }}</td>
+        <td>{{ membership.person.email }}</td>
 
-        <td>{{ x.role }}</td>
+        <td>{{ membership.role }}</td>
         <td>
-            <a href="{% url 'secondapp:org_member_edit' organization.user.username x.person.id %}">
+            <a href="{% url 'secondapp:org_member_edit' organization.user.username membership.person.id %}">
                 Edit
             </a>
         </td>

@@ -12,14 +12,15 @@
 {% if memberships %}
 
 <p>Your memberships:</p>
-        {% for memberships in username.owned_persons.memberships.all %}
-          <ul>
+        <ul>
+          {% for membership in memberships %}
+
             <li>
-            {{ memberships.organization.name }}
-            ({{ memberships.role }})
-          </li>
-        {% endfor %}
-          </ul>
+            {{ membership.organization.name }}
+            ({{ membership.role }})
+            </li>
+          {% endfor %}
+        </ul>
 
 {% else %}
   <p>You are not member of any organization.</p>
