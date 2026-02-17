@@ -42,7 +42,7 @@
                                     </a>
                                    <ul class="org-submenu">
                                         <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">songs</a></li>
-                                        {% if membership.role == "ADMIN" %}
+                                        {% if membership.role_id == 1 %}
                                             <li><a href="{% url 'secondapp:song_form2' org.user.username %}">add song</a></li>
                                             <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
                                             <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>

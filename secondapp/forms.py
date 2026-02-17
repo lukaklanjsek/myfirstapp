@@ -6,7 +6,7 @@ from django_select2.forms import ModelSelect2MultipleWidget
 #It is advised to always setup a separate cache server for Select2.
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill
+from .models import CustomUser, Organization, Person, Song, Skill, Role
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -91,6 +91,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     active_supporter = forms.BooleanField(required=False, label="Active")
     active_external = forms.BooleanField(required=False, label="Active")
 
+    skills = forms.ModelMultipleChoiceField(
+        queryset=Skill.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+
     def clean(self):
         cleaned_data = super().clean()  # for multiple fields
 
@@ -119,21 +125,25 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         return cleaned_data
 
     def get_selected_roles(self):
-        """role_name, is_active."""
         ROLE_MAP = {
-            "ADMIN": ("role_admin", "active_admin"),
-            "MEMBER": ("role_member", "active_member"),
-            "SUPPORTER": ("role_supporter", "active_supporter"),
-            "EXTERNAL": ("role_external", "active_external"),
+            Role.ADMIN: ("role_admin", "active_admin"),
+            Role.MEMBER: ("role_member", "active_member"),
+            Role.SUPPORTER: ("role_supporter", "active_supporter"),
+            Role.EXTERNAL: ("role_external", "active_external"),
         }
 
-        selected_roles = []
-        for role_name, (role_field, active_field) in ROLE_MAP.items():
-            if self.cleaned_data.get(role_field):
-                is_active = self.cleaned_data.get(active_field)
-                selected_roles.append((role_name, is_active))
+        selected_pks = [
+            pk for pk, (role_field, _) in ROLE_MAP.items()
+            if self.cleaned_data.get(role_field)
+        ]
 
-        return selected_roles
+        roles_by_pk = {r.pk: r for r in Role.objects.filter(pk__in=selected_pks)}
+
+        return [
+            (roles_by_pk[pk], self.cleaned_data.get(active_field))
+            for pk, (role_field, active_field) in ROLE_MAP.items()
+            if self.cleaned_data.get(role_field)
+        ]
 
     def get_person_data(self):
         """Person fields."""
@@ -144,6 +154,10 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
             "phone": self.cleaned_data["phone"],
             "address": self.cleaned_data["address"],
         }
+
+    def get_selected_skills(self):
+        return self.cleaned_data.get("skills", [])
+
 
 class SongForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):

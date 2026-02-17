@@ -34,11 +34,19 @@ from django.conf import settings
 #
 #
 
-class Role(Enum):
-    ADMIN = "admin"
-    MEMBER = "member"
-    SUPPORTER = "supporter"
-    EXTERNAL = "external"
+class Role(models.Model):
+    ADMIN = 1
+    MEMBER = 2
+    SUPPORTER = 3
+    EXTERNAL = 4
+
+    title = models.CharField("name of role",max_length=50, unique=True)
+    additional_notes = models.CharField("short explanation of role",max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
 
 
 class UserManager(BaseUserManager):
@@ -103,12 +111,13 @@ class Organization(models.Model):
             return None
 
         # Check memberships of owned persons
-        owned_persons = person.owned_persons.all()
-        for owned_person in owned_persons:
-            owned_membership = self.memberships.filter(person=owned_person, is_active=True).first()
-            if owned_membership:
-                return owned_membership.role
-
+        for owned_person in person.owned_persons.all():
+            membership = self.memberships.filter(
+                person=owned_person,
+                is_active=True
+            ).select_related('role').first()
+            if membership:
+                return membership.role
         return None
 
     def __str__(self):
@@ -142,6 +151,28 @@ class PersonQuerySet(models.QuerySet):
         return self.in_user_organizations(user).with_skill(skill_id)
 
 
+class Skill(models.Model):
+    """
+    Title of the skill that each member has.
+    Example: conductor, singer, musician, composer, poet, translator...
+    """
+    COMPOSER = 1
+    POET = 2
+    ARRANGER = 3
+    SINGER = 4
+    INSTRUMENTALIST = 5
+    CONDUCTOR = 6
+
+    title = models.CharField("name of skill",max_length=50, unique=True)
+    additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+
 class Person(models.Model):
     """
     One Person is under CustomUser, different Persons are owned by organizations.
@@ -170,6 +201,18 @@ class Person(models.Model):
         related_name="owned_persons"
     )
 
+    skills = models.ManyToManyField(
+        Skill,
+        through="PersonSkill",
+        related_name="persons"
+    )
+
+    roles = models.ManyToManyField(
+        Role,
+        through="Membership",
+        related_name="persons"
+    )
+
     objects = PersonQuerySet.as_manager()
 
     updated_at = models.DateTimeField(auto_now=True)
@@ -183,7 +226,7 @@ class Membership(models.Model):
     """Base relationship between Person and Organization."""
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="memberships")
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="memberships")
-    role = models.CharField(max_length=15, choices=[(role.name, role.value) for role in Role])
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="memberships")
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -206,26 +249,6 @@ class MembershipPeriod(models.Model):
     ended_at = models.DateField(null=True, blank=True)
 
 
-class Skill(models.Model):
-    """
-    Title of the skill that each member has.
-    Example: conductor, singer, musician, composer, poet, translator...
-    """
-    COMPOSER = 1
-    POET = 2
-    ARRANGER = 3
-    SINGER = 4
-    INSTRUMENTALIST = 5
-    CONDUCTOR = 6
-
-    title = models.CharField("name of skill",max_length=50, unique=True)
-    additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
-
 
 class PersonSkill(models.Model):
     """
@@ -234,7 +257,6 @@ class PersonSkill(models.Model):
     """
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_skill")
     skill = models.ForeignKey(Skill, on_delete=models.PROTECT, related_name="person_skill")
-    # organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="person_skill")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -252,8 +274,18 @@ class Song(models.Model):
     number_of_pages = models.PositiveIntegerField(blank=True, null=True)
     number_of_copies = models.PositiveIntegerField(blank=True, null=True)
 
-    composer = models.ForeignKey(Person, on_delete=PROTECT, related_name="composed_songs")
-    poet = models.ForeignKey(Person, on_delete=PROTECT, related_name="written_songs")
+    composer = models.ForeignKey(
+        Person,
+        on_delete=PROTECT,
+        related_name="composed_songs",
+        limit_choices_to={'person_skill__skill_id': Skill.COMPOSER}
+    )
+    poet = models.ForeignKey(
+        Person,
+        on_delete=PROTECT,
+        related_name="written_songs",
+        limit_choices_to={'person_skill__skill_id': Skill.POET}
+    )
 
     year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField("type of song", max_length=250)

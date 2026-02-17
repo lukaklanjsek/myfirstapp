@@ -9,6 +9,7 @@
     <tr>
         <th>Name</th>
         <th>Email</th>
+        <th>Skill</th>
         <th>Roles</th>
         <th>Actions</th>
     </tr>
@@ -17,8 +18,18 @@
     <tr>
         <td>{{ membership.person.first_name }} {{ membership.person.last_name }}</td>
         <td>{{ membership.person.email }}</td>
-
-        <td>{{ membership.role }}</td>
+        <td>
+            {% for skill in membership.person.skills.all %}
+                {{ skill.title }}
+            {% empty %}
+                No skills
+            {% endfor %}
+        </td>
+        <td>{% for role in membership.person.roles.all %}
+                {{ role.title }}
+            {% empty %}
+                No roles
+            {% endfor %}</td>
         <td>
             <a href="{% url 'secondapp:org_member_edit' organization.user.username membership.person.id %}">
                 Edit

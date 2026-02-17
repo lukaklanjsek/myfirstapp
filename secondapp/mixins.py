@@ -38,9 +38,9 @@ class RoleRequiredMixin:
 
     def role_allowed(self, user_role):
         """Check if the user's role is allowed."""
-        if user_role == Role.ADMIN.name:
-            return True
-        return user_role in self.allowed_roles
+        if user_role is None:
+            return False
+        return user_role.pk in self.allowed_roles
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

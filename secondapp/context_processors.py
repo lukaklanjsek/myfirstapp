@@ -26,7 +26,7 @@ def user_person(request):
     context["memberships"] = list(Membership.objects.filter(
         person__owner=person
     ).select_related(
-        "organization", "organization__user", "person"
+        "organization", "organization__user", "person", "role"
     ))
 
     context["owner_username"] = (

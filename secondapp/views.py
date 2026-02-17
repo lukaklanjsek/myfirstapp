@@ -40,7 +40,7 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .forms import OrgMemberForm
-from .models import Organization, Person, Membership, MembershipPeriod, Role
+from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet
 
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
@@ -200,7 +200,7 @@ class OrganizationCreateView(CreateView):
             Membership.objects.create(
                 organization=organization,
                 person=person_admin,
-                role=Role.ADMIN.name,
+                role_id=Role.ADMIN,
                 is_active=True,
             )
 
@@ -209,7 +209,7 @@ class OrganizationCreateView(CreateView):
 
 class OrgMemberMixin(RoleRequiredMixin):
     """Mixin for organization member views."""
-    allowed_roles = [Role.ADMIN.name, Role.MEMBER.name]  # changed added members
+    allowed_roles = [Role.ADMIN, Role.MEMBER]
 
     def dispatch(self, request, *args, **kwargs):
         # Get username from URL
@@ -236,10 +236,21 @@ class OrgMemberListView(OrgMemberMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["memberships"] = Membership.objects.filter(
+
+        memberships_specific = Membership.objects.filter(
             organization=self.organization,
             is_active=True
-        ).select_related("person").order_by("person__last_name")
+        ).select_related("person").prefetch_related("person__roles", "person__skills").order_by("person__last_name")
+
+        # remove double lines
+        seen = set()
+        unique_memberships = []
+        for m in memberships_specific:
+            if m.person.id not in seen:
+                unique_memberships.append(m)
+                seen.add(m.person.id)
+
+        context["memberships"] = unique_memberships
         return context
 
 
@@ -288,7 +299,14 @@ class OrgMemberAddView(OrgMemberMixin, FormView):
                     membership.is_active = is_active
                     membership.save()
 
+            for skill in form.get_selected_skills():
+                PersonSkill.objects.update_or_create(
+                    person=person,
+                    skill=skill
+                )
+
         return redirect("secondapp:org_member_list", username=self.kwargs["username"])
+
 
 @method_decorator(login_required, name='dispatch')
 class OrgMemberEditView(OrgMemberMixin, FormView):
@@ -324,6 +342,7 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
                 organization=self.organization,
                 person=self.person,
             )
+            skills = PersonSkill.objects.filter(person=self.person)
 
             # dict of the checkboxes
             initial = {
@@ -340,10 +359,11 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
                 "active_admin": False,
                 "active_member": False,
                 "active_supporter": False,
+                "skills": self.person.person_skill.values_list("skill", flat=True),
             }
 
             for m in memberships: # check the right boxes
-                role = m.role.lower()  # "ADMIN" == "admin"
+                role = m.role.title.lower()  # "ADMIN" == "admin"
                 initial[f"role_{role}"] = True
                 initial[f"active_{role}"] = m.is_active
 
@@ -371,7 +391,7 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
             selected_roles = {role_name: is_active for role_name, is_active in form.get_selected_roles()}
 
             # handle each possible role
-            for role_name in ["ADMIN", "MEMBER", "SUPPORTER"]:
+            for role_name in [Role.ADMIN, Role.MEMBER, Role.SUPPORTER, Role.EXTERNAL]:
                 membership = Membership.objects.filter(
                     organization=self.organization,
                     person=self.person,
@@ -419,7 +439,31 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
                             ended_at__isnull=True,
                         ).update(ended_at=datetime.date.today())
 
+            selected_skills = {
+                skill.id
+                for skill in form.get_selected_skills()
+            }
+
+            existing_skills = {
+                sp.skill.id: sp
+                for sp in PersonSkill.objects.filter(person=self.person)
+            }
+
+            # adding skills
+            for skill_id in selected_skills:
+                if skill_id not in existing_skills:
+                    PersonSkill.objects.create(
+                        person=self.person,
+                        skill_id=skill_id
+                    )
+
+            # deleting skills
+            for skill_id, sp in existing_skills.items():
+                if skill_id not in selected_skills:
+                    sp.delete()
+
         return redirect("secondapp:org_member_list", username=self.kwargs["username"])
+
 
 @method_decorator(login_required, name='dispatch')
 class SongListView(ListView):
@@ -482,7 +526,6 @@ class SongDeleteView(DeleteView):
 
 class SkillListAndCreateView(SkillListAndCreateMixin, View):
     pass
-
 
 
 # -----------------------------------------------------
