@@ -81,82 +81,17 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     phone = forms.CharField(max_length=23, required=False)
     address = forms.CharField(required=False, widget=forms.Textarea)
     # Role checkboxes
-    role_admin = forms.BooleanField(required=False, label="Admin")
-    role_member = forms.BooleanField(required=False, label="Member")
-    role_supporter = forms.BooleanField(required=False, label="Supporter")
-    role_external = forms.BooleanField(required=False, label="External")
-    # Active checkboxes
-    active_admin = forms.BooleanField(required=False, label="Active")
-    active_member = forms.BooleanField(required=False, label="Active")
-    active_supporter = forms.BooleanField(required=False, label="Active")
-    active_external = forms.BooleanField(required=False, label="Active")
-
+    roles = forms.ModelMultipleChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        widget=forms.CheckboxSelectMultiple
+    )
+    # Skill checkbox
     skills = forms.ModelMultipleChoiceField(
         queryset=Skill.objects.all(),
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
-
-    def clean(self):
-        cleaned_data = super().clean()  # for multiple fields
-
-        has_any_role = (
-                cleaned_data.get("role_admin")
-                or cleaned_data.get("role_member")
-                or cleaned_data.get("role_supporter")
-                or cleaned_data.get("role_external")
-        )
-        # if none of them are checked, show an error
-        if not has_any_role:
-            raise forms.ValidationError(
-                "At least one role must be selected."
-            )
-
-        # role_admin = unchecked but active_admin = checked
-        if not cleaned_data.get("role_admin"):
-            cleaned_data["active_admin"] = False
-        if not cleaned_data.get("role_member"):
-            cleaned_data["active_member"] = False
-        if not cleaned_data.get("role_supporter"):
-            cleaned_data["active_supporter"] = False
-        if not cleaned_data.get("role_external"):
-            cleaned_data["active_external"] = False
-
-        return cleaned_data
-
-    def get_selected_roles(self):
-        ROLE_MAP = {
-            Role.ADMIN: ("role_admin", "active_admin"),
-            Role.MEMBER: ("role_member", "active_member"),
-            Role.SUPPORTER: ("role_supporter", "active_supporter"),
-            Role.EXTERNAL: ("role_external", "active_external"),
-        }
-
-        selected_pks = [
-            pk for pk, (role_field, _) in ROLE_MAP.items()
-            if self.cleaned_data.get(role_field)
-        ]
-
-        roles_by_pk = {r.pk: r for r in Role.objects.filter(pk__in=selected_pks)}
-
-        return [
-            (roles_by_pk[pk], self.cleaned_data.get(active_field))
-            for pk, (role_field, active_field) in ROLE_MAP.items()
-            if self.cleaned_data.get(role_field)
-        ]
-
-    def get_person_data(self):
-        """Person fields."""
-        return {
-            "first_name": self.cleaned_data["first_name"],
-            "last_name": self.cleaned_data["last_name"],
-            "email": self.cleaned_data["email"],
-            "phone": self.cleaned_data["phone"],
-            "address": self.cleaned_data["address"],
-        }
-
-    def get_selected_skills(self):
-        return self.cleaned_data.get("skills", [])
 
 
 class SongForm(forms.ModelForm):
@@ -189,7 +124,7 @@ class SkillForm(forms.ModelForm):
         model = Skill
         fields = ["title", "additional_notes"]
 
-
+##########################################################################
 # class BaseForm(forms.ModelForm):
 #     # required field indicator
 #     def __init__(self, *args, **kwargs):

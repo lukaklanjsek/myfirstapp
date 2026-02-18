@@ -114,7 +114,7 @@ class Organization(models.Model):
         for owned_person in person.owned_persons.all():
             membership = self.memberships.filter(
                 person=owned_person,
-                is_active=True
+                # is_active=True
             ).select_related('role').first()
             if membership:
                 return membership.role
@@ -135,15 +135,15 @@ class PersonQuerySet(models.QuerySet):
         if not owner_person:
             return self.none()
 
-        owned_person_ids = owner_person.owned_persons.values_list('id', flat=True)
+        owned_person_ids = owner_person.owned_persons.values_list('id') #, flat=True)
         org_ids = Membership.objects.filter(
             person_id__in=owned_person_ids,
-            is_active=True
-        ).values_list('organization_id', flat=True)
+            # is_active=True
+        ).values_list('organization_id') #, flat=True)
 
         return self.filter(
             memberships__organization_id__in=org_ids,
-            memberships__is_active=True
+            # memberships__is_active=True
         ).distinct()
 
     def for_user_with_skill(self, user, skill_id):
@@ -227,7 +227,6 @@ class Membership(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="memberships")
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="memberships")
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="memberships")
-    is_active = models.BooleanField(default=True)
 
     class Meta:
         constraints = [
@@ -238,14 +237,18 @@ class Membership(models.Model):
         ]
 
     def __str__(self):
-        # status = "Active" if self.is_active else "Inactive"
         return f"{self.person} {self.organization}"
 
 
 class MembershipPeriod(models.Model):
-    """Tracks activity periods for each role assignment."""
-    membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="periods")
-    started_at = models.DateField(auto_now_add=True)
+    """
+    Tracks activity periods for each role assignment.
+    Can have multiple periods of the same role, but only singular period at a given time.
+    """
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="membership_period")
+    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="membership_period")
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="membership_period")
+    started_at = models.DateField()
     ended_at = models.DateField(null=True, blank=True)
 
 

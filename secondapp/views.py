@@ -121,7 +121,7 @@ class PersonUpdateView(UpdateView):
                 organization=self.organization,
                 person=self.object,
                 role=Role.MEMBER,
-                is_active=True
+                # is_active=True
             )
         else:
             # non-admin access
@@ -174,7 +174,7 @@ class OrganizationCreateView(CreateView):
     def form_valid(self, form):
         # atomic transaction - creates everything at once:
         with transaction.atomic():
-            person = Person.objects.filter(user=self.request.user).first()
+            the_admin = Person.objects.filter(user=self.request.user).first()
 
             # create auth account for org
             org_user = CustomUser.objects.create(
@@ -189,19 +189,28 @@ class OrganizationCreateView(CreateView):
             organization.user = org_user
             organization.save()
 
-            # create first admin person of the org
+            # create admin person of the org
             person_admin = Person.objects.create(
-                owner=person,
-                email=person.email,
-                first_name=person.first_name,
-                last_name=person.last_name,
+                user=organization.user,    # this Person belongs to the organization
+                owner=the_admin,    #  this person is claimed by the creator of the organization
+                email=the_admin.email,
+                first_name=the_admin.first_name,
+                last_name=the_admin.last_name,
             )
 
+            # make an admin role into membership
             Membership.objects.create(
                 organization=organization,
                 person=person_admin,
                 role_id=Role.ADMIN,
-                is_active=True,
+            )
+
+            # track the admin into period
+            MembershipPeriod.objects.create(
+                organization=organization,
+                person=person_admin,
+                role_id=Role.ADMIN,
+                started_at=datetime.date.today()
             )
 
         return super().form_valid(form)
@@ -239,10 +248,10 @@ class OrgMemberListView(OrgMemberMixin, TemplateView):
 
         memberships_specific = Membership.objects.filter(
             organization=self.organization,
-            is_active=True
+            # is_active=True
         ).select_related("person").prefetch_related("person__roles", "person__skills").order_by("person__last_name")
 
-        # remove double lines
+        # remove double lines   #### IS THIS STILL NECESSARY?
         seen = set()
         unique_memberships = []
         for m in memberships_specific:
@@ -262,50 +271,65 @@ class OrgMemberAddView(OrgMemberMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # context["organization"] = self.organization
-        context["page_title"] = f"Add Member to {self.organization.name}"
+        # context["page_title"] = f"Add Member to {self.organization.name}"
         return context
 
     def form_valid(self, form):
-        person_data = form.get_person_data()
-
         with transaction.atomic():
-            # find or create Person
-            person = Person.objects.filter(
-                email=person_data["email"],
-                memberships__organization=self.organization
-            ).first()
+            # 1. create new person
+            person = self._create_person(form)
 
-            if not person:
-                person = Person.objects.create(**person_data, user=None)
-            else: # update existing person
-                for field, value in person_data.items():
-                    if field != "email":  # don't update email
-                        setattr(person, field, value)
-                person.save()
+            # 2. add roles into membership
+            self._add_roles(person, form.cleaned_data["roles"])
 
-            # create memberships for selected roles
-            for role_name, is_active in form.get_selected_roles():
-                membership, created = Membership.objects.get_or_create(
-                    organization=self.organization,
-                    person=person,
-                    role=role_name,
-                    defaults={"is_active": is_active}
-                )
+            # 3. add skills
+            self._add_skills(person, form.cleaned_data["skills"])
 
-                if created:
-                    MembershipPeriod.objects.create(membership=membership)
-                else:
-                    membership.is_active = is_active
-                    membership.save()
+        return redirect(
+            "secondapp:org_member_list",
+            username=self.kwargs["username"]
+        )
 
-            for skill in form.get_selected_skills():
-                PersonSkill.objects.update_or_create(
-                    person=person,
-                    skill=skill
-                )
+    def _create_person(self, form):
+        """Create a new Person in an organization. (unclaimed by any real user)"""
+        person = Person.objects.create(
+            first_name=form.cleaned_data["first_name"],
+            last_name=form.cleaned_data["last_name"],
+            email=form.cleaned_data.get("email", ""),
+            phone=form.cleaned_data.get("phone", ""),
+            address=form.cleaned_data.get("address", ""),
+            user=self.organization.user,  # linked to organization's auth acc
+            owner=None  # profile not claimed by individual yet
+        )
+        return person
 
-        return redirect("secondapp:org_member_list", username=self.kwargs["username"])
+    def _add_roles(self, person, selected_roles):
+        """Create memberships for selected roles."""
+        today = datetime.date.today()
+
+        for role in selected_roles:
+            # Create the membership
+            Membership.objects.create(
+                organization=self.organization,
+                person=person,
+                role=role
+            )
+
+            # Track when they started this role
+            MembershipPeriod.objects.create(
+                organization=self.organization,
+                person=person,
+                role=role,
+                started_at=today
+            )
+
+    def _add_skills(self, person, selected_skills):
+        """Create PersonSkill entry for selected skills."""
+        for skill in selected_skills:
+            PersonSkill.objects.create(
+                person=person,
+                skill=skill
+            )
 
 
 @method_decorator(login_required, name='dispatch')
@@ -317,152 +341,130 @@ class OrgMemberEditView(OrgMemberMixin, FormView):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        username = self.kwargs.get("username")
-        self.organization = Organization.objects.get(user__username=username)
+        self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
 
-        self.person = get_object_or_404(
-            Person.objects.prefetch_related(
-                Prefetch(
-                    "memberships",
-                    queryset=Membership.objects.filter(
-                        organization=self.organization
-                    )
-                )
-            ),
-            pk=self.kwargs["pk"]
-        )
 
     def get_form(self, form_class=None):
+        # pre fill form with existing data
         form = super().get_form(form_class)
 
-        # pre-fill if this is a GET request
         if self.request.method == "GET":
-            # grab existing memberships
-            memberships = Membership.objects.filter(
+            # current roles in THIS organization
+            current_role_ids = Membership.objects.filter(
                 organization=self.organization,
-                person=self.person,
+                person=self.person
+            ).values_list("role_id", flat=True)
+
+            # current skills
+            current_skill_ids = self.person.person_skill.values_list(
+                "skill_id", flat=True
             )
-            skills = PersonSkill.objects.filter(person=self.person)
 
             # dict of the checkboxes
-            initial = {
+            form.initial = {
                 # person info
                 "first_name": self.person.first_name,
                 "last_name": self.person.last_name,
                 "email": self.person.email,
                 "phone": self.person.phone,
                 "address": self.person.address,
-                # checkboxes start as False
-                "role_admin": False,
-                "role_member": False,
-                "role_supporter": False,
-                "active_admin": False,
-                "active_member": False,
-                "active_supporter": False,
-                "skills": self.person.person_skill.values_list("skill", flat=True),
+                # m2m relationships
+                "roles": current_role_ids,
+                "skills": current_skill_ids,
             }
-
-            for m in memberships: # check the right boxes
-                role = m.role.title.lower()  # "ADMIN" == "admin"
-                initial[f"role_{role}"] = True
-                initial[f"active_{role}"] = m.is_active
-
-            form.initial = initial
 
         return form
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.organization
-        context["page_title"] = f"Edit {self.person.first_name} {self.person.last_name}"
+        # context["page_title"] = f"Edit {self.person.first_name} {self.person.last_name}"
         return context
 
     def form_valid(self, form):
-        person_data = form.get_person_data()
-
         with transaction.atomic():
-            # update person (exclude email)
-            for field, value in person_data.items():
-                if field != "email":
-                    setattr(self.person, field, value)
-            self.person.save()
+            # 1. update person info
+            self._update_person_info(form)
 
-            # get all selected roles from form
-            selected_roles = {role_name: is_active for role_name, is_active in form.get_selected_roles()}
+            # 2. update roles
+            self._update_roles(form.cleaned_data["roles"])
 
-            # handle each possible role
-            for role_name in [Role.ADMIN, Role.MEMBER, Role.SUPPORTER, Role.EXTERNAL]:
-                membership = Membership.objects.filter(
-                    organization=self.organization,
-                    person=self.person,
-                    role=role_name,
-                ).first()
+            # 3. update skills
+            self._update_skills(form.cleaned_data["skills"])
 
-                if role_name in selected_roles:
-                    # role is checked
-                    is_active = selected_roles[role_name]
+        return redirect("secondapp:org_member_list",username=self.kwargs["username"])
 
-                    if not membership:
-                        # new role
-                        membership = Membership.objects.create(
-                            organization=self.organization,
-                            person=self.person,
-                            role=role_name,
-                            is_active=is_active,
-                        )
-                        MembershipPeriod.objects.create(membership=membership)
-                    else:
-                        # existing role, check if activity changed
-                        if membership.is_active != is_active:
-                            membership.is_active = is_active
-                            membership.save()
+    def _update_person_info(self, form):
+        """update personal info"""
+        self.person.first_name = form.cleaned_data["first_name"]
+        self.person.last_name = form.cleaned_data["last_name"]
+        self.person.email = form.cleaned_data.get("email", "")
+        self.person.phone = form.cleaned_data.get("phone", "")
+        self.person.address = form.cleaned_data.get("address", "")
+        self.person.save()
 
-                            if not is_active:
-                                # deactivated
-                                MembershipPeriod.objects.filter(
-                                    membership=membership,
-                                    ended_at__isnull=True,
-                                ).update(ended_at=datetime.date.today())
-                            else:
-                                # reactivated
-                                MembershipPeriod.objects.create(membership=membership)
+    def _update_roles(self, new_roles):
+        """sync roles - add new ones, remove old ones"""
+        today = datetime.date.today()
 
-                else:
-                    # role is NOT checked
-                    if membership and membership.is_active:
-                        # deactivate it
-                        membership.is_active = False
-                        membership.save()
+        # current roles
+        current_memberships = Membership.objects.filter(
+            organization=self.organization,
+            person=self.person
+        )
+        current_role_ids = set(current_memberships.values_list("role_id", flat=True))
 
-                        MembershipPeriod.objects.filter(
-                            membership=membership,
-                            ended_at__isnull=True,
-                        ).update(ended_at=datetime.date.today())
+        # new roles
+        new_role_ids = {role.id for role in new_roles}
 
-            selected_skills = {
-                skill.id
-                for skill in form.get_selected_skills()
-            }
+        # do the magic
+        for role_id in (new_role_ids - current_role_ids):
+            Membership.objects.create(
+                organization=self.organization,
+                person=self.person,
+                role_id=role_id
+            )
+            MembershipPeriod.objects.create(
+                organization=self.organization,
+                person=self.person,
+                role_id=role_id,
+                started_at=today
+            )
 
-            existing_skills = {
-                sp.skill.id: sp
-                for sp in PersonSkill.objects.filter(person=self.person)
-            }
+        # remove roles
+        removed_role_ids = current_role_ids - new_role_ids
+        if removed_role_ids:
+            # Close open periods for removed roles
+            MembershipPeriod.objects.filter(
+                organization=self.organization,
+                person=self.person,
+                role_id__in=removed_role_ids,
+                ended_at__isnull=True
+            ).update(ended_at=today)
 
-            # adding skills
-            for skill_id in selected_skills:
-                if skill_id not in existing_skills:
-                    PersonSkill.objects.create(
-                        person=self.person,
-                        skill_id=skill_id
-                    )
+            # Delete the memberships
+            current_memberships.filter(role_id__in=removed_role_ids).delete()
 
-            # deleting skills
-            for skill_id, sp in existing_skills.items():
-                if skill_id not in selected_skills:
-                    sp.delete()
+    def _update_skills(self, new_skills):
+        """sync skills - add new, remove old"""
+        # current skills
+        current_skills = PersonSkill.objects.filter(person=self.person)
+        current_skill_ids = set(current_skills.values_list("skill_id", flat=True))
 
-        return redirect("secondapp:org_member_list", username=self.kwargs["username"])
+        # new skills
+        new_skill_ids = {skill.id for skill in new_skills}
+
+        # do the magic
+        for skill_id in (new_skill_ids - current_skill_ids):
+            PersonSkill.objects.create(
+                person=self.person,
+                skill_id=skill_id
+            )
+
+        # remove old skills
+        removed_skill_ids = current_skill_ids - new_skill_ids
+        if removed_skill_ids:
+            current_skills.filter(skill_id__in=removed_skill_ids).delete()
 
 
 @method_decorator(login_required, name='dispatch')

@@ -21,7 +21,7 @@ class SongQueryHelper:
         owned_persons = person.owned_persons.all()
         memberships = Membership.objects.filter(
             person in owned_persons,
-            is_active = True
+            # is_active = True
         ).select_related("organization__user")
 
         org_user = [m.organization.user for m in memberships]
