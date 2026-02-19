@@ -1,3 +1,4 @@
+# views.py
 import csv
 from dataclasses import field
 from fileinput import filename
@@ -50,6 +51,7 @@ from .models import CustomUser, Organization, Person, Membership, Role, Song, Sk
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
 from .forms import CustomUserCreationForm
 from .mixins import RoleRequiredMixin, SkillListAndCreateMixin
+from .permissions import AccessControl
 
 
 class SignUp(generic.CreateView):
@@ -239,27 +241,26 @@ class OrgMemberMixin(RoleRequiredMixin):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberListView(OrgMemberMixin, TemplateView):
+class OrgMemberListView(OrgMemberMixin, ListView):
     """Shows all members of an organization."""
     template_name = "secondapp/org_member_list.html"
+    context_object_name = "members"
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        username = self.kwargs["username"]
+        self.organization = get_object_or_404(Organization, user__username=username)
+
+    def get_queryset(self):
+        # Get filtered persons based on access control
+        return AccessControl.get_visible_members(
+            self.request.user,  # self.request.user = the individual person browsing
+            self.organization  # self.organization = the org being viewed
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        memberships_specific = Membership.objects.filter(
-            organization=self.organization,
-            # is_active=True
-        ).select_related("person").prefetch_related("person__roles", "person__skills").order_by("person__last_name")
-
-        # remove double lines   #### IS THIS STILL NECESSARY?
-        seen = set()
-        unique_memberships = []
-        for m in memberships_specific:
-            if m.person.id not in seen:
-                unique_memberships.append(m)
-                seen.add(m.person.id)
-
-        context["memberships"] = unique_memberships
+        context["organization"] = self.organization
         return context
 
 
@@ -490,12 +491,27 @@ class SongDetailView(DetailView):
     template_name = "secondapp/song_page.html"
     context_object_name = "song"
 
+    def get_object(self):
+        song = super().get_object()
+        if not AccessControl.can_view_song(self.request.user, song):
+            raise PermissionDenied("You cannot view this song")
+
+        return song
+
 
 
 @method_decorator(login_required, name='dispatch')
 class SongCreateView(CreateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        owner_username = self.kwargs["username"]
+        active_user = get_object_or_404(CustomUser, username=owner_username)
+
+        kwargs["user"] = active_user  # pass the user to form
+        return kwargs
 
     def form_valid(self, form):
         owner_username = self.kwargs["username"]
@@ -515,6 +531,27 @@ class SongCreateView(CreateView):
 class SongUpdateView(UpdateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        owner_username = self.kwargs["username"]
+        active_user = get_object_or_404(CustomUser, username=owner_username)
+
+        kwargs["user"] = active_user # pass the user to form
+        return kwargs
+
+    def form_valid(self, form):
+        owner_username = self.kwargs["username"]
+        # get auth user owner from username
+        active_user = get_object_or_404(CustomUser, username=owner_username)
+        form.instance.user = active_user # assign song to owner user (org or individual)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("secondapp:song_page",kwargs={
+            "username": self.kwargs["username"],
+            "pk": self.object.pk
+        })
 
 
 @method_decorator(login_required, name="dispatch")

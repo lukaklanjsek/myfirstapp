@@ -20,15 +20,19 @@ def user_person(request):
 
     context["person"] = person
 
-    # get owned persons sub-profiles
-    owned_persons = person.owned_persons.select_related("user").all()
+    # Get all memberships for this user's owned persons
+    context["memberships"] = list(
+        Membership.objects.filter(
+            person__owner=person
+        ).select_related(
+            "organization",
+            "organization__user",
+            "person",
+            "role"
+        ).order_by("organization__name", "person__last_name")
+    )
 
-    context["memberships"] = list(Membership.objects.filter(
-        person__owner=person
-    ).select_related(
-        "organization", "organization__user", "person", "role"
-    ))
-
+    # Get username from URL (which org page are we on)
     context["owner_username"] = (
         request.resolver_match.kwargs.get('username')
         if request.resolver_match else None

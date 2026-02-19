@@ -129,26 +129,15 @@ class PersonQuerySet(models.QuerySet):
         """Filter persons who have a specific skill"""
         return self.filter(person_skill__skill_id=skill_id).distinct()
 
-    def in_user_organizations(self, user):
-        """Filter persons in user's organizations"""
-        owner_person = user.persons.first()
-        if not owner_person:
-            return self.none()
-
-        owned_person_ids = owner_person.owned_persons.values_list('id') #, flat=True)
-        org_ids = Membership.objects.filter(
-            person_id__in=owned_person_ids,
-            # is_active=True
-        ).values_list('organization_id') #, flat=True)
-
+    def in_org_user(self, org_user):
+        """Filter persons only from within organization."""
         return self.filter(
-            memberships__organization_id__in=org_ids,
-            # memberships__is_active=True
+            memberships__organization__user=org_user
         ).distinct()
 
     def for_user_with_skill(self, user, skill_id):
         """Generic method - any skill any organization"""
-        return self.in_user_organizations(user).with_skill(skill_id)
+        return self.in_org_user(user).with_skill(skill_id)
 
 
 class Skill(models.Model):

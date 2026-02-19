@@ -13,33 +13,36 @@
         <th>Roles</th>
         <th>Actions</th>
     </tr>
-
-    {% for membership in memberships %}
-    <tr>
-        <td>{{ membership.person.first_name }} {{ membership.person.last_name }}</td>
-        <td>{{ membership.person.email }}</td>
-        <td>
-            {% for skill in membership.person.skills.all %}
-                {{ skill.title }}
-            {% empty %}
-                No skills
-            {% endfor %}
-        </td>
-        <td>{% for role in membership.person.roles.all %}
-                {{ role.title }}
-            {% empty %}
-                No roles
-            {% endfor %}</td>
-        <td>
-            <a href="{% url 'secondapp:org_member_edit' organization.user.username membership.person.id %}">
-                Edit
-            </a>
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td>No members yet</td>
-    </tr>
-    {% endfor %}
+    {% if members %}
+        {% for person in members %}
+        <tr>
+            <td>{{ person.first_name }} {{ person.last_name }}</td>
+            <td>{{ person.email }}</td>
+            <td>
+                {% for skill in person.skills.all %}
+                    {{ skill.title }}
+                {% empty %}
+                    No skills
+                {% endfor %}
+            </td>
+            <td>{% for role in person.roles.all %}
+                    {{ role.title }}
+                {% empty %}
+                    No roles
+                {% endfor %}</td>
+            <td>
+                <a href="{% url 'secondapp:org_member_edit' organization.user.username person.id %}">
+                    Edit
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td>No members yet</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+    <p>No members to display.</p>
+    {% endif %}
 </table>
 {% endblock %}

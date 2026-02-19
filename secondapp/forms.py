@@ -95,14 +95,6 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
 
 
 class SongForm(forms.ModelForm):
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if user:
-            # for more skills later just add one line
-            self.fields['composer'].queryset = Person.objects.for_user_with_skill(user, Skill.COMPOSER)
-            self.fields['poet'].queryset = Person.objects.for_user_with_skill(user, Skill.POET)
-
     class Meta:
         model = Song
         fields = [
@@ -117,6 +109,15 @@ class SongForm(forms.ModelForm):
             "number_of_voices",
             "additional_notes",
         ]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user:  # filter choices
+            # for more skills later just add one line
+            self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER)
+            self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
+
 
 
 class SkillForm(forms.ModelForm):

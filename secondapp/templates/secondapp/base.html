@@ -32,33 +32,36 @@
                     <li>
                         <p>Groups:</p>
                         <ul>
-                        <!-- User's Own Memberships -->
-                            <!-- If user has no direct memberships, check owned persons -->
-                            {% for membership in memberships %}
-                                {% with org=membership.organization %}
-                                <li class="org-item {% if active_org == org %}active{% endif %}">
-                                    <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
-                                        {{ org.name }} ({{ owned_person }} - {{ membership.role }})
-                                    </a>
-                                   <ul class="org-submenu">
-                                        <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">songs</a></li>
-                                        {% if membership.role_id == 1 %}
-                                            <li><a href="{% url 'secondapp:song_form2' org.user.username %}">add song</a></li>
-                                            <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
-                                            <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
-                                        {% endif %}
-                                        </ul>
+                        {% for membership in memberships %}
+                            {% with org=membership.organization %}
+                            <li class="org-item {% if owner_username == org.user.username %}active{% endif %}">
+                                <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
+                                    {{ org.name }} ({{ membership.person.first_name }} - {{ membership.role }})
+                                </a>
+                                <ul class="org-submenu">
+                                    <!-- Songs visible to ADMIN and MEMBER -->
+                                    {% if membership.role.id == 1 or membership.role.id == 2 %}
+                                        <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">Songs</a></li>
+                                    {% endif %}
 
-                                </li>
-                                {% endwith %}
-                            {% empty %}
-                                <!-- No memberships for this owned person -->
-                            {% endfor %}
+                                    <!-- Member list visible to ADMIN and MEMBER -->
+                                    {% if membership.role.id == 1 or membership.role.id == 2 %}
+                                        <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
+                                    {% endif %}
 
-
-                </ul>
+                                    <!-- Admin-only actions -->
+                                    {% if membership.role.id == 1 %}
+                                        <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
+                                        <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endwith %}
+                        {% empty %}
+                            <li>No groups yet</li>
+                        {% endfor %}
+                        </ul>
                     </li>
-
 
                     <li>
                         <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
@@ -67,10 +70,10 @@
                         </form>
                     </li>
                 </ul>
-{% else %}
+            {% else %}
                 <a href="{% url 'secondapp:signup' %}">Sign Up</a>
                 <a href="{% url 'secondapp:login' %}">Login</a>
-{% endif %}
+            {% endif %}
         </nav>
 
 <!--    main -->
