@@ -29,7 +29,7 @@ def user_person(request):
             "organization__user",
             "person",
             "role"
-        ).order_by("organization__name", "person__last_name")
+        ).order_by("organization__name", "role__id")
     )
 
     # Get username from URL (which org page are we on)

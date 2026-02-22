@@ -125,6 +125,7 @@ class Organization(models.Model):
 
 
 class PersonQuerySet(models.QuerySet):
+    """Intent for this queryset was to get filtering of composers and poets."""
     def with_skill(self, skill_id):
         """Filter persons who have a specific skill"""
         return self.filter(person_skill__skill_id=skill_id).distinct()

@@ -9,45 +9,34 @@ from .forms import SkillForm
 # from .models import Tag, Musician, Composer, Poet, Arranger, Member, Conductor
 # from .forms import TagForm, ArrangerForm, MusicianForm, ComposerForm, PoetForm, ConductorForm, MemberForm
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
+from django.core.exceptions import PermissionDenied
+from django.views.generic import DetailView
+from .models import CustomUser
 
 
-class RoleRequiredMixin:
-    """Role based rendering."""
 
-    allowed_roles = [Role.ADMIN]
+class SongOwnerMixin:
+    """
+    Handles owner fetching for all song views.
+    For Detail/Update/Delete: also checks permission using permission_check_method.
+    ListView/CreateView will just fetch owner_user; queryset/form handle filtering.
+    """
+    permission_check_method = None  # assign in view if needed
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        owner_username = self.kwargs.get("username")
+        self.owner_user = get_object_or_404(CustomUser, username=owner_username)
 
     def dispatch(self, request, *args, **kwargs):
-        username = self.kwargs.get("username")
-        if not username:
-            raise PermissionDenied("Organization not specified.")
-        try:
-            self.organization = Organization.objects.get(user__username=username)
-        except Organization.DoesNotExist:
-            raise PermissionDenied("Organization not found.")
-
-        # Get the user's Person
-        person = request.user.persons.first()
-
-        # Get the user's role in this organization
-        self.user_role = self.organization.get_role(request.user)
-
-        if not self.role_allowed(self.user_role):
-            raise PermissionDenied(f"Your role '{self.user_role}' does not have access.")
-
+        # Only enforce permission for Detail/Update/Delete views
+        if self.permission_check_method and hasattr(self, "get_object") and isinstance(self, DetailView):
+            song = super().get_object(queryset=self.get_queryset())
+            allowed = self.permission_check_method(request.user, song)
+            if not allowed:
+                raise PermissionDenied("You do not have permission")
         return super().dispatch(request, *args, **kwargs)
-
-    def role_allowed(self, user_role):
-        """Check if the user's role is allowed."""
-        if user_role is None:
-            return False
-        return user_role.pk in self.allowed_roles
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['user_role'] = self.user_role
-        context['organization'] = self.organization
-        return context
-
 
 
 class SkillListAndCreateMixin(FormMixin, ListView):
@@ -84,6 +73,43 @@ class SkillListAndCreateMixin(FormMixin, ListView):
         return super().form_valid(form)
 
 #
+# class RoleRequiredMixin:
+#     """Role based rendering."""
+#
+#     allowed_roles = [Role.ADMIN]
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         username = self.kwargs.get("username")
+#         if not username:
+#             raise PermissionDenied("Organization not specified.")
+#         try:
+#             self.organization = Organization.objects.get(user__username=username)
+#         except Organization.DoesNotExist:
+#             raise PermissionDenied("Organization not found.")
+#
+#         # Get the user's Person
+#         person = request.user.persons.first()
+#
+#         # Get the user's role in this organization
+#         self.user_role = self.organization.get_role(request.user)
+#
+#         if not self.role_allowed(self.user_role):
+#             raise PermissionDenied(f"Your role '{self.user_role}' does not have access.")
+#
+#         return super().dispatch(request, *args, **kwargs)
+#
+#     def role_allowed(self, user_role):
+#         """Check if the user's role is allowed."""
+#         if user_role is None:
+#             return False
+#         return user_role.pk in self.allowed_roles
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['user_role'] = self.user_role
+#         context['organization'] = self.organization
+#         return context
+
 # class PersonRoleMixin:
 #     role_model_from_map = {
 #         "member": (Member, MemberForm),
