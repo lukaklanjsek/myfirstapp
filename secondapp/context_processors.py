@@ -1,5 +1,5 @@
 # secondapp/context_processors.py
-from .models import Membership
+from .models import Membership, Role
 
 
 def user_person(request):
@@ -10,7 +10,6 @@ def user_person(request):
         "owner_username": None,
     }
 
-
     if not request.user.is_authenticated:
         return context
 
@@ -20,16 +19,13 @@ def user_person(request):
 
     context["person"] = person
 
-    # Get all memberships for this user's owned persons
+    # get all memberships for this user
     context["memberships"] = list(
         Membership.objects.filter(
             person__owner=person
-        ).select_related(
-            "organization",
-            "organization__user",
-            "person",
-            "role"
-        ).order_by("organization__name", "role__id")
+        )
+        .select_related("user", "person", "role")
+        .order_by("user__username", "role__id")
     )
 
     # Get username from URL (which org page are we on)
@@ -37,5 +33,8 @@ def user_person(request):
         request.resolver_match.kwargs.get('username')
         if request.resolver_match else None
     ) or request.user.username
+
+    context["ADMIN_ROLE"] = Role.ADMIN
+    context["MEMBER_ROLE"] = Role.MEMBER
 
     return context

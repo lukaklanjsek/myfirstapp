@@ -126,7 +126,7 @@ class PersonUpdateView(UpdateView):
         # organization - ADMIN
         return get_object_or_404(
             AccessControl.get_viewable_people_queryset(self.request.user)
-            .filter(memberships__organization=self.organization),
+            .filter(memberships__user=self.organization.user),
             id=self.kwargs["pk"]
         )
 
@@ -160,7 +160,7 @@ class IndexView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        context["memberships"] = Membership.objects.filter(person__user=user).select_related("organization")
+        context["memberships"] = Membership.objects.filter(person__user=user).select_related("user", "person", "role")
         return context
 
 
@@ -192,7 +192,7 @@ class OrganizationDashboard(TemplateView):
         context["organization"] = self.organization
 
         memberships = Membership.objects.filter(
-            organization=self.organization
+            user=self.organization.user
         ).select_related("person", "role")
 
         # role based filtering
@@ -252,15 +252,15 @@ class OrganizationCreateView(CreateView):
             )
 
             # make an admin role into membership
-            Membership.objects.create(
-                organization=organization,
+            membership = Membership.objects.create(
+                user=organization.user,
                 person=person_admin,
                 role_id=Role.ADMIN,
             )
 
             # track the admin into period
             MembershipPeriod.objects.create(
-                organization=organization,
+                membership=membership,
                 person=person_admin,
                 role_id=Role.ADMIN,
                 started_at=datetime.date.today()
@@ -422,14 +422,14 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
         for role in selected_roles:
             # Create the membership
             Membership.objects.create(
-                organization=self.organization,
+                user=self.organization.user,
                 person=person,
                 role=role
             )
 
             # Track when they started this role
             MembershipPeriod.objects.create(
-                organization=self.organization,
+                user=self.organization.user,
                 person=person,
                 role=role,
                 started_at=today
@@ -483,7 +483,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         if self.request.method == "GET":
             # current roles in THIS organization
             current_role_ids = Membership.objects.filter(
-                organization=self.organization,
+                user=self.organization.user,
                 person=self.person
             ).values_list("role_id", flat=True)
 
@@ -540,7 +540,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
         # current roles
         current_memberships = Membership.objects.filter(
-            organization=self.organization,
+            user=self.organization.user,
             person=self.person
         )
         current_role_ids = set(current_memberships.values_list("role_id", flat=True))
@@ -551,12 +551,12 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         # do the magic
         for role_id in (new_role_ids - current_role_ids):
             Membership.objects.create(
-                organization=self.organization,
+                user=self.organization.user,
                 person=self.person,
                 role_id=role_id
             )
             MembershipPeriod.objects.create(
-                organization=self.organization,
+                user=self.organization.user,
                 person=self.person,
                 role_id=role_id,
                 started_at=today
@@ -567,7 +567,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         if removed_role_ids:
             # Close open periods for removed roles
             MembershipPeriod.objects.filter(
-                organization=self.organization,
+                user=self.organization.user,
                 person=self.person,
                 role_id__in=removed_role_ids,
                 ended_at__isnull=True
