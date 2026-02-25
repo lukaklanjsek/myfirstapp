@@ -1,6 +1,7 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Details2{% endblock %}
 {% block content %}
+<p><a href="{% url 'secondapp:song_form2' owner_username song.pk %}">EDIT SONG</a></p>
 <p> TEST PRINT: song is owned by {{ song.user }}</p>
 <p>Song ID: {{ song.internal_id }}</p>
 <p>Title: {{ song.title }}</p>

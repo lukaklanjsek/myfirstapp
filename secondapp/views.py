@@ -4,7 +4,7 @@ from dataclasses import field
 from fileinput import filename
 import sqlite3
 
-from django.contrib.auth import logout
+from django.contrib.auth import logout, get_user_model
 from django.shortcuts import redirect
 from django.core.files.uploadedfile import UploadedFile
 from django.core.exceptions import PermissionDenied
@@ -93,24 +93,23 @@ class PersonUpdateView(UpdateView):
     success_url = reverse_lazy("secondapp:home")
 
     def dispatch(self, request, *args, **kwargs):
-        self.organization = None
+        url_username = self.kwargs.get("username")
 
-        # if org_id in url
-        org_id = self.kwargs.get("org_id")
+        if url_username:
+            try:
+                self.organization = Organization.objects.get(user__username=url_username)
 
-        if org_id:
-            self.organization = get_object_or_404(
-                Organization,
-                id=org_id
-            )
-
-            # mandatory ADMIN
-            if not AccessControl.has_permission(
-                    request.user,
-                    "update",
-                    self.organization
-            ):
-                return HttpResponseForbidden()
+                # Check permission - FIXED: should be "update" not "action"
+                if not AccessControl.has_permission(request.user, "update", url_username):
+                    return HttpResponseForbidden()
+            except Organization.DoesNotExist:
+                # No organization, this is a personal user
+                self.organization = None
+                # Only allow user to edit their own personal profile
+                if request.user.username != url_username:
+                    return HttpResponseForbidden()
+        else:
+            self.organization = None
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -124,9 +123,15 @@ class PersonUpdateView(UpdateView):
             )
 
         # organization - ADMIN
+        url_username = self.kwargs["username"]
+        try:
+            target_user = CustomUser.objects.get(username=url_username)
+        except CustomUser.DoesNotExist:
+            raise Http404("User not found")
+
         return get_object_or_404(
             AccessControl.get_viewable_people_queryset(self.request.user)
-            .filter(memberships__user=self.organization.user),
+            .filter(memberships__user=target_user),
             id=self.kwargs["pk"]
         )
 
@@ -170,22 +175,22 @@ class OrganizationDashboard(TemplateView):
     template_name = "secondapp/org_dashboard.html"
 
     def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs["username"]
+
         self.organization = get_object_or_404(
             Organization,
-            user__username=self.kwargs["username"]
+            user__username=url_username
         )
 
         self.viewer_role = AccessControl.get_user_role_in_org(
             request.user,
-            self.organization
+            url_username
         )
 
-        # if no connection to org
         if not self.viewer_role:
             return HttpResponseForbidden()
 
         return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -212,7 +217,7 @@ class OrganizationDashboard(TemplateView):
         else:  # EXTERNAL
             visible_memberships = Membership.objects.none()
 
-        context["memberships"] = visible_memberships
+        context["org_memberships"] = visible_memberships
 
         return context
 
@@ -292,36 +297,38 @@ class OrganizationCreateView(CreateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class OrgMemberListView( ListView): # OrgMemberMixin,
+class OrgMemberListView(ListView):
     """Shows all members of an organization."""
     template_name = "secondapp/org_member_list.html"
     context_object_name = "members"
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        username = self.kwargs["username"]
+        url_username = self.kwargs["username"]
         self.organization = get_object_or_404(
             Organization,
-            user__username=username
+            user__username=url_username
         )
 
     def get_queryset(self):
-        visible_memberships = AccessControl.get_visible_members(
+        url_username = self.kwargs["username"]
+        return AccessControl.get_visible_members(
             self.request.user,
-            self.organization
-        )
-        visible_person_ids = visible_memberships.values_list("person_id", flat=True)
-
-        return Person.objects.filter(id__in=visible_person_ids).prefetch_related(
-            "person_skill__skill",
-            "memberships__role"
-        ).distinct()
+            url_username
+        ).select_related('person').prefetch_related('person__skills', "person__roles")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.organization
-        return context
 
+        # Add memberships to context for easier template access
+        url_username = self.kwargs["username"]
+        context["org_memberships"] = AccessControl.get_visible_members(
+            self.request.user,
+            url_username
+        )
+
+        return context
 
 @method_decorator(login_required, name="dispatch")
 class OrgMemberDetailView(DetailView):
@@ -333,6 +340,7 @@ class OrgMemberDetailView(DetailView):
     def get_queryset(self):
         org_id = self.kwargs["org_id"]
         organization = get_object_or_404(Organization, id=org_id)
+        url_username = self.kwargs["username"]
         # check user role
         viewer_role = AccessControl.get_user_role_in_org(
             self.request.user,
@@ -343,7 +351,7 @@ class OrgMemberDetailView(DetailView):
         # get memberships
         visible_memberships = AccessControl.get_visible_members(
             self.request.user,
-            organization
+            url_username
         )
         # get only persons from this membership
         return Person.objects.filter(
@@ -352,10 +360,12 @@ class OrgMemberDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        url_username = self.kwargs["username"]
 
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
             self.object,
+            url_username,
         )
 
         return context
@@ -369,21 +379,26 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
     form_class = OrgMemberForm
 
     def dispatch(self, request, *args, **kwargs):
-        self.organization = get_object_or_404(
-            Organization,
-            user__username=self.kwargs["username"]
-        )
-        viewer_role = AccessControl.get_user_role_in_org(
-            request.user,
-            self.organization
-        )
-        if not viewer_role or viewer_role.id != Role.ADMIN:
-            raise PermissionDenied("Only admin can add members")
+        url_username = self.kwargs.get("username")
+
+        if url_username:
+            self.organization = get_object_or_404(
+                Organization,
+                user__username=url_username
+            )
+            if not AccessControl.has_permission(
+                    request.user,
+                    "update",
+                    url_username
+            ):
+                return HttpResponseForbidden()
+        else:
+            self.organization = None
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # context["page_title"] = f"Add Member to {self.organization.name}"
         return context
 
     def form_valid(self, form):
@@ -421,7 +436,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
         for role in selected_roles:
             # Create the membership
-            Membership.objects.create(
+            membership=Membership.objects.create(
                 user=self.organization.user,
                 person=person,
                 role=role
@@ -429,7 +444,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
             # Track when they started this role
             MembershipPeriod.objects.create(
-                user=self.organization.user,
+                membership=membership,
                 person=person,
                 role=role,
                 started_at=today
@@ -456,20 +471,22 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
     #     self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
 
     def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs["username"]
+
         self.organization = get_object_or_404(
             Organization,
-            user__username=self.kwargs["username"]
+            user__username=url_username
         )
 
         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
 
         viewer_role = AccessControl.get_user_role_in_org(
             request.user,
-            self.organization
+            url_username
         )
 
         is_admin = viewer_role and viewer_role.id == Role.ADMIN
-        is_owner = self.person.owner and self.person.owner.user == request.user
+        is_owner = self.person.user == request.user
 
         if not (is_admin or is_owner):
             raise PermissionDenied("No permission to edit")
@@ -650,6 +667,10 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
     form_class = SongForm
     template_name = "secondapp/song_form2.html"
     permission_check_method = AccessControl.can_manage_song
+
+    def get_queryset(self):
+        user = self.request.user
+        personal = Song.objects.filter(user=user)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

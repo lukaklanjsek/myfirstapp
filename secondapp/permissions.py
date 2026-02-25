@@ -33,16 +33,22 @@ class AccessControl:
         # 1. User is directly the membership user, OR
         # 2. User owns a person who has memberships
         return Membership.objects.filter(
-            Q(user=auth_user) |
+            # Q(user=auth_user) |
             Q(person__owner__user=auth_user)
         ).select_related("user", "person", "role")
 
     @classmethod
-    def get_user_role_in_org(cls, auth_user, organization):
-        """Get user's role in a specific organization."""
+    def get_user_role_in_org(cls, auth_user, url_username):
+        """Get user's role in a specific membership."""
+        try:
+            user_url = CustomUser.objects.get(username=url_username)
+        except CustomUser.DoesNotExist:
+            return None
+
         membership = cls._user_memberships(auth_user).filter(
-            user=organization.user  # Filter by org's auth user
+            user=user_url  # Memberships hanging on the URL user
         ).first()
+
         return membership.role if membership else None
 
     @classmethod
@@ -75,19 +81,24 @@ class AccessControl:
         ).distinct()
 
     @classmethod
-    def has_permission(cls, auth_user, action, organization=None):
+    def has_permission(cls, auth_user, action, url_username):
         """
-        Check if a user has permission to perform an action in an organization.
+        Check if a user has permission to perform an action.
         Args:
-            auth_user: CustomUser instance
+            auth_user: CustomUser instance (the viewer)
             action: String action name (e.g., 'view', 'create', 'update', 'delete')
-            organization: Organization instance to check permission within
+            url_username: Username from URL (the context)
         Returns:
             Boolean indicating whether user has the specified permission
         """
+        try:
+            target_user = CustomUser.objects.get(username=url_username)
+        except CustomUser.DoesNotExist:
+            return False
+
         membership = (
             cls._user_memberships(auth_user)
-            .filter(organization=organization)
+            .filter(user=target_user)
             .first()
         )
 
@@ -107,12 +118,12 @@ class AccessControl:
         if not auth_user.is_authenticated:
             return Person.objects.none()
 
-        # Get organizations the auth_user is a member of
-        user_org_ids = cls._user_memberships(auth_user).values_list('organization_id', flat=True)
+        # Get org user IDs the auth_user is a member of
+        org_user_ids = cls._user_memberships(auth_user).values_list("user_id", flat=True)
 
         # Get all users who are members of those organizations
         member_user_ids = Membership.objects.filter(
-            organization_id__in=user_org_ids
+            user_id__in=org_user_ids
         ).values_list('user_id', flat=True)
 
         # Return Person objects linked to those users
@@ -121,9 +132,16 @@ class AccessControl:
         ).distinct()
 
     @classmethod
-    def can_access(cls, auth_user, action, organization=None,  queryset=None):
-        """Does the user have permission for action and filter queryset if given."""
-        if not cls.has_permission(auth_user, action, organization):
+    def can_access(cls, auth_user, action, url_username, queryset=None):
+        """
+        Check permission and filter queryset if provided.
+        Args:
+            auth_user: The viewer
+            action: Permission type
+            url_username: Username from URL
+            queryset: Optional queryset to filter
+        """
+        if not cls.has_permission(auth_user, action, url_username):
             return False, queryset.none() if queryset is not None else None
 
         if queryset is not None:
@@ -131,37 +149,37 @@ class AccessControl:
         return True, None
 
     @classmethod
-    def filter_person_details(cls, auth_user, person, organization):
+    def filter_person_details(cls, auth_user, person, url_username):
         """
-        Filter person details based on the viewer's role in the same organization.
-        Returns a dictionary with only the fields the user is allowed to see.
-        For MEMBERS:
-        - Show basic info (name, skills)
-        - Hide sensitive contact info (email, phone)
-        For ADMINS:
-        - Show all information
-        For others:
-        - Return None
+        Filter person details based on the viewer's role.
+        Args:
+            auth_user: The viewer
+            person: Person object being viewed
+            url_username: Username from URL (the context)
+        Returns:
+            Dictionary with allowed fields or None
         """
+        try:
+            target_user = CustomUser.objects.get(username=url_username)
+        except CustomUser.DoesNotExist:
+            return None
+
         membership = (
             cls._user_memberships(auth_user)
-            .filter(
-                organization=organization,
-                # person=person
-            )
+            .filter(user=target_user)
             .select_related("role").first()
         )
 
         if not membership:
             return None
 
-        # if the person being viewed is in the same org
-        person_in_org = Membership.objects.filter(
-            organization=organization,
-            # person=person
+        # Check if the person being viewed is in the same context
+        person_in_context = Membership.objects.filter(
+            user=target_user,
+            person=person
         ).exists()
 
-        if not person_in_org:
+        if not person_in_context:
             return None
 
         base_data = {
@@ -188,7 +206,7 @@ class AccessControl:
         return None
 
     @classmethod
-    def get_visible_members(cls, auth_user, organization):
+    def get_visible_members(cls, auth_user, url_username):
         """
         Get memberships visible to a user within an organization.
         Args:
@@ -201,16 +219,28 @@ class AccessControl:
             - SUPPORTER: Can see only ADMIN roles
             - EXTERNAL: Cannot see any members
         """
-        viewer_role = cls.get_user_role_in_org(auth_user, organization)
+        viewer_role = cls.get_user_role_in_org(auth_user, url_username)
 
         if not viewer_role:
             return Membership.objects.none()
 
+        # Get the target user from username
+        try:
+            target_user = CustomUser.objects.get(username=url_username)
+        except CustomUser.DoesNotExist:
+            return Membership.objects.none()
+
+        # Get memberships for this target user
         memberships = (
             Membership.objects
-            .filter(organization=organization)
-            .select_related("user", "role")
+            .filter(user=target_user)  # FIXED: use target_user instead of organization.user
+            .select_related("user", "person", "role")
         )
+        # memberships = (
+        #     Membership.objects
+        #     .filter(user=organization.user)
+        #     .select_related("user", "person", "role")
+        # )
 
         if viewer_role.id == Role.ADMIN:
             return memberships
@@ -239,7 +269,7 @@ class AccessControl:
         org = Organization.objects.filter(user=owner_user).first()
         if org:
             memberships = cls._user_memberships(auth_user).filter(
-                organization=org,
+                user=org.user,
                 role_id__in=[Role.ADMIN, Role.MEMBER]
             )
             return memberships.exists()

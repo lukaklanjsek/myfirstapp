@@ -1,5 +1,6 @@
 # secondapp/context_processors.py
 from .models import Membership, Role
+from django.db.models import Q
 
 
 def user_person(request):
@@ -22,7 +23,8 @@ def user_person(request):
     # get all memberships for this user
     context["memberships"] = list(
         Membership.objects.filter(
-            person__owner=person
+            Q(user=request.user) |  # Direct memberships (personal user)
+            Q(person__owner=person)  # Org memberships where user owns the person
         )
         .select_related("user", "person", "role")
         .order_by("user__username", "role__id")

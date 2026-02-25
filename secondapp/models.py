@@ -138,7 +138,7 @@ class PersonQuerySet(models.QuerySet):
     def in_org_user(self, org_user):
         """Filter persons only from within organization."""
         return self.filter(
-            memberships__organization__user=org_user
+            memberships__user=org_user
         ).distinct()
 
     def for_user_with_skill(self, user, skill_id):
@@ -233,19 +233,19 @@ class Membership(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "person", "role"],
-                name="unique_membership_per_org_person"
+                name="unique_membership_per_user_person_role"
             )
         ]
-
-    @property
-    def organization(self):
-        """Get organization if user represents an org, otherwise None."""
-        return self.user.organizations.all()
+    #
+    # @property
+    # def organization(self):
+    #     """Get organization if user represents an org, otherwise None."""
+    #     return self.user.organizations.all()
 
     def __str__(self):
-        org = self.organization
-        if org:
-            return f"{self.person} - {org.name} ({self.role.title})"
+        # org = self.organization
+        # if org:
+        #     return f"{self.person} - {org.name} ({self.role.title})"
         return f"{self.person} ({self.role.title})"
 
 

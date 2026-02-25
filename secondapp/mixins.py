@@ -72,6 +72,12 @@ class SkillListAndCreateMixin(FormMixin, ListView):
         form.save()
         return super().form_valid(form)
 
+
+class AccountContextMixin:
+    pass
+
+
+
 #
 # class RoleRequiredMixin:
 #     """Role based rendering."""

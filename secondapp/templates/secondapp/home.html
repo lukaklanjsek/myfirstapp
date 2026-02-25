@@ -16,7 +16,7 @@
           {% for membership in memberships %}
 
             <li>
-            {{ membership.organization.name }}
+            {{ membership.user.username }}
             ({{ membership.role }})
             </li>
           {% endfor %}
