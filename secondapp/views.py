@@ -99,7 +99,7 @@ class PersonUpdateView(UpdateView):
             try:
                 self.organization = Organization.objects.get(user__username=url_username)
 
-                # Check permission - FIXED: should be "update" not "action"
+                # Check permission
                 if not AccessControl.has_permission(request.user, "update", url_username):
                     return HttpResponseForbidden()
             except Organization.DoesNotExist:

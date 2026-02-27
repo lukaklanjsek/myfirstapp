@@ -104,26 +104,6 @@ class Organization(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def get_role(self, user):
-        """
-        Return the user's role in this organization.
-        Args:
-            user: A CustomUser who might be a member of this org
-        Returns:
-            Role object if user is a member, None otherwise
-        """
-        # Check if this user has a membership in this organization
-        membership = Membership.objects.filter(
-            organization=self,
-            user=user
-        ).select_related('role').first()
-
-        return membership.role if membership else None
-
-    def is_owner(self, user):
-        """Check if user is the organization's owner (the org's auth account)."""
-        return self.user == user
-
 
     def __str__(self):
         return self.name
@@ -199,12 +179,14 @@ class Person(models.Model):
     skills = models.ManyToManyField(
         Skill,
         through="PersonSkill",
+        blank=True,
         related_name="persons"
     )
 
     roles = models.ManyToManyField(
         Role,
-        through="Membership",
+        through="PersonRole",
+        blank=True,
         related_name="persons"
     )
 
@@ -227,26 +209,18 @@ class Membership(models.Model):
         related_name="memberships"
     )
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="memberships")
-    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="memberships")
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "person", "role"],
-                name="unique_membership_per_user_person_role"
+                fields=["user", "person"],
+                name="unique_membership_per_user_person"
             )
         ]
-    #
-    # @property
-    # def organization(self):
-    #     """Get organization if user represents an org, otherwise None."""
-    #     return self.user.organizations.all()
+
 
     def __str__(self):
-        # org = self.organization
-        # if org:
-        #     return f"{self.person} - {org.name} ({self.role.title})"
-        return f"{self.person} ({self.role.title})"
+        return self.person
 
 
 class MembershipPeriod(models.Model):
@@ -277,6 +251,19 @@ class PersonSkill(models.Model):
             models.UniqueConstraint(
                 fields=["person", "skill"], # , "organization"],
                 name="unique_skill_per_org_person"
+            )
+        ]
+
+
+class PersonRole(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="person_role")
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="person_role")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["person", "role"],
+                name="unique_role_per_org_person"
             )
         ]
 

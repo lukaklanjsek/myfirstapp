@@ -19,6 +19,65 @@ class AccessControl:
         Role.EXTERNAL: set(),
     }
 
+    # BASIC HELPERS -------------------------------------------------------------------
+
+    @classmethod
+    def get_auth_person(cls, auth_user):
+        """
+        Get the viewer's personal Person profile.
+        This Person is directly linked to their auth account (and not to the org).
+        Args: auth_user: the authenticated CustomUser
+        Returns: Person object or None
+        """
+        if not auth_user.is_authenticated:
+            return None
+
+        return Person.objects.filter(
+            user=auth_user,
+            owner__isnull=True
+        ).first()  # Returns None if not found
+
+
+    @classmethod
+    def get_organization(cls, url_username):
+        """Get Organization from URL."""
+
+        return Organization.objects.filter(user__username=url_username).first()
+
+    #   ----------------------------------------------------------
+
+    @classmethod
+    def get_org_roles(cls, auth_user, url_username):
+        """
+        Get viewer's role in an organization- url_username.
+        Args:
+            auth_user = viewer's CustomUser
+            url_username = Organization object
+        Returns:
+            all roles of viewer inside an organization
+        """
+        if not auth_user.is_authenticated:
+            return None
+
+        viewer_person = cls.get_viewer_person(auth_user)
+        if not viewer_person:
+            return None
+
+        membership = Membership.objects.filter(
+            user__username=url_username,
+            person__owner=viewer_person
+        ).select_related('person').first()
+
+        return membership.person.roles.all() if membership else None
+
+
+
+
+
+
+
+
+
     @classmethod
     def _user_memberships(cls, auth_user):
         """
@@ -33,9 +92,9 @@ class AccessControl:
         # 1. User is directly the membership user, OR
         # 2. User owns a person who has memberships
         return Membership.objects.filter(
-            # Q(user=auth_user) |
+            Q(user=auth_user) |
             Q(person__owner__user=auth_user)
-        ).select_related("user", "person", "role")
+        ).select_related("user", "person", "roles")
 
     @classmethod
     def get_user_role_in_org(cls, auth_user, url_username):
@@ -49,21 +108,21 @@ class AccessControl:
             user=user_url  # Memberships hanging on the URL user
         ).first()
 
-        return membership.role if membership else None
+        return membership.person.roles if membership else None
 
-    @classmethod
-    def get_user_accessible_orgs(cls, auth_user):
-        """
-        Get all organizations that a user has access to (is a member of).
-        Args: auth_user: CustomUser instance
-        Returns: QuerySet of Organization objects the user is a member of
-        """
-        if not auth_user.is_authenticated:
-            return Organization.objects.none()
-
-        # Get org users from memberships
-        org_user_ids = cls._user_memberships(auth_user).values_list('user_id', flat=True)
-        return Organization.objects.filter(user_id__in=org_user_ids)
+    # @classmethod
+    # def get_user_accessible_orgs(cls, auth_user):
+    #     """
+    #     Get all organizations that a user has access to (is a member of).
+    #     Args: auth_user: CustomUser instance
+    #     Returns: QuerySet of Organization objects the user is a member of
+    #     """
+    #     if not auth_user.is_authenticated:
+    #         return Organization.objects.none()
+    #
+    #     # Get org users from memberships
+    #     org_user_ids = cls._user_memberships(auth_user).values_list('user_id', flat=True)
+    #     return Organization.objects.filter(user_id__in=org_user_ids)
 
     @classmethod
     def filter_queryset_by_org(cls, auth_user, queryset):
@@ -131,22 +190,22 @@ class AccessControl:
             user_id__in=member_user_ids
         ).distinct()
 
-    @classmethod
-    def can_access(cls, auth_user, action, url_username, queryset=None):
-        """
-        Check permission and filter queryset if provided.
-        Args:
-            auth_user: The viewer
-            action: Permission type
-            url_username: Username from URL
-            queryset: Optional queryset to filter
-        """
-        if not cls.has_permission(auth_user, action, url_username):
-            return False, queryset.none() if queryset is not None else None
-
-        if queryset is not None:
-            return True, cls.filter_queryset_by_org(auth_user, queryset)
-        return True, None
+    # @classmethod
+    # def can_access(cls, auth_user, action, url_username, queryset=None):
+    #     """
+    #     Check permission and filter queryset if provided.
+    #     Args:
+    #         auth_user: The viewer
+    #         action: Permission type
+    #         url_username: Username from URL
+    #         queryset: Optional queryset to filter
+    #     """
+    #     if not cls.has_permission(auth_user, action, url_username):
+    #         return False, queryset.none() if queryset is not None else None
+    #
+    #     if queryset is not None:
+    #         return True, cls.filter_queryset_by_org(auth_user, queryset)
+    #     return True, None
 
     @classmethod
     def filter_person_details(cls, auth_user, person, url_username):
