@@ -2,6 +2,8 @@
 from .models import Membership, Role
 from django.db.models import Q
 
+from .permissions import AccessControl
+
 
 def user_person(request):
     """Logged-in user's memberships available in every template automatically."""
@@ -26,15 +28,12 @@ def user_person(request):
             Q(user=request.user) |  # Direct memberships (personal user)
             Q(person__owner=person)  # Org memberships where user owns the person
         )
-        .select_related("user", "person", "role")
-        .order_by("user__username", "role__id")
+        .select_related("user", "person")
+        .order_by("user__username")
     )
 
     # Get username from URL (which org page are we on)
-    context["owner_username"] = (
-        request.resolver_match.kwargs.get('username')
-        if request.resolver_match else None
-    ) or request.user.username
+    # context["owner_username"] =
 
     context["ADMIN_ROLE"] = Role.ADMIN
     context["MEMBER_ROLE"] = Role.MEMBER

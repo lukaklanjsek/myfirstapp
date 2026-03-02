@@ -41,7 +41,7 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .forms import OrgMemberForm
-from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet
+from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
 
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
@@ -182,42 +182,24 @@ class OrganizationDashboard(TemplateView):
             user__username=url_username
         )
 
-        self.viewer_role = AccessControl.get_user_role_in_org(
+        self.viewer_roles = AccessControl.get_org_roles(
             request.user,
             url_username
         )
 
-        if not self.viewer_role:
+        if not self.viewer_roles:
             return HttpResponseForbidden()
 
         return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         context["organization"] = self.organization
 
-        memberships = Membership.objects.filter(
-            user=self.organization.user
-        ).select_related("person", "role")
-
-        # role based filtering
-        if self.viewer_role.id == Role.ADMIN:
-            visible_memberships = memberships
-
-        elif self.viewer_role.id == Role.MEMBER:
-            visible_memberships = memberships.filter(
-                role_id__in=[Role.ADMIN, Role.MEMBER]
-            )
-
-        elif self.viewer_role.id == Role.SUPPORTER:
-            visible_memberships = memberships.filter(
-                role_id=Role.ADMIN
-            )
-
-        else:  # EXTERNAL
-            visible_memberships = Membership.objects.none()
-
-        context["org_memberships"] = visible_memberships
+        context["org_memberships"] = AccessControl.get_visible_members(
+            self.request.user,
+            self.kwargs["username"]
+        )
 
         return context
 
@@ -260,7 +242,11 @@ class OrganizationCreateView(CreateView):
             membership = Membership.objects.create(
                 user=organization.user,
                 person=person_admin,
-                role_id=Role.ADMIN,
+            )
+
+            person_role = PersonRole.objects.create(
+                person = person_admin,
+                role_id=Role.ADMIN
             )
 
             # track the admin into period
@@ -342,7 +328,7 @@ class OrgMemberDetailView(DetailView):
         organization = get_object_or_404(Organization, id=org_id)
         url_username = self.kwargs["username"]
         # check user role
-        viewer_role = AccessControl.get_user_role_in_org(
+        viewer_role = AccessControl.get_org_roles(
             self.request.user,
             organization
         )
@@ -480,7 +466,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
 
-        viewer_role = AccessControl.get_user_role_in_org(
+        viewer_role = AccessControl.get_org_roles(
             request.user,
             url_username
         )
