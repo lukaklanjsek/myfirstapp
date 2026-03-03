@@ -137,25 +137,30 @@ class AccessControl:
     @classmethod
     def has_permission(cls, auth_user, action, url_username):
         """
-        Check if a user has permission to perform an action.
-        Args:
-            auth_user: CustomUser instance (the viewer)
-            action: String action name (e.g., 'view', 'create', 'update', 'delete')
-            url_username: Username from URL (the context)
-        Returns:
-            Boolean indicating whether user has the specified permission
-        """
+            Check if a user has permission to perform an action.
+            Args:
+                auth_user: CustomUser instance (the viewer)
+                action: String action name (e.g., 'view', 'create', 'update', 'delete')
+                url_username: Username from URL (the context)
+            Returns:
+                Boolean indicating whether user has the specified permission
+            """
         try:
             target_user = CustomUser.objects.get(username=url_username)
         except CustomUser.DoesNotExist:
             return False
 
         roles = cls.get_org_roles(auth_user, url_username)
-        if not roles:
+        if not roles.exists():
             return False
 
+        # Check if ANY of the user's roles grants the permission
+        for role in roles:
+            role_permissions = cls.ROLE_PERMISSIONS.get(role.id, set())
+            if action in role_permissions:
+                return True
 
-        return action in cls.ROLE_PERMISSIONS.get(roles, set())
+        return False
 
     @classmethod
     def get_viewable_people_queryset(cls, auth_user):
@@ -291,7 +296,7 @@ class AccessControl:
 
         # member sees members and admins
         if Role.MEMBER in viewer_role_ids:
-            return memberships.filter(role_id__in=[Role.ADMIN, Role.MEMBER])
+            return memberships.filter(person__roles__id__in=[Role.ADMIN, Role.MEMBER])
 
 
         if Role.SUPPORTER in viewer_role_ids:
@@ -316,7 +321,7 @@ class AccessControl:
         if org:
             memberships = cls._user_memberships(auth_user).filter(
                 user=org.user,
-                role_id__in=[Role.ADMIN, Role.MEMBER]
+                person__roles__id__in=[Role.ADMIN, Role.MEMBER]
             )
             return memberships.exists()
 
@@ -344,7 +349,7 @@ class AccessControl:
 
         memberships = cls._user_memberships(auth_user).filter(
             user=owner_user,
-            role_id__in=[Role.ADMIN, Role.MEMBER]
+            person__roles__id__in=[Role.ADMIN, Role.MEMBER]
         )
         if not memberships.exists():
             return Song.objects.none()
@@ -352,17 +357,19 @@ class AccessControl:
         return Song.objects.filter(user=org.user)
 
     @classmethod
-    def can_manage_song(cls, auth_user, owner_user):
+    def can_manage_song(cls, auth_user, song):
         """
-        Returns True if auth_user can create/update/delete songs for owner_user.
+        Returns True if auth_user can create/update/delete the given song.
         Rules:
-        - Personal songs: owner_user == auth_user
+        - Personal songs: owner must be auth_user
         - Org songs: auth_user must be ADMIN in the org
         """
         if not auth_user.is_authenticated:
             return False
 
-            # Check if owner_user represents an organization
+        owner_user = song.user
+
+        # Check if owner_user represents an organization
         org = Organization.objects.filter(user=owner_user).first()
 
         if not org:
@@ -370,5 +377,5 @@ class AccessControl:
             return auth_user == owner_user
 
         # Organizational songs - must be ADMIN
-        role = cls.get_org_roles(auth_user, org)
-        return role and role.id == Role.ADMIN
+        roles = cls.get_org_roles(auth_user, org.user.username)
+        return roles.filter(id=Role.ADMIN).exists()

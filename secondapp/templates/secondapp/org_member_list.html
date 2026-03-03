@@ -3,10 +3,10 @@
 
 {% block content %}
 
-{% if owner_username == user.username %}
+{% if url_username == user.username %}
     <p>This is your personal page</p>
 {% else %}
-    <p>This is organization: {{ owner_username }}</p>
+    <p>This is organization: {{ url_username }}</p>
 {% endif %}
 <table>
     <tr>

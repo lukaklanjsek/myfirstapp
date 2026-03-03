@@ -260,28 +260,6 @@ class OrganizationCreateView(CreateView):
         return super().form_valid(form)
 
 
-# class OrgMemberMixin(RoleRequiredMixin):
-#     """Mixin for organization member views."""
-#     allowed_roles = [Role.ADMIN, Role.MEMBER]
-#
-#     def dispatch(self, request, *args, **kwargs):
-#         # Get username from URL
-#         username = self.kwargs.get("username")
-#
-#         # Find the organization
-#         self.organization = get_object_or_404(Organization, user__username=username)
-#
-#         # Get the user's Person
-#         # person = request.user.persons.first()
-#
-#         # Get the user's role in this organization
-#         self.user_role = self.organization.get_role(request.user)
-#         if not self.role_allowed(self.user_role):
-#             raise PermissionDenied(f"Your role '{self.user_role}' does not have access.")
-#
-#         return super().dispatch(request, *args, **kwargs)
-
-
 @method_decorator(login_required, name='dispatch')
 class OrgMemberListView(ListView):
     """Shows all members of an organization."""
@@ -357,7 +335,6 @@ class OrgMemberDetailView(DetailView):
         return context
 
 
-
 @method_decorator(login_required, name='dispatch')
 class OrgMemberAddView( FormView):  # OrgMemberMixin,
     """Add new member."""
@@ -420,10 +397,15 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
         """Create memberships for selected roles."""
         today = datetime.date.today()
 
+        # Create the base membership (only once per person-org relationship)
+        membership, created = Membership.objects.get_or_create(
+            user=self.organization.user,
+            person=person
+        )
+
         for role in selected_roles:
-            # Create the membership
-            membership=Membership.objects.create(
-                user=self.organization.user,
+            # Create PersonRole to assign the role to the person
+            PersonRole.objects.create(
                 person=person,
                 role=role
             )
@@ -452,10 +434,6 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
     form_class = OrgMemberForm
 
 
-    # def setup(self, request, *args, **kwargs):
-    #     super().setup(request, *args, **kwargs)
-    #     self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
-
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs["username"]
 
@@ -471,7 +449,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
             url_username
         )
 
-        is_admin = viewer_role and viewer_role.id == Role.ADMIN
+        is_admin = viewer_role.filter(id=Role.ADMIN).exists()
         is_owner = self.person.user == request.user
 
         if not (is_admin or is_owner):
@@ -485,10 +463,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
         if self.request.method == "GET":
             # current roles in THIS organization
-            current_role_ids = Membership.objects.filter(
-                user=self.organization.user,
-                person=self.person
-            ).values_list("role_id", flat=True)
+            current_role_ids = self.person.roles.values_list("id", flat=True)
 
             # current skills
             current_skill_ids = self.person.person_skill.values_list(
@@ -541,43 +516,47 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         """sync roles - add new ones, remove old ones"""
         today = datetime.date.today()
 
-        # current roles
-        current_memberships = Membership.objects.filter(
+        # Get current roles for this person
+        current_role_ids = set(self.person.roles.values_list("id", flat=True))
+
+        # New roles from form
+        new_role_ids = {role.id for role in new_roles}
+
+        # Get or create the base membership (the relationship between org user and person)
+        membership, _ = Membership.objects.get_or_create(
             user=self.organization.user,
             person=self.person
         )
-        current_role_ids = set(current_memberships.values_list("role_id", flat=True))
 
-        # new roles
-        new_role_ids = {role.id for role in new_roles}
-
-        # do the magic
+        # Add new roles
         for role_id in (new_role_ids - current_role_ids):
-            Membership.objects.create(
-                user=self.organization.user,
+            PersonRole.objects.create(
                 person=self.person,
                 role_id=role_id
             )
             MembershipPeriod.objects.create(
-                user=self.organization.user,
+                membership=membership,
                 person=self.person,
                 role_id=role_id,
                 started_at=today
             )
 
-        # remove roles
+        # Remove roles
         removed_role_ids = current_role_ids - new_role_ids
         if removed_role_ids:
             # Close open periods for removed roles
             MembershipPeriod.objects.filter(
-                user=self.organization.user,
+                membership=membership,
                 person=self.person,
                 role_id__in=removed_role_ids,
                 ended_at__isnull=True
             ).update(ended_at=today)
 
-            # Delete the memberships
-            current_memberships.filter(role_id__in=removed_role_ids).delete()
+            # Delete the PersonRole entries
+            PersonRole.objects.filter(
+                person=self.person,
+                role_id__in=removed_role_ids
+            ).delete()
 
     def _update_skills(self, new_skills):
         """sync skills - add new, remove old"""
@@ -614,7 +593,7 @@ class SongListView(SongOwnerMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["owner_username"] = self.owner_user.username
+        context["url_username"] = self.owner_user.username
         return context
 
 
@@ -655,8 +634,8 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
     permission_check_method = AccessControl.can_manage_song
 
     def get_queryset(self):
-        user = self.request.user
-        personal = Song.objects.filter(user=user)
+        return Song.objects.filter(user=self.owner_user)
+
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

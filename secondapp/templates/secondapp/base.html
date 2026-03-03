@@ -32,35 +32,31 @@
                     <li>
                         <p>Groups:</p>
                         <ul>
-                            {% if memberships %}
-                                {% for membership in memberships %}
-                                    {% if membership.user.organizations.exists %}
-                                        {% with org=membership.user.organizations.first %}
-                                            <li class="org-item {% if owner_username == org.user.username %}active{% endif %}">
-                                                <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
-                                                    {{ org.name }} ({{ membership.person.first_name }} - {{ membership.role }})
-                                                </a>
-                                                <ul class="org-submenu">
-                                                    <!-- Songs visible to ADMIN and MEMBER -->
-                                                    {% if membership.role.id == ADMIN_ROLE or membership.role.id == MEMBER_ROLE  %}
-                                                        <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">Songs</a></li>
-                                                        <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
-                                                    {% endif %}
+                            {% for membership in memberships %}
+                                {% with org=membership.user.organizations.first %}
+                                    {% if org %}
+                                        <li class="org-item {% if url_username == org.user.username %}active{% endif %}">
+                                            <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
+                                                {{ org.name }} ({{ membership.person.first_name }} - {{ membership.person.roles.all|join:", " }})
+                                            </a>
+                                            <ul class="org-submenu">
+                                                <!-- Songs visible to ADMIN and MEMBER -->
+                                                {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
+                                                    <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">Songs</a></li>
+                                                    <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
+                                                {% endif %}
 
-                                                    {% if membership.role.id == ADMIN_ROLE %}
-                                                        <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
-                                                        <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
-                                                    {% endif %}
-                                                </ul>
-                                            </li>
-                                        {% endwith %}
+                                                {% if ADMIN_ROLE in membership.person.roles.all %}
+                                                    <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
+                                                    <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </li>
                                     {% endif %}
-                                {% empty %}
-                                    <li>No groups yet</li>
-                                {% endfor %}
-                            {% else %}
-                                <p>No groups yet</p>
-                            {% endif %}
+                                {% endwith %}
+                            {% empty %}
+                                <li>No groups yet</li>
+                            {% endfor %}
                         </ul>
                     </li>
 

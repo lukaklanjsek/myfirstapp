@@ -17,7 +17,7 @@
 
             <li>
             {{ membership.user.username }}
-            ({{ membership.role }})
+            ({{ membership.person.roles.all|join:", " }})
             </li>
           {% endfor %}
         </ul>
@@ -27,7 +27,7 @@
 {% endif %}
 
   {% else %}
-    <a href="{% url 'secondapp:person_update' owner_username %}">
+    <a href="{% url 'secondapp:person_update' url_username %}">
       Please complete your profile
     </a>
   {% endif %}

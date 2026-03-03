@@ -26,8 +26,8 @@ class SongOwnerMixin:
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        owner_username = self.kwargs.get("username")
-        self.owner_user = get_object_or_404(CustomUser, username=owner_username)
+        url_username = self.kwargs.get("username")
+        self.owner_user = get_object_or_404(CustomUser, username=url_username)
 
     def dispatch(self, request, *args, **kwargs):
         # Only enforce permission for Detail/Update/Delete views
