@@ -3,6 +3,13 @@
 
 {% block content %}
 <h1>{{ page_title }}</h1>
+{% if url_username == user.username %}
+    <p>
+        This is your personal page.
+    </p>
+{% else %}
+    <p>This is organization: {{ url_username }}</p>
+{% endif %}
 
 <form method="post">
     {% csrf_token %}

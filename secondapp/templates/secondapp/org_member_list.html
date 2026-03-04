@@ -4,7 +4,17 @@
 {% block content %}
 
 {% if url_username == user.username %}
-    <p>This is your personal page</p>
+    <p>
+        This is your personal page.
+
+        <a href="{% url 'secondapp:org_member_add_composer' user.username %}">
+            + Add Composer
+        </a>
+
+        <a href="{% url 'secondapp:org_member_add_poet' user.username %}">
+            + Add Poet
+        </a>
+    </p>
 {% else %}
     <p>This is organization: {{ url_username }}</p>
 {% endif %}
@@ -34,7 +44,7 @@
                     No roles
                 {% endfor %}</td>
             <td>
-                <a href="{% url 'secondapp:org_member_edit' organization.user.username membership.person.id %}">
+                <a href="{% url 'secondapp:org_member_edit' url_username membership.person.id %}">
                     Edit
                 </a>
             </td>

@@ -39,33 +39,12 @@ def user_person(request):
             "person__person_role__role"
         )
     )
-    # # --------------------------------- TEST PRINTS ----------------------------
-    # print(f"Person: {context['person']}")
-    # print(f"URL Username: {context['url_username']}")
-    # # print(f"Memberships: {context['memberships']}")
-    # print(f"Available keys: {context.keys()}")
-    # print(f"\nMemberships ({len(context['memberships'])}):")
-    #
-    # for i, membership in enumerate(context['memberships']):
-    #     print(f"\n  [{i}] User: {membership.user}")
-    #     print(f"      Person: {membership.person}")
-    #     print(f"      Person owner: {membership.person.owner}")
-    #
-    #     person_roles = membership.person.person_role.all()
-    #     if person_roles:
-    #         print(f"      Roles: {[pr.role.title for pr in person_roles]}")
-    #     else:
-    #         print(f"      Roles: None")
-    #     print(person_roles)
-    #     print(context["ADMIN_ROLE"])
-    #     if context["ADMIN_ROLE"] in person_roles:
-    #         print("hello")
-    #
-    #     # Check if this membership connects to an org
-    #     if membership.user.organizations.exists():
-    #         org = membership.user.organizations.first()
-    #         print(f"      → Org: {org.name}")
-    #     else:
-    #         print(f"      → No org (personal membership)")
+
+    # for home page
+    context["org_memberships"] = [
+        m for m in context["memberships"]
+        if m.user != request.user  # Exclude your own org
+    ]
+
 
     return context

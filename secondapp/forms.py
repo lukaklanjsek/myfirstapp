@@ -74,10 +74,11 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
+    VALID_PRESETS = {'composer', 'poet'}
     # Person
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
-    email = forms.EmailField()
+    email = forms.EmailField(required=False)
     phone = forms.CharField(max_length=23, required=False)
     address = forms.CharField(required=False, widget=forms.Textarea)
     # Role checkboxes
@@ -92,6 +93,26 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
+
+    def __init__(self, *args, preset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if preset not in self.VALID_PRESETS:
+            preset = None
+
+        # Apply presets
+        if preset == 'composer':
+            external_role = Role.objects.filter(title__iexact='external').first()
+            composer_skill = Skill.objects.filter(title__iexact="composer").first()
+            if external_role and composer_skill:
+                self.initial['roles'] = [external_role.id]
+                self.initial["skills"] = [composer_skill.id]
+
+        elif preset == 'poet':
+            poet_skill = Skill.objects.filter(title__iexact="poet").first()
+            external_role = Role.objects.filter(title__iexact="external").first()
+            if poet_skill and external_role:
+                self.initial['roles'] = [external_role.id]
+                self.initial["skills"] = [poet_skill.id]
 
 
 class SongForm(forms.ModelForm):

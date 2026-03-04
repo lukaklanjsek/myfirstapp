@@ -24,6 +24,10 @@ urlpatterns = [
     path("<str:username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
     path("<str:username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
     path("<str:username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
+    path("<str:username>/members/add-composer/",
+         views.OrgMemberAddView.as_view(),{'preset': 'composer'},name="org_member_add_composer"),
+    path("<str:username>/members/add-poet/",
+         views.OrgMemberAddView.as_view(),{'preset': 'poet'},name="org_member_add_poet"),
     path("<str:username>/members/edit/<int:pk>/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
 
     path("<str:username>/songs/", views.SongListView.as_view(), name="song_dashboard"),

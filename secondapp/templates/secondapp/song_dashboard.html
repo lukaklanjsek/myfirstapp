@@ -2,8 +2,18 @@
 {% block title %}Songs2{% endblock %}
 {% block content %}
 
-{% if membership.role == "ADMIN" %}
-    <a href="{% url 'secondapp:song_form2' url_username %}"><button type="button">+ Add New Song +</button></a>
+{% if url_username == user.username %}
+    <p>
+        This is your personal bubble.
+        <a href="{% url 'secondapp:org_member_list' user.username %}">
+            + Here is a list of your own composers and poets. +
+        </a>
+    </p>
+<p><a href="{% url 'secondapp:song_form2' user.username %}">
+            + ADD YOUR OWN SONG +
+        </a></p>
+{% else %}
+    <p>This is organization: {{ url_username }}</p>
 {% endif %}
 <p>Here is a list of all songs:</p>
 <table>
