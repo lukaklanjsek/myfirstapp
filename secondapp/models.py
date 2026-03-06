@@ -166,7 +166,7 @@ class Person(models.Model):
         null=True,
         blank=True,
         related_name="persons"
-    )
+    ) # used to map login to actual user
 
     owner = models.ForeignKey(
         "self",
@@ -195,6 +195,14 @@ class Person(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                name="unique_user_per_person"
+            )
+        ]
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
@@ -220,7 +228,7 @@ class Membership(models.Model):
 
 
     def __str__(self):
-        return self.person
+        return f"{self.person} in {self.user}"
 
 
 class MembershipPeriod(models.Model):
@@ -459,7 +467,7 @@ class Song(models.Model):
 #     first_name = models.CharField(max_length=100, blank=True, null=True)
 #     last_name = models.CharField(max_length=100, db_index=True, blank=True, null=True)
 #
-#     role = models.CharField(max_length=10, choices=[(role.name, role.value) for role in Role])
+#     role = models.CharField(max_length=10, choices=[(role.title, role.value) for role in Role])
 #     address = models.CharField(max_length=250, blank=True, null=True)
 #     email = models.EmailField(blank=True, null=True)
 #     phone_number = models.CharField(max_length=17, blank=True, null=True)

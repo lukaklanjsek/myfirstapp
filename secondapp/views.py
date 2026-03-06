@@ -113,27 +113,51 @@ class PersonUpdateView(UpdateView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    # def get_object(self, queryset=None):
+    #
+    #     # single user
+    #     if not self.organization:
+    #         return get_object_or_404(
+    #             Person,
+    #             user=self.request.user
+    #         )
+    #
+    #     # organization - ADMIN
+    #     url_username = self.kwargs["username"]
+    #     try:
+    #         target_user = CustomUser.objects.get(username=url_username)
+    #     except CustomUser.DoesNotExist:
+    #         raise Http404("User not found")
+    #
+    #     return get_object_or_404(
+    #         AccessControl.get_viewable_people_queryset(self.request.user)
+    #         .filter(memberships__user=target_user),
+    #         id=self.kwargs["pk"]
+    #     )
     def get_object(self, queryset=None):
+        person_id = self.kwargs.get("pk")
 
-        # single user
-        if not self.organization:
+        if person_id:
+            # Editing a specific organization person by ID
+            url_username = self.kwargs["username"]
+            try:
+                target_user = CustomUser.objects.get(username=url_username)
+            except CustomUser.DoesNotExist:
+                raise Http404("User not found")
+
+            return get_object_or_404(
+                AccessControl.get_viewable_people_queryset(self.request.user)
+                .filter(memberships__user=target_user),
+                id=person_id
+            )
+        else:
+            # Editing personal person (owner=None)
+            # URL pattern: /<username>/person_form2/
             return get_object_or_404(
                 Person,
-                user=self.request.user
+                user=self.request.user,
+                owner__isnull=True
             )
-
-        # organization - ADMIN
-        url_username = self.kwargs["username"]
-        try:
-            target_user = CustomUser.objects.get(username=url_username)
-        except CustomUser.DoesNotExist:
-            raise Http404("User not found")
-
-        return get_object_or_404(
-            AccessControl.get_viewable_people_queryset(self.request.user)
-            .filter(memberships__user=target_user),
-            id=self.kwargs["pk"]
-        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -276,11 +300,15 @@ class OrgMemberListView(ListView):
 
     def get_queryset(self):
         url_username = self.kwargs["username"]
+        print(f"=== OrgMemberListView get_queryset ===")
+        print(f"Logged in user: {self.request.user.username}")
+        print(f"URL username: {url_username}")
         queryset = AccessControl.get_visible_members(
             self.request.user,
             url_username
         ).select_related('person').prefetch_related('person__skills', "person__roles")
 
+        print(f"Final queryset count: {queryset.count()}")
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -289,10 +317,10 @@ class OrgMemberListView(ListView):
 
         # Add memberships to context for easier template access
         url_username = self.kwargs["username"]
-        context["org_memberships"] = AccessControl.get_visible_members(
-            self.request.user,
-            url_username
-        )
+        # context["org_memberships"] = AccessControl.get_visible_members(
+        #     self.request.user,
+        #     url_username
+        # )
 
         return context
 
@@ -346,22 +374,22 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
         url_username = self.kwargs.get("username")
 
         if url_username:
-            self.organization = get_object_or_404(
+            self.customuser = get_object_or_404(
                 CustomUser,
                 username=url_username
             )
             # Allow if viewing own account OR if has member access
-            if request.user != self.organization:
+            if request.user != self.customuser:
                 member_queryset = AccessControl.can_view_member_list(
                     request.user,
-                    self.organization
+                    self.customuser
                 )
                 if not member_queryset.exists():
                     return HttpResponseForbidden()
 
 
         else:
-            self.organization = None
+            self.customuser = None
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -393,17 +421,40 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
         )
 
     def _create_person(self, form):
-        """Create a new Person in membership. (unclaimed by any real user)"""
-        person = Person.objects.create(
-            first_name=form.cleaned_data["first_name"],
-            last_name=form.cleaned_data["last_name"],
-            email=form.cleaned_data.get("email", ""),
-            phone=form.cleaned_data.get("phone", ""),
-            address=form.cleaned_data.get("address", ""),
-            user=self.organization,  # linked to  auth acc
-            owner=None  # profile not claimed by individual yet
-        )
+        """
+        Create a new Person.
+        - If adding to an customuser: create org person with owner
+        - If adding to personal account: create personal person with owner=None
+        """
+        is_organization = Organization.objects.filter(user=self.customuser).exists()
+
+        if is_organization:
+            # adding members to an organization:
+            person = Person.objects.create(
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                email=form.cleaned_data.get("email", ""),
+                phone=form.cleaned_data.get("phone", ""),
+                address=form.cleaned_data.get("address", ""),
+                user=None,  # Belongs to organization
+                owner=None  # Ownership not claimed yet
+            )
+        else:
+            #  Adding to personal account (like adding a family member, poet, composer, etc.)
+            # These are personal records that belong to the user
+            person = Person.objects.create(
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                email=form.cleaned_data.get("email", ""),
+                phone=form.cleaned_data.get("phone", ""),
+                address=form.cleaned_data.get("address", ""),
+                user=None,  # The personal user account
+                owner=None  # Personal record, no owner
+            )
+
         return person
+
+
 
     def _add_roles(self, person, selected_roles):
         """Create memberships for selected roles."""
@@ -411,7 +462,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
         # Create the base membership (only once per person-org relationship)
         membership, created = Membership.objects.get_or_create(
-            user=self.organization,
+            user=self.customuser,
             person=person
         )
 
@@ -448,21 +499,27 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs["username"]
+        print("print orgmembereditview dispatch url_username:", url_username)
 
-        self.organization = get_object_or_404(
+        self.customuser = get_object_or_404(
             CustomUser,
             username=url_username
         )
+        print("orgmembereditview dispatch customuser", self.customuser)
 
         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
+        print("orgmembereditview dispatch person", self.person)
 
         viewer_role = AccessControl.get_org_roles(
             request.user,
-            self.organization
+            self.customuser
         )
+        print("orgmembereditview dispatch viewer_role", viewer_role)
 
         is_admin = viewer_role.filter(id=Role.ADMIN).exists()
         is_owner = self.person.user == request.user
+
+        print("orgmembereditview dispatch is_admin, is_owner", is_admin, is_owner)
 
         if not (is_admin or is_owner):
             raise PermissionDenied("No permission to edit")
@@ -499,7 +556,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["organization"] = self.organization
+        context["organization"] = self.customuser
         return context
 
     def form_valid(self, form):
@@ -536,7 +593,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
         # Get or create the base membership (the relationship between org user and person)
         membership, _ = Membership.objects.get_or_create(
-            user=self.organization.user,
+            user=self.customuser,
             person=self.person
         )
 
