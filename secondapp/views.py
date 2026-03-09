@@ -47,7 +47,7 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
+from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill,
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
 from .forms import CustomUserCreationForm
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
@@ -735,6 +735,21 @@ class SongDeleteView(SongOwnerMixin, DeleteView):
 
 class SkillListAndCreateView(SkillListAndCreateMixin, View):
     pass
+
+
+@method_decorator(login_required, name="dispatch")
+class EventListView(ListView):
+    template_name = "secondapp/event_dashboard.html"
+    context_object_name = "events"
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        url_username = self.kwargs["username"]
+        self.customuser = get_object_or_404(
+            CustomUser,
+            username=url_username
+        )
+
 
 
 # -----------------------------------------------------

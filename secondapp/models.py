@@ -49,6 +49,35 @@ class Role(models.Model):
         return self.title
 
 
+class EventType(models.Model):
+    REHEARSAL = 1
+    PERFORMANCE = 2
+    CONCERT = 3
+
+    name = models.CharField("event designation", max_length=90, unique=True)
+    additional_notes = models.CharField("short description of type", max_length=250, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Attendance(models.Model):
+    PRESENT = 1
+    MISSING = 2
+    ABSENT = 3
+    LATE = 4
+
+    name = models.CharField("attendance designation", max_length=90, unique=True)
+    additional_notes = models.CharField("short description of presence", max_length=250, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
 class UserManager(BaseUserManager):
     """Custom user model manager for authentication."""
     def create_user(self, email, password, **extra_fields):
@@ -257,7 +286,7 @@ class PersonSkill(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["person", "skill"], # , "organization"],
+                fields=["person", "skill"],
                 name="unique_skill_per_org_person"
             )
         ]
@@ -314,7 +343,67 @@ class Song(models.Model):
         return self.title
 
 
+class Event(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="events"
+    )
 
+    name = models.CharField("name of the event", max_length=250)
+    location = models.TextField(blank=True, null=True)
+    date = models.DateField("date of event")
+    start_hour = models.TimeField("start hour")
+    end_hour = models.TimeField("end hour")
+    event_type = models.ForeignKey(Event, on_delete=models.PROTECT)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+
+
+
+class EventSong(models.Model):
+    """
+    Through table for song objects that are in each event. Order matters.
+    """
+    event = models.ForeignKey(Event, on_delete=models.PROTECT)
+    song = models.ForeignKey(Song, on_delete=models.PROTECT)
+    order = models.IntegerField()
+    addition = models.BooleanField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "order"],
+                name="unique_order_per_event"
+            )
+        ]
+
+
+class EventPerson(models.Model):
+    """
+    Designation of participation between event and person.
+    Outputs: present, missing, absent, late, early departure.
+    """
+    event = models.ForeignKey(Event, on_delete=models.PROTECT)
+    person = models.ForeignKey(Person, on_delete=models.PROTECT)
+    attendance = models.ForeignKey(Attendance, on_delete=models.PROTECT)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "person"],
+                name="unique_person_per_event"
+            )
+        ]
 #
 # class SongOrganization(models.Model):
 #     """Relationship between song.pk and its org so each org only manages its own songs."""
