@@ -255,7 +255,7 @@ class OrganizationCreateView(CreateView):
 
             # create admin person of the org
             person_admin = Person.objects.create(
-                user=organization.user,    # this Person belongs to the organization
+                # user=organization.user,    # this Person belongs to the organization
                 owner=the_admin,    #  this person is claimed by the creator of the organization
                 email=the_admin.email,
                 first_name=the_admin.first_name,
@@ -441,7 +441,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
             )
         else:
             #  Adding to personal account (like adding a family member, poet, composer, etc.)
-            # These are personal records that belong to the user
+            # These are personal records that belong to the user but "user" is only for login
             person = Person.objects.create(
                 first_name=form.cleaned_data["first_name"],
                 last_name=form.cleaned_data["last_name"],
@@ -512,7 +512,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
         viewer_role = AccessControl.get_org_roles(
             request.user,
-            self.customuser
+            url_username
         )
         print("orgmembereditview dispatch viewer_role", viewer_role)
 
