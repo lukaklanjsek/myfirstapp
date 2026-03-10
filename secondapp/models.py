@@ -1,11 +1,11 @@
 
 from django.db import models
 from django.db.models import PROTECT, CASCADE
-from django.db import transaction
-from django.urls import reverse
-import datetime
-from datetime import date
-from enum import Enum
+# from django.db import transaction
+# from django.urls import reverse
+# import datetime
+# from datetime import date
+# from enum import Enum
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
@@ -63,11 +63,11 @@ class EventType(models.Model):
         return self.name
 
 
-class Attendance(models.Model):
+class AttendanceType(models.Model):
     PRESENT = 1
-    MISSING = 2
-    ABSENT = 3
-    LATE = 4
+    ABSENT = 2
+    MISSING = 3
+    PARTIAL = 4
 
     name = models.CharField("attendance designation", max_length=90, unique=True)
     additional_notes = models.CharField("short description of presence", max_length=250, blank=True, null=True)
@@ -352,10 +352,9 @@ class Event(models.Model):
 
     name = models.CharField("name of the event", max_length=250)
     location = models.TextField(blank=True, null=True)
-    date = models.DateField("date of event")
-    start_hour = models.TimeField("start hour")
-    end_hour = models.TimeField("end hour")
-    event_type = models.ForeignKey(Event, on_delete=models.PROTECT)
+    started_at = models.DateTimeField("start date hour")
+    ended_at = models.DateTimeField("end date hour")
+    event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -371,7 +370,7 @@ class EventSong(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT)
     song = models.ForeignKey(Song, on_delete=models.PROTECT)
     order = models.IntegerField()
-    addition = models.BooleanField(blank=True, null=True)
+    encore = models.BooleanField("additional songs after the end",blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -385,14 +384,14 @@ class EventSong(models.Model):
         ]
 
 
-class EventPerson(models.Model):
+class Attendance(models.Model):
     """
     Designation of participation between event and person.
     Outputs: present, missing, absent, late, early departure.
     """
     event = models.ForeignKey(Event, on_delete=models.PROTECT)
     person = models.ForeignKey(Person, on_delete=models.PROTECT)
-    attendance = models.ForeignKey(Attendance, on_delete=models.PROTECT)
+    attendance_type = models.ForeignKey(AttendanceType, on_delete=models.PROTECT)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

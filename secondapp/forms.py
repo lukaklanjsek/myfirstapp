@@ -2,11 +2,13 @@ from django import forms
 import datetime
 # from .models import Song, Person, Member, Composer, Musician, Arranger, Poet, Tag
 # from .models import Rehearsal, Activity, Conductor, Ensemble, ImportFile
-from django_select2.forms import ModelSelect2MultipleWidget
+# from django_select2.forms import ModelSelect2MultipleWidget
 #It is advised to always setup a separate cache server for Select2.
-from django.contrib.auth.forms import AuthenticationForm
+# from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
+from .models import Event, EventSong, Attendance
+from django.forms import inlineformset_factory
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -145,6 +147,72 @@ class SkillForm(forms.ModelForm):
     class Meta:
         model = Skill
         fields = ["title", "additional_notes"]
+
+
+class EventForm(forms.ModelForm):
+    class Meta:
+        model = Event
+        fields = ['name',
+                  'location',
+                  'started_at',
+                  'ended_at',
+                  'event_type'
+                  ]
+        widgets = {
+            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'location': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    # def __init__(self, *args, **kwargs):
+    #     self.user = kwargs.pop('user', None)  # Remove 'user' from kwargs, so django does not complain
+    #     super().__init__(*args, **kwargs)  # Pass remaining kwargs to parent
+    #
+    #     # kwargs before: {'instance': event_obj, 'user': request.user}
+    #     # After pop: kwargs = {'instance': event_obj}, and self.user = request.user
+
+class EventSongForm(forms.ModelForm):
+    class Meta:
+        model = EventSong
+        fields = ['song', 'order', 'encore']
+        widgets = {
+            'order': forms.HiddenInput(),  # We'll manage this in the view
+        }
+
+    # def __init__(self, *args, **kwargs):
+    #     self.user = kwargs.pop('user', None)
+    #     super().__init__(*args, **kwargs)
+    #
+    #     # Limit song choices to user's songs
+    #     if self.user:
+    #         self.fields['song'].queryset = Song.objects.filter(user=self.user).order_by('title')
+
+
+class AttendanceForm(forms.ModelForm):
+    class Meta:
+        model = Attendance
+        fields = ['person', 'attendance_type']
+        widgets = {
+            # 'person': forms.HiddenInput(),  # Pre-filled, user just changes attendance_type
+        }
+
+
+# Formset factories  ------------------------------------------------------
+EventSongFormSet = inlineformset_factory(
+    Event,
+    EventSong,
+    form=EventSongForm,
+    extra=1,
+    can_delete=True,
+)
+
+AttendanceFormSet = inlineformset_factory(
+    Event,
+    Attendance,
+    form=AttendanceForm,
+    extra=0,  # We'll manually create initial data for all members
+    can_delete=False,
+)
 
 ##########################################################################
 # class BaseForm(forms.ModelForm):

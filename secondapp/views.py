@@ -47,9 +47,10 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill,
+from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
+from .models import Event, EventSong, Attendance
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, EventForm
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 
@@ -737,20 +738,224 @@ class SkillListAndCreateView(SkillListAndCreateMixin, View):
     pass
 
 
+@method_decorator(login_required, name='dispatch')
+class EventCreateView(CreateView):
+    """Step 1: Create event with basic info only"""
+    model = Event
+    form_class = EventForm
+    template_name = 'secondapp/event_create.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get("username")
+
+        if url_username:
+            self.customuser = get_object_or_404(
+                CustomUser,
+                username=url_username
+            )
+            # Allow if viewing own account OR if has member access
+            if request.user != self.customuser:
+                member_queryset = AccessControl.can_add_event(
+                    request.user,
+                    self.customuser
+                )
+                if not member_queryset.exists():
+                    return HttpResponseForbidden()
+
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+        # Redirect to update view to add songs and attendance
+        return redirect('secondapp:event_update', username=self.kwargs["username"], pk=self.object.pk)
+
+    def get_success_url(self):
+        return reverse_lazy('secondapp:event_update', kwargs={"username": self.kwargs.username, 'pk': self.object.pk})
+
+
+@method_decorator(login_required, name='dispatch')
+class EventUpdateView(UpdateView):
+    """Step 2 & ongoing edits"""
+    model = Event
+    form_class = EventForm
+    template_name = 'events/event_update.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get("username")
+
+        if url_username:
+            self.customuser = get_object_or_404(
+                CustomUser,
+                username=url_username
+            )
+            # Check access
+            if request.user != self.customuser:
+                member_queryset = AccessControl.can_edit_event(
+                    request.user,
+                    self.customuser
+                )
+                if not member_queryset.exists():
+                    return HttpResponseForbidden()
+        else:
+            self.customuser = request.user
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        # Only events belonging to the customuser from URL
+        return Event.objects.filter(user=self.customuser)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.customuser
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        event = self.object
+
+        if self.request.POST:
+            context['song_formset'] = EventSongFormSet(
+                self.request.POST,
+                instance=event,
+                form_kwargs={'user': self.customuser}
+            )
+            context['attendance_formset'] = AttendanceFormSet(
+                self.request.POST,
+                instance=event
+            )
+        else:
+            context['song_formset'] = EventSongFormSet(
+                instance=event,
+                form_kwargs={'user': self.customuser}
+            )
+            context['attendance_formset'] = self._get_prepopulated_attendance_formset(event)
+
+        return context
+
+
+
 @method_decorator(login_required, name="dispatch")
 class EventListView(ListView):
-    template_name = "secondapp/event_dashboard.html"
+    template_name = "secondapp/event_list.html"
     context_object_name = "events"
 
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        url_username = self.kwargs["username"]
-        self.customuser = get_object_or_404(
-            CustomUser,
-            username=url_username
-        )
+    # def setup(self, request, *args, **kwargs):
+    #     super().setup(request, *args, **kwargs)
+    #     url_username = self.kwargs["username"]
+    #     self.customuser = get_object_or_404(
+    #         CustomUser,
+    #         username=url_username
+    #     )
+
+@method_decorator(login_required, name='dispatch')
+class AttendanceCreateView(CreateView):
+    """Create attendance record for an event"""
+    model = Attendance
+    fields = ['person', 'status', 'notes']
+    template_name = 'secondapp/attendance_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get("username")
+        self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
+
+        if url_username:
+            self.customuser = get_object_or_404(
+                CustomUser,
+                username=url_username
+            )
+            # Check permission
+            if request.user != self.customuser:
+                if not AccessControl.can_edit_event(request.user, self.customuser).exists():
+                    return HttpResponseForbidden()
+        else:
+            self.customuser = request.user
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.event = self.event
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('secondapp:event_detail', kwargs={
+            'username': self.kwargs['username'],
+            'pk': self.event.pk
+        })
 
 
+@method_decorator(login_required, name='dispatch')
+class AttendanceListView(ListView):
+    """List all attendance records for an event"""
+    model = Attendance
+    template_name = 'secondapp/attendance_list.html'
+    context_object_name = 'attendances'
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get("username")
+        self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
+
+        if url_username:
+            self.customuser = get_object_or_404(
+                CustomUser,
+                username=url_username
+            )
+            # Check permission
+            if request.user != self.customuser:
+                if not AccessControl.can_view_event(request.user, self.customuser).exists():
+                    return HttpResponseForbidden()
+        else:
+            self.customuser = request.user
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return Attendance.objects.filter(event=self.event).select_related('person', 'event')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['event'] = self.event
+        context['customuser'] = self.customuser
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+class AttendanceUpdateView(UpdateView):
+    """Edit attendance record"""
+    model = Attendance
+    fields = ['person', 'status', 'notes']
+    template_name = 'secondapp/attendance_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs.get("username")
+
+        if url_username:
+            self.customuser = get_object_or_404(
+                CustomUser,
+                username=url_username
+            )
+            # Check permission
+            if request.user != self.customuser:
+                if not AccessControl.can_edit_event(request.user, self.customuser).exists():
+                    return HttpResponseForbidden()
+        else:
+            self.customuser = request.user
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return Attendance.objects.filter(event__user=self.customuser)
+
+    def get_success_url(self):
+        return reverse_lazy('secondapp:event_detail', kwargs={
+            'username': self.kwargs['username'],
+            'pk': self.object.event.pk
+        })
 
 # -----------------------------------------------------
 # class IndexView(generic.ListView): #BreadcrumbMixin,

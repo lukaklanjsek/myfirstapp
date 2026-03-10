@@ -524,3 +524,51 @@ class AccessControl:
         # Organizational songs - must be ADMIN
         roles = cls.get_org_roles(auth_user, org.user.username)
         return roles.filter(id=Role.ADMIN).exists()
+
+    @classmethod
+    def can_add_event(cls, auth_user, url_username):
+        """
+        Return queryset of Memberships that auth_user can view:
+        - Personal memberships if owner_user is same as auth_user
+        - Or org memberships if auth_user is ADMIN or MEMBER of that org
+        """
+        if not auth_user.is_authenticated:
+            return Membership.objects.none()
+
+        # personal memberships
+        if url_username == auth_user:
+            return Membership.objects.filter(user=auth_user)
+
+        # org memberships - check if auth_user has proper role
+        memberships = cls._user_memberships(auth_user).filter(
+            user=url_username,  # Memberships under owner_user's "org"
+            person__roles__id__in=[Role.ADMIN] #, Role.MEMBER
+        )
+        if not memberships.exists():
+            return Membership.objects.none()
+
+        return Membership.objects.filter(user=url_username)
+
+    @classmethod
+    def can_edit_event(cls, auth_user, url_username):
+        """
+        Return queryset of Memberships that auth_user can view:
+        - Personal memberships if owner_user is same as auth_user
+        - Or org memberships if auth_user is ADMIN or MEMBER of that org
+        """
+        if not auth_user.is_authenticated:
+            return Membership.objects.none()
+
+        # personal memberships
+        if url_username == auth_user:
+            return Membership.objects.filter(user=auth_user)
+
+        # org memberships - check if auth_user has proper role
+        memberships = cls._user_memberships(auth_user).filter(
+            user=url_username,  # Memberships under owner_user's "org"
+            person__roles__id__in=[Role.ADMIN, Role.MEMBER]
+        )
+        if not memberships.exists():
+            return Membership.objects.none()
+
+        return Membership.objects.filter(user=url_username)
