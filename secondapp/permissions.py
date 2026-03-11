@@ -37,7 +37,7 @@ class AccessControl:
         return Person.objects.get(
             user=auth_user,
             owner__isnull=True
-        )  # Returns None if not found
+        )  # Raises exteption if not found
 
 
     @classmethod
@@ -536,7 +536,7 @@ class AccessControl:
             return Membership.objects.none()
 
         # personal memberships
-        if url_username == auth_user:
+        if url_username == auth_user.username:
             return Membership.objects.filter(user=auth_user)
 
         # org memberships - check if auth_user has proper role

@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 from django.views.generic import DetailView
 from .models import CustomUser
-from .models import Event, EventPerson, EventSong
+from .models import Event, Attendance, EventSong
 
 
 

@@ -1,0 +1,18 @@
+{% extends "secondapp/base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Type</th>
+    </tr>
+    {% for event in events %}
+        <tr>
+            <td> {{ event.started_at }}</td>
+            <td> {{ event.event_type }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

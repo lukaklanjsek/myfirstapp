@@ -50,7 +50,7 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
 from .models import Event, EventSong, Attendance
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
-from .forms import CustomUserCreationForm, EventForm
+from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 
@@ -762,60 +762,73 @@ class EventCreateView(CreateView):
                 if not member_queryset.exists():
                     return HttpResponseForbidden()
 
+        else:
+            self.customuser = None
+
+
+        return super().dispatch(request, *args, **kwargs)
+
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs['username'] = self.request.user
         return kwargs
 
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        # Redirect to update view to add songs and attendance
-        return redirect('secondapp:event_update', username=self.kwargs["username"], pk=self.object.pk)
-
-    def get_success_url(self):
-        return reverse_lazy('secondapp:event_update', kwargs={"username": self.kwargs.username, 'pk': self.object.pk})
-
+    # def form_valid(self, form):
+    #     form.instance.user = self.request.user
+    #     response = super().form_valid(form)
+    #     # Redirect to update view to add songs and attendance
+    #     return redirect('secondapp:event_update', username=self.kwargs["username"], pk=self.object.pk)
+    #
+    # def get_success_url(self):
+    #     return reverse_lazy('secondapp:event_update',
+    #                         kwargs={"username": self.kwargs.username, 'pk': self.object.pk}
+    #                         )
 
 @method_decorator(login_required, name='dispatch')
 class EventUpdateView(UpdateView):
-    """Step 2 & ongoing edits"""
     model = Event
     form_class = EventForm
     template_name = 'events/event_update.html'
 
     def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
         url_username = self.kwargs.get("username")
 
         if url_username:
-            self.customuser = get_object_or_404(
-                CustomUser,
-                username=url_username
-            )
-            # Check access
+            self.customuser = get_object_or_404(CustomUser, username=url_username)
+
             if request.user != self.customuser:
-                member_queryset = AccessControl.can_edit_event(
-                    request.user,
-                    self.customuser
-                )
-                if not member_queryset.exists():
-                    return HttpResponseForbidden()
+                # CHANGED: Cache permission check result to avoid redundant queries
+                self.has_edit_permission = AccessControl.can_edit_event(
+                    request.user, self.customuser
+                ).exists()
+
+                if not self.has_edit_permission:  # CHANGED: Use cached result
+                    return HttpResponseForbidden("You don't have permission to edit this event.")
         else:
             self.customuser = request.user
 
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        # Only events belonging to the customuser from URL
-        return Event.objects.filter(user=self.customuser)
+        """Return only events belonging to the organization/user from URL."""
+        # ADDED: select_related and prefetch_related to reduce database queries
+        return Event.objects.filter(
+            user=self.customuser
+        ).select_related('user', 'event_type').prefetch_related(
+            'eventsongs__song',
+            'attendances__person'
+        )
 
     def get_form_kwargs(self):
+        """Pass the organization/user to the form."""  # ADDED: Docstring
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.customuser
         return kwargs
 
     def get_context_data(self, **kwargs):
+        """Prepare formsets and context data for the template."""  # ADDED: Docstring
         context = super().get_context_data(**kwargs)
         event = self.object
 
@@ -836,14 +849,96 @@ class EventUpdateView(UpdateView):
             )
             context['attendance_formset'] = self._get_prepopulated_attendance_formset(event)
 
+        context['url_username'] = self.kwargs.get('username')
         return context
 
+    def _get_prepopulated_attendance_formset(self, event):
+        """
+        Pre-populate attendance formset with all members of the organization.
+
+        Only creates initial entries for members who don't already have attendance records.
+        """  # ADDED: Docstring
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+
+        # # ADDED: Get existing attendance to avoid duplicates
+        # existing_attendance_ids = set(
+        #     event.attendances.values_list('person_id', flat=True)
+        # )
+
+        # CHANGED: Filter out members who already have attendance records
+        # ADDED: select_related to reduce queries
+        members = Person.objects.filter(
+            memberships__user=org_user,
+            memberships__person__roles__id=Role.MEMBER
+        ).distinct().select_related('user') #.exclude(id__in=existing_attendance_ids)
+
+        initial_data = [
+            {'person': person.id}
+            for person in members
+        ]
+
+        # CHANGED: Create formset with both existing instances and initial data for new members
+        formset = AttendanceFormSet(
+            instance=event,
+            initial=initial_data
+        )
+
+        return formset
+
+    def form_valid(self, form):
+        """
+        Save the event and related formsets in a transaction.
+
+        All changes are saved atomically - if any save fails, all changes are rolled back.
+        """  # ADDED: Docstring
+        context = self.get_context_data()
+        song_formset = context['song_formset']
+        attendance_formset = context['attendance_formset']
+
+        # CHANGED: Validate formsets BEFORE starting transaction for better error handling
+        if not song_formset.is_valid():
+            messages.error(self.request, "Please fix errors in the songs section.")
+            return self.form_invalid(form)
+
+        if not attendance_formset.is_valid():
+            messages.error(self.request, "Please fix errors in the attendance section.")
+            return self.form_invalid(form)
+
+        # CHANGED: Save everything in atomic transaction for data integrity
+        with transaction.atomic():
+            self.object = form.save()
+
+            song_formset.instance = self.object
+            song_formset.save()
+
+            attendance_formset.instance = self.object
+            attendance_formset.save()
+
+        messages.success(self.request, f"Event updated successfully!")  # ADDED: Success feedback message
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        """Re-render the page with error messages if validation fails."""  # ADDED: Docstring
+        messages.error(  # ADDED: Error message for user feedback
+            self.request,
+            "There was an error updating the event. Please check the form below."
+        )
+        return self.render_to_response(self.get_context_data(form=form))
+
+    def get_success_url(self):
+        """Redirect to event detail page after successful update."""  # ADDED: Docstring
+        return reverse_lazy('secondapp:event_detail', kwargs={
+            'username': self.kwargs.get('username'),
+            'pk': self.object.pk
+        })
 
 
 @method_decorator(login_required, name="dispatch")
 class EventListView(ListView):
     template_name = "secondapp/event_list.html"
     context_object_name = "events"
+    model = Event
 
     # def setup(self, request, *args, **kwargs):
     #     super().setup(request, *args, **kwargs)

@@ -164,37 +164,18 @@ class EventForm(forms.ModelForm):
             'location': forms.Textarea(attrs={'rows': 3}),
         }
 
-    # def __init__(self, *args, **kwargs):
-    #     self.user = kwargs.pop('user', None)  # Remove 'user' from kwargs, so django does not complain
-    #     super().__init__(*args, **kwargs)  # Pass remaining kwargs to parent
-    #
-    #     # kwargs before: {'instance': event_obj, 'user': request.user}
-    #     # After pop: kwargs = {'instance': event_obj}, and self.user = request.user
+
 
 class EventSongForm(forms.ModelForm):
     class Meta:
         model = EventSong
         fields = ['song', 'order', 'encore']
-        widgets = {
-            'order': forms.HiddenInput(),  # We'll manage this in the view
-        }
-
-    # def __init__(self, *args, **kwargs):
-    #     self.user = kwargs.pop('user', None)
-    #     super().__init__(*args, **kwargs)
-    #
-    #     # Limit song choices to user's songs
-    #     if self.user:
-    #         self.fields['song'].queryset = Song.objects.filter(user=self.user).order_by('title')
 
 
 class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
         fields = ['person', 'attendance_type']
-        widgets = {
-            # 'person': forms.HiddenInput(),  # Pre-filled, user just changes attendance_type
-        }
 
 
 # Formset factories  ------------------------------------------------------
