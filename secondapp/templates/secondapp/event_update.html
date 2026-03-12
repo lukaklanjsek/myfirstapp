@@ -7,6 +7,30 @@
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Update Event</button>
+
+
+
+
+<h3>Songs</h3>
+    {{ song_formset.management_form }}
+    <div id="song-formset">
+        {% for form in song_formset %}
+            <div class="formset-form">
+                {{ form.as_p }}
+            </div>
+        {% endfor %}
+    </div>
+
+
+<h3>Attendance</h3>
+    {{ attendance_formset.management_form }}
+    <div id="attendance-formset">
+        {% for form in attendance_formset %}
+            <div class="formset-form">
+                {{ form.as_p }}
+            </div>
+        {% endfor %}
+    </div>
+   <button type="submit">Update Event</button>
 </form>
 {% endblock %}

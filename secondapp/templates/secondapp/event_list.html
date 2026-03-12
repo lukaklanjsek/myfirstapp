@@ -3,6 +3,8 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
+<a href="{% url 'secondapp:event_create' url_username %}">
+    +</a>
 <table>
     <tr>
         <th>Date</th>
@@ -10,7 +12,11 @@
     </tr>
     {% for event in events %}
         <tr>
-            <td> {{ event.started_at }}</td>
+            <td> <a href="{% url 'secondapp:event_update' url_username event.id %}">
+                   (Edit:)
+                {{ event.started_at }}
+                </a>
+            </td>
             <td> {{ event.event_type }}</td>
         </tr>
     {% endfor %}

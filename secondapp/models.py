@@ -370,7 +370,7 @@ class EventSong(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT)
     song = models.ForeignKey(Song, on_delete=models.PROTECT)
     order = models.IntegerField()
-    encore = models.BooleanField("additional songs after the end",blank=True, null=True)
+    encore = models.BooleanField("additional songs after the end (encore)",blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

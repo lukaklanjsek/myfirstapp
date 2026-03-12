@@ -7,7 +7,7 @@ import datetime
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
-from .models import Event, EventSong, Attendance
+from .models import Event, EventSong, Attendance, AttendanceType
 from django.forms import inlineformset_factory
 
 # class SongWidget(ModelSelect2MultipleWidget):
@@ -176,6 +176,9 @@ class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
         fields = ['person', 'attendance_type']
+        widgets = {
+            "attendance_type": forms.RadioSelect()
+        }
 
 
 # Formset factories  ------------------------------------------------------

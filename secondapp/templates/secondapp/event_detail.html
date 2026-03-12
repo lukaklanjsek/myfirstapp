@@ -1,0 +1,63 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Details2{% endblock %}
+{% block content %}
+
+<p> TEST PRINT: event is owned by {{ event.user }}</p>
+
+<p> TEST name of event {{ event.name }} </p>
+<p>location: {{ event.location }} </p>
+<p>starts: {{ event.started_at }} </p>
+<p>ends: {{ event.ended_at }}</p>
+<p>
+    <a href="{% url 'secondapp:event_update' url_username event.id %}">
+EDIT
+    </a>
+</p>
+<h3>Songs</h3>
+{% if event.eventsong_set.all %}
+    <table>
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Song Title</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
+            <tr>
+                <td>{{ eventsong.order }}</td>
+                <td>{{ eventsong.song.title }}</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No songs added yet.</p>
+{% endif %}
+
+
+<h3>Attendance</h3>
+{% if event.attendance_set.all %}
+    <table>
+        <thead>
+            <tr>
+                <th>Person</th>
+                <th>Attendance Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attendance in event.attendance_set.all %}
+            <tr>
+                <td>{{ attendance.person }}</td>
+                <td>{{ attendance.attendance_type }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No attendance records yet.</p>
+{% endif %}
+
+{% endblock %}

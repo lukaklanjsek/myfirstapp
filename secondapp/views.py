@@ -771,8 +771,20 @@ class EventCreateView(CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['username'] = self.request.user
+        # kwargs['username'] = self.request.user
         return kwargs
+
+    def form_valid(self, form):
+        # Debug: print what's being assigned
+        user_to_assign = self.customuser if self.customuser else self.request.user
+        print(f"DEBUG: Assigning event to user: {user_to_assign.username}")
+        print(f"DEBUG: self.customuser = {self.customuser}")
+        print(f"DEBUG: self.request.user = {self.request.user}")
+
+        form.instance.user = user_to_assign
+        # form.instance.user =  self.request.user # self.customuser if self.customuser else
+        return super().form_valid(form)
+
 
     # def form_valid(self, form):
     #     form.instance.user = self.request.user
@@ -780,16 +792,17 @@ class EventCreateView(CreateView):
     #     # Redirect to update view to add songs and attendance
     #     return redirect('secondapp:event_update', username=self.kwargs["username"], pk=self.object.pk)
     #
-    # def get_success_url(self):
-    #     return reverse_lazy('secondapp:event_update',
-    #                         kwargs={"username": self.kwargs.username, 'pk': self.object.pk}
-    #                         )
+    def get_success_url(self):
+        return reverse_lazy("secondapp:event_update", kwargs={
+            "username": self.customuser.username,
+            "pk": self.object.pk
+        })
 
 @method_decorator(login_required, name='dispatch')
 class EventUpdateView(UpdateView):
     model = Event
     form_class = EventForm
-    template_name = 'events/event_update.html'
+    template_name = 'secondapp/event_update.html'
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -817,15 +830,15 @@ class EventUpdateView(UpdateView):
         return Event.objects.filter(
             user=self.customuser
         ).select_related('user', 'event_type').prefetch_related(
-            'eventsongs__song',
-            'attendances__person'
+            'eventsong_set__song',
+            'attendance_set__person'
         )
 
-    def get_form_kwargs(self):
-        """Pass the organization/user to the form."""  # ADDED: Docstring
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.customuser
-        return kwargs
+    # def get_form_kwargs(self):
+    #     """Pass the organization/user to the form."""  # ADDED: Docstring
+    #     kwargs = super().get_form_kwargs()
+    #     kwargs['user'] = self.customuser
+    #     return kwargs
 
     def get_context_data(self, **kwargs):
         """Prepare formsets and context data for the template."""  # ADDED: Docstring
@@ -836,7 +849,7 @@ class EventUpdateView(UpdateView):
             context['song_formset'] = EventSongFormSet(
                 self.request.POST,
                 instance=event,
-                form_kwargs={'user': self.customuser}
+                # form_kwargs={'user': self.customuser}
             )
             context['attendance_formset'] = AttendanceFormSet(
                 self.request.POST,
@@ -845,7 +858,7 @@ class EventUpdateView(UpdateView):
         else:
             context['song_formset'] = EventSongFormSet(
                 instance=event,
-                form_kwargs={'user': self.customuser}
+                # form_kwargs={'user': self.customuser}
             )
             context['attendance_formset'] = self._get_prepopulated_attendance_formset(event)
 
@@ -947,6 +960,20 @@ class EventListView(ListView):
     #         CustomUser,
     #         username=url_username
     #     )
+
+
+@method_decorator(login_required, name='dispatch')
+class EventDetailView(DetailView):
+    model = Event
+    template_name = 'secondapp/event_detail.html'
+
+    def get_queryset(self):
+        url_username = self.kwargs.get("username")
+        customuser = get_object_or_404(CustomUser, username=url_username)
+        return Event.objects.filter(user=customuser)
+
+
+
 
 @method_decorator(login_required, name='dispatch')
 class AttendanceCreateView(CreateView):
