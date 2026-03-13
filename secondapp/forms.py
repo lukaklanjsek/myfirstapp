@@ -9,6 +9,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
 from .models import Event, EventSong, Attendance, AttendanceType
 from django.forms import inlineformset_factory
+from django.db.models import Q
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -165,11 +166,24 @@ class EventForm(forms.ModelForm):
         }
 
 
-
 class EventSongForm(forms.ModelForm):
     class Meta:
         model = EventSong
         fields = ['song', 'order', 'encore']
+        widgets = {
+            'encore': forms.CheckboxInput(),
+            'order': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            # Filter songs belonging to this user directly
+            self.fields['song'].queryset = Song.objects.filter(
+                user=user  # Song has a user field according to the error
+            ).order_by('title')
 
 
 class AttendanceForm(forms.ModelForm):
@@ -179,6 +193,28 @@ class AttendanceForm(forms.ModelForm):
         widgets = {
             "attendance_type": forms.RadioSelect()
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            # Limit person choices to members of this organization
+            self.fields['person'].queryset = Person.objects.filter(
+                memberships__user=user,
+                memberships__person__roles__id=Role.MEMBER
+            ).distinct()
+
+        # ensure the current person is in the queryset even if they're no longer a member
+        if self.instance and self.instance.pk and self.instance.person:
+            if user:
+                # Make sure the existing person is included in the queryset
+                current_queryset = self.fields['person'].queryset
+                if not current_queryset.filter(pk=self.instance.person.pk).exists():
+                    self.fields['person'].queryset = Person.objects.filter(
+                        Q(memberships__user=user, memberships__person__roles__id=Role.MEMBER) |
+                        Q(pk=self.instance.person.pk)
+                    ).distinct()
 
 
 # Formset factories  ------------------------------------------------------
@@ -194,7 +230,7 @@ AttendanceFormSet = inlineformset_factory(
     Event,
     Attendance,
     form=AttendanceForm,
-    extra=0,  # We'll manually create initial data for all members
+    extra=5,  # We'll manually create initial data for all members
     can_delete=False,
 )
 

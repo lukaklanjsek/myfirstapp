@@ -1,1 +1,7 @@
-[{"model": "secondapp.eventtype", "pk": 1, "fields": {"name": "Rehearsal", "additional_notes": "basic event", "created_at": "2026-02-16T11:39:31.869Z"}}, {"model": "secondapp.eventtype", "pk": 2, "fields": {"name": "Performance", "additional_notes": "short under 20 min event", "created_at": "2026-02-16T11:39:58.706Z"}}, {"model": "secondapp.eventtype", "pk": 3, "fields": {"name": "Concert", "additional_notes": "full performance", "created_at": "2026-02-16T11:40:19.865Z"}}]
+[{"model": "secondapp.eventtype", "pk": 1, "fields":
+{"name": "Rehearsal", "additional_notes": "basic event", "created_at": "2026-02-16T11:39:31.869Z"}},
+  {"model": "secondapp.eventtype", "pk": 2, "fields":
+  {"name": "Performance", "additional_notes": "short under 20 min event", "created_at": "2026-02-16T11:39:58.706Z"}},
+  {"model": "secondapp.eventtype", "pk": 3, "fields":
+  {"name": "Concert", "additional_notes": "full performance", "created_at": "2026-02-16T11:40:19.865Z"}}
+]

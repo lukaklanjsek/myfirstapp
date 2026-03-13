@@ -1,0 +1,98 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<style>
+.event-col {
+    width: 40px;
+
+}
+
+.attendance-cell {
+    width: 40px;
+    text-align: center;
+}
+</style>
+<div class="attendance-dashboard">
+    <h2>Attendance Dashboard - {{ org_user.username }}</h2>
+
+    {# Filters and Quick Add in same row #}
+    <div class="dashboard-controls" style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: end;">
+        <form method="get" class="filters" style="display: flex; gap: 1rem; align-items: end;">
+            <div>
+                <label>Date Range:</label>
+                <input type="date" name="start_date" value="{{ request.GET.start_date }}">
+                to
+                <input type="date" name="end_date" value="{{ request.GET.end_date }}">
+            </div>
+            <div>
+                <label>Event Limit:</label>
+                <input type="number" name="event_limit" value="{{ request.GET.event_limit|default:8 }}" min="1" max="50" style="width: 60px;">
+            </div>
+            <button type="submit">Filter</button>
+            <a href="?">Reset</a>
+        </form>
+
+        <form method="post" action="{% url 'secondapp:quick_add_rehearsal' username=url_username %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
+        </form>
+    </div>
+
+    {# Main Form with Attendance Table #}
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="table-container" >
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th class="sticky-col">Member</th>
+                        {% for event in events %}
+                            <th class="event-col" style="height: 10px; padding: 5px;">
+                                <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
+                                    {{ event.event_type.name|first }}  {{ event.started_at|date:"m/d" }}
+                                </div>
+                            </th>
+                        {% endfor %}
+                        <th>Total</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in dashboard_data %}
+                        <tr>
+                            <td class="sticky-col member-name">{{ row.member }}</td>
+                            {% for cell in row.attendance_cells %}
+                                <td class="attendance-cell">
+                                    <input
+                                        type="checkbox"
+                                        name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                        value="present"
+                                        {% if cell.is_present %}checked{% endif %}
+                                        class="attendance-checkbox"
+                                    >
+                                </td>
+                            {% endfor %}
+                            <td>{{ row.total_present }}/{{ row.total_events }}</td>
+                            <td>{{ row.percentage|floatformat:0 }}%</td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="totals-row">
+                        <td class="sticky-col"><strong>Event Total</strong></td>
+                        {% for total in event_totals %}
+                            <td>{{ total.present }}/{{ total.total }}</td>
+                        {% endfor %}
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div >
+            <button type="submit" class="btn-primary">Save All Changes</button>
+        </div>
+    </form>
+</div>
+
+
+{% endblock %}

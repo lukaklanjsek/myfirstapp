@@ -12,7 +12,7 @@ from django.db import connection
 from django.http import HttpRequest, HttpResponse, Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.template.context_processors import request
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.contrib.sessions.models import Session
 from datetime import datetime, timedelta, date
@@ -48,7 +48,7 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
-from .models import Event, EventSong, Attendance
+from .models import Event, EventSong, Attendance, AttendanceType, EventType
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
@@ -849,55 +849,59 @@ class EventUpdateView(UpdateView):
             context['song_formset'] = EventSongFormSet(
                 self.request.POST,
                 instance=event,
-                # form_kwargs={'user': self.customuser}
+                form_kwargs={'user': self.customuser}
             )
             context['attendance_formset'] = AttendanceFormSet(
                 self.request.POST,
-                instance=event
+                instance=event,
+                form_kwargs={'user': self.customuser}
             )
         else:
             context['song_formset'] = EventSongFormSet(
                 instance=event,
-                # form_kwargs={'user': self.customuser}
+                form_kwargs={'user': self.customuser}
             )
-            context['attendance_formset'] = self._get_prepopulated_attendance_formset(event)
+            context['attendance_formset'] = AttendanceFormSet(
+                instance=event,
+                form_kwargs={'user': self.customuser}
+            )
 
         context['url_username'] = self.kwargs.get('username')
         return context
 
-    def _get_prepopulated_attendance_formset(self, event):
-        """
-        Pre-populate attendance formset with all members of the organization.
-
-        Only creates initial entries for members who don't already have attendance records.
-        """  # ADDED: Docstring
-        url_username = self.kwargs.get('username')
-        org_user = get_object_or_404(CustomUser, username=url_username)
-
-        # # ADDED: Get existing attendance to avoid duplicates
-        # existing_attendance_ids = set(
-        #     event.attendances.values_list('person_id', flat=True)
-        # )
-
-        # CHANGED: Filter out members who already have attendance records
-        # ADDED: select_related to reduce queries
-        members = Person.objects.filter(
-            memberships__user=org_user,
-            memberships__person__roles__id=Role.MEMBER
-        ).distinct().select_related('user') #.exclude(id__in=existing_attendance_ids)
-
-        initial_data = [
-            {'person': person.id}
-            for person in members
-        ]
-
-        # CHANGED: Create formset with both existing instances and initial data for new members
-        formset = AttendanceFormSet(
-            instance=event,
-            initial=initial_data
-        )
-
-        return formset
+    # def _get_prepopulated_attendance_formset(self, event):
+    #     """
+    #     Pre-populate attendance formset with all members of the organization.
+    #     Only creates initial entries for members who don't already have attendance records.
+    #     """  # ADDED: Docstring
+    #     url_username = self.kwargs.get('username')
+    #     org_user = get_object_or_404(CustomUser, username=url_username)
+    #
+    #     # # ADDED: Get existing attendance to avoid duplicates
+    #     # existing_attendance_ids = set(
+    #     #     event.attendances.values_list('person_id', flat=True)
+    #     # )
+    #
+    #     # CHANGED: Filter out members who already have attendance records
+    #     # ADDED: select_related to reduce queries
+    #     members = Person.objects.filter(
+    #         memberships__user=org_user,
+    #         memberships__person__roles__id=Role.MEMBER
+    #     ).distinct().select_related('user') #.exclude(id__in=existing_attendance_ids)
+    #
+    #     initial_data = [
+    #         {'person': person.id}
+    #         for person in members
+    #     ]
+    #
+    #     # CHANGED: Create formset with both existing instances and initial data for new members
+    #     formset = AttendanceFormSet(
+    #         instance=event,
+    #         initial=initial_data,
+    #         # extra=len(initial_data)
+    #     )
+    #
+    #     return formset
 
     def form_valid(self, form):
         """
@@ -932,12 +936,36 @@ class EventUpdateView(UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
-        """Re-render the page with error messages if validation fails."""  # ADDED: Docstring
-        messages.error(  # ADDED: Error message for user feedback
+        """Re-render the page with error messages if validation fails."""
+        context = self.get_context_data(form=form)
+        song_formset = context['song_formset']
+        attendance_formset = context['attendance_formset']
+
+        # Show specific error messages
+        if form.errors:
+            messages.error(self.request, f"Event form errors: {form.errors}")
+
+        if song_formset.errors:
+            for i, form_errors in enumerate(song_formset.errors):
+                if form_errors:
+                    messages.error(self.request, f"Song #{i + 1} errors: {form_errors}")
+
+        if song_formset.non_form_errors():
+            messages.error(self.request, f"Song formset errors: {song_formset.non_form_errors()}")
+
+        if attendance_formset.errors:
+            for i, form_errors in enumerate(attendance_formset.errors):
+                if form_errors:
+                    messages.error(self.request, f"Attendance #{i + 1} errors: {form_errors}")
+
+        if attendance_formset.non_form_errors():
+            messages.error(self.request, f"Attendance formset errors: {attendance_formset.non_form_errors()}")
+
+        messages.error(
             self.request,
             "There was an error updating the event. Please check the form below."
         )
-        return self.render_to_response(self.get_context_data(form=form))
+        return self.render_to_response(context)
 
     def get_success_url(self):
         """Redirect to event detail page after successful update."""  # ADDED: Docstring
@@ -952,6 +980,7 @@ class EventListView(ListView):
     template_name = "secondapp/event_list.html"
     context_object_name = "events"
     model = Event
+    ordering = ['-started_at']
 
     # def setup(self, request, *args, **kwargs):
     #     super().setup(request, *args, **kwargs)
@@ -972,113 +1001,345 @@ class EventDetailView(DetailView):
         customuser = get_object_or_404(CustomUser, username=url_username)
         return Event.objects.filter(user=customuser)
 
-
-
-
-@method_decorator(login_required, name='dispatch')
-class AttendanceCreateView(CreateView):
-    """Create attendance record for an event"""
-    model = Attendance
-    fields = ['person', 'status', 'notes']
-    template_name = 'secondapp/attendance_form.html'
+@method_decorator(login_required, name="dispatch")
+class AttendanceDashboardView(View):
+    template_name = 'secondapp/attendance.html'
 
     def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
         url_username = self.kwargs.get("username")
-        self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
+        self.org_user = get_object_or_404(CustomUser, username=url_username)
 
-        if url_username:
-            self.customuser = get_object_or_404(
-                CustomUser,
-                username=url_username
-            )
-            # Check permission
-            if request.user != self.customuser:
-                if not AccessControl.can_edit_event(request.user, self.customuser).exists():
-                    return HttpResponseForbidden()
-        else:
-            self.customuser = request.user
+        if request.user != self.org_user:
+            has_permission = AccessControl.can_edit_event(
+                request.user, self.org_user
+            ).exists()
+
+            if not has_permission:
+                return HttpResponseForbidden("You don't have permission to view this dashboard.")
 
         return super().dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form):
-        form.instance.event = self.event
-        return super().form_valid(form)
+    def get(self, request, username):
+        # Get date range from query params or default to last 8 events
+        event_limit = int(request.GET.get('event_limit', 8))
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
 
-    def get_success_url(self):
-        return reverse_lazy('secondapp:event_detail', kwargs={
-            'username': self.kwargs['username'],
-            'pk': self.event.pk
-        })
+        ## Fetch events with optimization
+        events_query = Event.objects.filter(
+            user=self.org_user
+        ).select_related('event_type').prefetch_related(
+            'attendance_set__person',
+            'attendance_set__attendance_type'
+        ).order_by('-started_at')  # Most recent first
 
-
-@method_decorator(login_required, name='dispatch')
-class AttendanceListView(ListView):
-    """List all attendance records for an event"""
-    model = Attendance
-    template_name = 'secondapp/attendance_list.html'
-    context_object_name = 'attendances'
-
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs.get("username")
-        self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
-
-        if url_username:
-            self.customuser = get_object_or_404(
-                CustomUser,
-                username=url_username
+        # Apply date filters if provided
+        if start_date and end_date:
+            events_query = events_query.filter(
+                started_at__date__gte=start_date,
+                started_at__date__lte=end_date
             )
-            # Check permission
-            if request.user != self.customuser:
-                if not AccessControl.can_view_event(request.user, self.customuser).exists():
-                    return HttpResponseForbidden()
-        else:
-            self.customuser = request.user
 
-        return super().dispatch(request, *args, **kwargs)
+        # Get the last N events and reverse them
+        events = list(reversed(list(events_query[:event_limit])))
 
-    def get_queryset(self):
-        return Attendance.objects.filter(event=self.event).select_related('person', 'event')
+        # Get all current members, ordered alphabetically for now
+        members = Person.objects.filter(
+            memberships__user=self.org_user,
+            memberships__person__roles__id=Role.MEMBER
+        ).distinct().order_by('last_name')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['event'] = self.event
-        context['customuser'] = self.customuser
-        return context
+        # Get attendance types
+        present_type = AttendanceType.objects.get(name='Present')
+
+        # Build attendance matrix
+        dashboard_data = self._build_attendance_matrix(members, events, present_type)
+
+        # Calculate totals per event
+        event_totals = self._calculate_event_totals(events, members, present_type)
+
+        context = {
+            'org_user': self.org_user,
+            'members': members,
+            'events': events,
+            'dashboard_data': dashboard_data,
+            'event_totals': event_totals,
+            'url_username': username,
+        }
+
+        return render(request, self.template_name, context)
+
+    def post(self, request, username):
+        """Handle bulk attendance updates."""
+        with transaction.atomic():
+            # Get all events and members being displayed
+            event_limit = int(request.GET.get('event_limit', 8))
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            events_query = Event.objects.filter(user=self.org_user).order_by('-started_at')
+            if start_date and end_date:
+                events_query = events_query.filter(
+                    started_at__date__gte=start_date,
+                    started_at__date__lte=end_date
+                )
+            events = list(reversed(list(events_query[:event_limit])))
+
+            members = Person.objects.filter(
+                memberships__user=self.org_user,
+                memberships__person__roles__id=Role.MEMBER
+            ).distinct()
+
+            # Get attendance types
+            present_type = AttendanceType.objects.get(name='Present')
+            absent_type = AttendanceType.objects.get(name='Absent')
+
+            # Track which checkboxes were checked
+            checked_attendances = set()
+            for key, value in request.POST.items():
+                if key.startswith('attendance_') and value == 'present':
+                    # Format: attendance_<event_id>_<person_id>
+                    _, event_id, person_id = key.split('_')
+                    checked_attendances.add((int(event_id), int(person_id)))
+
+            # Update all attendance records
+            for event in events:
+                for member in members:
+                    is_present = (event.id, member.id) in checked_attendances
+                    attendance_type = present_type if is_present else absent_type
+
+                    # Get or create attendance record
+                    Attendance.objects.update_or_create(
+                        event=event,
+                        person=member,
+                        defaults={'attendance_type': attendance_type}
+                    )
+
+            messages.success(request, "Attendance updated successfully!")
+
+        # Redirect back to the same view with the same filters
+        query_params = request.GET.urlencode()
+        redirect_url = reverse('secondapp:attendance', kwargs={'username': username})
+        if query_params:
+            redirect_url += f'?{query_params}'
+        return redirect(redirect_url)
+
+    def _build_attendance_matrix(self, members, events, present_type):
+        """Build efficient attendance lookup matrix."""
+        # Create lookup dict: {event_id: {person_id: attendance_type_id}}
+        attendance_lookup = {}
+        for event in events:
+            attendance_lookup[event.id] = {
+                att.person_id: att.attendance_type_id
+                for att in event.attendance_set.all()
+            }
+
+        # Build row data for each member
+        dashboard_data = []
+        for member in members:
+            row = {
+                'member': member,
+                'attendance_cells': [],  # Changed: list instead of dict
+                'total_present': 0,
+                'total_events': len(events),
+            }
+
+            # Build list of attendance cells in same order as events
+            for event in events:
+                attendance_type_id = attendance_lookup.get(event.id, {}).get(member.id)
+                row['attendance_cells'].append({
+                    'event_id': event.id,
+                    'is_present': attendance_type_id == present_type.id,
+                    'attendance_type_id': attendance_type_id
+                })
+
+                if attendance_type_id == present_type.id:
+                    row['total_present'] += 1
+
+            row['percentage'] = (row['total_present'] / row['total_events'] * 100) if row['total_events'] > 0 else 0
+            dashboard_data.append(row)
+
+        return dashboard_data
+
+    def _calculate_event_totals(self, events, members, present_type):
+        """Calculate attendance totals per event."""
+        total_members = members.count()
+
+        # Return list instead of dict, matching events order
+        totals = []
+        for event in events:
+            present_count = event.attendance_set.filter(
+                attendance_type=present_type
+            ).count()
+
+            totals.append({
+                'event_id': event.id,
+                'present': present_count,
+                'total': total_members,
+                'percentage': (present_count / total_members * 100) if total_members > 0 else 0
+            })
+
+        return totals
 
 
-@method_decorator(login_required, name='dispatch')
-class AttendanceUpdateView(UpdateView):
-    """Edit attendance record"""
-    model = Attendance
-    fields = ['person', 'status', 'notes']
-    template_name = 'secondapp/attendance_form.html'
+def quick_add_rehearsal(request, username):
+    """Quickly create a rehearsal event with all members marked as absent."""
+    org_user = get_object_or_404(CustomUser, username=username)
 
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs.get("username")
+    # Check permissions
+    if request.user != org_user:
+        if not AccessControl.can_edit_event(request.user, org_user).exists():
+            return HttpResponseForbidden("No permission")
 
-        if url_username:
-            self.customuser = get_object_or_404(
-                CustomUser,
-                username=url_username
+    with transaction.atomic():
+        # Get or create "Rehearsal" event type
+        rehearsal_type, _ = EventType.objects.get_or_create(
+            name='Rehearsal',
+        )
+
+        # Create event
+        event = Event.objects.create(
+            user=org_user,
+            name=f"Rehearsal - {timezone.now().strftime('%B %d, %Y')}",
+            event_type=rehearsal_type,
+            started_at=timezone.now(),
+            ended_at=timezone.now() + timedelta(hours=2),
+            location="TBD"
+        )
+
+        # Get all current members
+        members = Person.objects.filter(
+            memberships__user=org_user,
+            memberships__person__roles__id=Role.MEMBER
+        ).distinct()
+
+        # Get the "Absent" attendance type
+        absent_type = AttendanceType.objects.get(name='Absent')
+
+        # Create attendance records for all members (default: absent)
+        attendance_records = [
+            Attendance(
+                event=event,
+                person=member,
+                attendance_type=absent_type
             )
-            # Check permission
-            if request.user != self.customuser:
-                if not AccessControl.can_edit_event(request.user, self.customuser).exists():
-                    return HttpResponseForbidden()
-        else:
-            self.customuser = request.user
+            for member in members
+        ]
+        Attendance.objects.bulk_create(attendance_records)
 
-        return super().dispatch(request, *args, **kwargs)
+        messages.success(request, f"Rehearsal created with {len(attendance_records)} members!")
 
-    def get_queryset(self):
-        return Attendance.objects.filter(event__user=self.customuser)
+    # Redirect back to dashboard
+    return redirect('secondapp:attendance', username=username)
 
-    def get_success_url(self):
-        return reverse_lazy('secondapp:event_detail', kwargs={
-            'username': self.kwargs['username'],
-            'pk': self.object.event.pk
-        })
 
+
+
+# @method_decorator(login_required, name='dispatch')
+# class AttendanceCreateView(CreateView):
+#     """Create attendance record for an event"""
+#     model = Attendance
+#     fields = ['person', 'status', 'notes']
+#     template_name = 'secondapp/attendance_form.html'
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         url_username = self.kwargs.get("username")
+#         self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
+#
+#         if url_username:
+#             self.customuser = get_object_or_404(
+#                 CustomUser,
+#                 username=url_username
+#             )
+#             # Check permission
+#             if request.user != self.customuser:
+#                 if not AccessControl.can_edit_event(request.user, self.customuser).exists():
+#                     return HttpResponseForbidden()
+#         else:
+#             self.customuser = request.user
+#
+#         return super().dispatch(request, *args, **kwargs)
+#
+#     def form_valid(self, form):
+#         form.instance.event = self.event
+#         return super().form_valid(form)
+#
+#     def get_success_url(self):
+#         return reverse_lazy('secondapp:event_detail', kwargs={
+#             'username': self.kwargs['username'],
+#             'pk': self.event.pk
+#         })
+#
+#
+# @method_decorator(login_required, name='dispatch')
+# class AttendanceListView(ListView):
+#     """List all attendance records for an event"""
+#     model = Attendance
+#     template_name = 'secondapp/attendance_list.html'
+#     context_object_name = 'attendances'
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         url_username = self.kwargs.get("username")
+#         self.event = get_object_or_404(Event, pk=self.kwargs["event_pk"])
+#
+#         if url_username:
+#             self.customuser = get_object_or_404(
+#                 CustomUser,
+#                 username=url_username
+#             )
+#             # Check permission
+#             if request.user != self.customuser:
+#                 if not AccessControl.can_view_event(request.user, self.customuser).exists():
+#                     return HttpResponseForbidden()
+#         else:
+#             self.customuser = request.user
+#
+#         return super().dispatch(request, *args, **kwargs)
+#
+#     def get_queryset(self):
+#         return Attendance.objects.filter(event=self.event).select_related('person', 'event')
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['event'] = self.event
+#         context['customuser'] = self.customuser
+#         return context
+#
+#
+# @method_decorator(login_required, name='dispatch')
+# class AttendanceUpdateView(UpdateView):
+#     """Edit attendance record"""
+#     model = Attendance
+#     fields = ['person', 'status', 'notes']
+#     template_name = 'secondapp/attendance_form.html'
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         url_username = self.kwargs.get("username")
+#
+#         if url_username:
+#             self.customuser = get_object_or_404(
+#                 CustomUser,
+#                 username=url_username
+#             )
+#             # Check permission
+#             if request.user != self.customuser:
+#                 if not AccessControl.can_edit_event(request.user, self.customuser).exists():
+#                     return HttpResponseForbidden()
+#         else:
+#             self.customuser = request.user
+#
+#         return super().dispatch(request, *args, **kwargs)
+#
+#     def get_queryset(self):
+#         return Attendance.objects.filter(event__user=self.customuser)
+#
+#     def get_success_url(self):
+#         return reverse_lazy('secondapp:event_detail', kwargs={
+#             'username': self.kwargs['username'],
+#             'pk': self.object.event.pk
+#         })
+# ===================================================================================
 # -----------------------------------------------------
 # class IndexView(generic.ListView): #BreadcrumbMixin,
 #     model = Rehearsal

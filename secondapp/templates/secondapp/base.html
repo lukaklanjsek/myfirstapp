@@ -48,6 +48,7 @@
                                                 {% endif %}
 
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}
+                                                    <li><a href="{% url 'secondapp:attendance' org.user.username %}">ATTENDANCE</a></li>
                                                     <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
                                                     <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
                                                 {% endif %}
