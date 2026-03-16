@@ -1,6 +1,44 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Update{% endblock %}
 {% block content %}
+<style>
+.locked-attendance-row {
+    background-color: #f5f5f5;
+    opacity: 0.7;
+}
+
+.locked-attendance-row input[type="radio"] {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+<!--.event-lock-section {-->
+<!--    background-color: #fff3cd;-->
+<!--    border: 1px solid #ffc107;-->
+<!--    padding: 15px;-->
+<!--    margin-bottom: 20px;-->
+<!--    border-radius: 4px;-->
+<!--}-->
+
+<!--.lock-button {-->
+<!--    padding: 8px 16px;-->
+<!--    border: none;-->
+<!--    border-radius: 4px;-->
+<!--    cursor: pointer;-->
+<!--    font-weight: bold;-->
+<!--}-->
+
+<!--.lock-button.locked {-->
+<!--    background-color: #ffc107;-->
+<!--    color: #000;-->
+<!--}-->
+
+<!--.lock-button.unlocked {-->
+<!--    background-color: #dc3545;-->
+<!--    color: #fff;-->
+}
+</style>
+
 {% if messages %}
     <div class="messages">
         {% for message in messages %}
@@ -10,15 +48,55 @@
         {% endfor %}
     </div>
 {% endif %}
+
+<!-- NEW: Admin Lock Button Section -->
+{% if is_admin %}
+<div class="event-lock-section">
+    <form method="POST" action="{% url 'secondapp:toggle_event_lock' username=url_username pk=object.pk %}"
+          style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="lock-button {% if is_event_locked %}locked{% else %}unlocked{% endif %}">
+            {% if is_event_locked %}
+                 Unlock Event Attendance
+            {% else %}
+                 Lock Event Attendance
+            {% endif %}
+        </button>
+    </form>
+
+    {% if is_event_locked %}
+        <small style="display: block; margin-top: 10px; color: #856404;">
+             Locked by {{ object.locked_by.get_full_name }} on {{ object.locked_at|date:"d, M, Y H:i" }}
+            <br>No attendance changes allowed except by admins.
+        </small>
+        {% if not admin_override %}
+            <a href="?admin_override=true" class="lock-button unlocked" style="display: inline-block; margin-top: 10px; text-decoration: none;">
+                ✏️ Edit Anyway (Admin Override)
+            </a>
+        {% else %}
+            <div style="background-color: #fff; border: 2px solid #dc3545; padding: 10px; margin-top: 10px; border-radius: 4px;">
+                <strong style="color: #dc3545;"> ADMIN OVERRIDE MODE</strong><br>
+                <small>You can now edit locked attendance. Changes will remain locked after saving.</small><br>
+                <a href="?" style="color: #007bff; text-decoration: underline;">Cancel Override</a>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- NEW: Warning for non-admins when event is locked -->
+{% if is_event_locked and not is_admin %}
+<div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: 15px;">
+    This event's attendance is locked. Contact an admin to make changes.
+</div>
+{% endif %}
+
 <h2>Update Your Event</h2>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
 
-
-
-
-<h3>Songs</h3>
+    <h3>Songs</h3>
     {{ song_formset.management_form }}
     <table id="song-table">
         <thead>
@@ -46,74 +124,73 @@
         </tbody>
     </table>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tbody = document.getElementById('song-formset');
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tbody = document.getElementById('song-formset');
 
-    // Move up buttons
-    tbody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('move-up')) {
-            const row = e.target.closest('tr');
-            const prevRow = row.previousElementSibling;
-            if (prevRow) {
-                tbody.insertBefore(row, prevRow);
-                renumberFormset();
-            }
-        }
-    });
-
-    // Move down buttons
-    tbody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('move-down')) {
-            const row = e.target.closest('tr');
-            const nextRow = row.nextElementSibling;
-            if (nextRow) {
-                tbody.insertBefore(nextRow, row);
-                renumberFormset();
-            }
-        }
-    });
-
-    // Renumber entire formset after moving
-    function renumberFormset() {
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach((row, index) => {
-            // Update all input/select names and IDs with new index
-            const inputs = row.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                // Update name attribute
-                if (input.name) {
-                    input.name = input.name.replace(/eventsong_set-\d+/, `eventsong_set-${index}`);
+        // Move up buttons
+        tbody.addEventListener('click', function(e) {
+            if (e.target.classList.contains('move-up')) {
+                const row = e.target.closest('tr');
+                const prevRow = row.previousElementSibling;
+                if (prevRow) {
+                    tbody.insertBefore(row, prevRow);
+                    renumberFormset();
                 }
-                // Update id attribute
-                if (input.id) {
-                    input.id = input.id.replace(/id_eventsong_set-\d+/, `id_eventsong_set-${index}`);
-                }
-            });
-
-            // Update labels for attribute
-            const labels = row.querySelectorAll('label');
-            labels.forEach(label => {
-                if (label.htmlFor) {
-                    label.htmlFor = label.htmlFor.replace(/id_eventsong_set-\d+/, `id_eventsong_set-${index}`);
-                }
-            });
-
-            // Update order value
-            const orderInput = row.querySelector('input[name$="-order"]');
-            if (orderInput) {
-                orderInput.value = index + 1;
             }
         });
-    }
 
-    // Set initial order numbers
-    renumberFormset();
-});
-</script>
+        // Move down buttons
+        tbody.addEventListener('click', function(e) {
+            if (e.target.classList.contains('move-down')) {
+                const row = e.target.closest('tr');
+                const nextRow = row.nextElementSibling;
+                if (nextRow) {
+                    tbody.insertBefore(nextRow, row);
+                    renumberFormset();
+                }
+            }
+        });
 
+        // Renumber entire formset after moving
+        function renumberFormset() {
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                // Update all input/select names and IDs with new index
+                const inputs = row.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    // Update name attribute
+                    if (input.name) {
+                        input.name = input.name.replace(/eventsong_set-\d+/, `eventsong_set-${index}`);
+                    }
+                    // Update id attribute
+                    if (input.id) {
+                        input.id = input.id.replace(/id_eventsong_set-\d+/, `id_eventsong_set-${index}`);
+                    }
+                });
 
-<h3>Attendance</h3>
+                // Update labels for attribute
+                const labels = row.querySelectorAll('label');
+                labels.forEach(label => {
+                    if (label.htmlFor) {
+                        label.htmlFor = label.htmlFor.replace(/id_eventsong_set-\d+/, `id_eventsong_set-${index}`);
+                    }
+                });
+
+                // Update order value
+                const orderInput = row.querySelector('input[name$="-order"]');
+                if (orderInput) {
+                    orderInput.value = index + 1;
+                }
+            });
+        }
+
+        // Set initial order numbers
+        renumberFormset();
+    });
+    </script>
+
+    <h3>Attendance</h3>
     {{ attendance_formset.management_form }}
     <table>
         <thead>
@@ -128,8 +205,15 @@ document.addEventListener('DOMContentLoaded', function() {
         </thead>
         <tbody id="attendance-formset">
             {% for form in attendance_formset %}
-                <tr class="formset-form">
-                    <td>{{ form.person }}</td>
+                <!-- NEW: Add locked class to row if locked -->
+                <tr class="formset-form {% if form.instance.is_locked or is_event_locked %}locked-attendance-row{% endif %}">
+                    <td>
+                        {{ form.person }}
+                        <!-- NEW: Show lock icon if individual record is locked -->
+                        {% if form.instance.is_locked %}
+                            <span style="color: #dc3545; font-size: 0.9em;" title="{{ form.instance.locked_reason }}">🔒</span>
+                        {% endif %}
+                    </td>
                     {% for radio in form.attendance_type %}
                         <td>{{ radio.tag }}</td>
                     {% endfor %}
@@ -138,6 +222,8 @@ document.addEventListener('DOMContentLoaded', function() {
             {% endfor %}
         </tbody>
     </table>
-   <button type="submit">Update Event</button>
+
+    <!-- NEW: Disable submit button if event is locked and user is not admin -->
+    <button type="submit" {% if is_event_locked and not is_admin %}disabled{% endif %}>Update Event</button>
 </form>
 {% endblock %}

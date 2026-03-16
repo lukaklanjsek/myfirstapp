@@ -276,7 +276,7 @@ class OrganizationCreateView(CreateView):
 
             # track the admin into period
             MembershipPeriod.objects.create(
-                membership=membership,
+                user=organization.user,
                 person=person_admin,
                 role_id=Role.ADMIN,
                 started_at=datetime.date.today()
@@ -301,9 +301,9 @@ class OrgMemberListView(ListView):
 
     def get_queryset(self):
         url_username = self.kwargs["username"]
-        print(f"=== OrgMemberListView get_queryset ===")
-        print(f"Logged in user: {self.request.user.username}")
-        print(f"URL username: {url_username}")
+        # print(f"=== OrgMemberListView get_queryset ===")
+        # print(f"Logged in user: {self.request.user.username}")
+        # print(f"URL username: {url_username}")
         queryset = AccessControl.get_visible_members(
             self.request.user,
             url_username
@@ -476,7 +476,7 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
             # Track when they started this role
             MembershipPeriod.objects.create(
-                membership=membership,
+                user=self.customuser,
                 person=person,
                 role=role,
                 started_at=today
@@ -605,7 +605,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                 role_id=role_id
             )
             MembershipPeriod.objects.create(
-                membership=membership,
+                user=self.customuser,
                 person=self.person,
                 role_id=role_id,
                 started_at=today
@@ -616,7 +616,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         if removed_role_ids:
             # Close open periods for removed roles
             MembershipPeriod.objects.filter(
-                membership=membership,
+                user=self.customuser,
                 person=self.person,
                 role_id__in=removed_role_ids,
                 ended_at__isnull=True
@@ -867,6 +867,15 @@ class EventUpdateView(UpdateView):
             )
 
         context['url_username'] = self.kwargs.get('username')
+        context['is_event_locked'] = event.attendance_locked
+        context['is_admin'] = AccessControl.can_add_event(
+            self.request.user,
+            self.customuser
+        ).filter(person__roles__id=Role.ADMIN).exists()
+
+        # Check if admin is in override mode
+        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and context['is_admin']
+
         return context
 
     # def _get_prepopulated_attendance_formset(self, event):
@@ -913,6 +922,19 @@ class EventUpdateView(UpdateView):
         song_formset = context['song_formset']
         attendance_formset = context['attendance_formset']
 
+        # check if admin is overriding the lock
+        is_admin = AccessControl.can_add_event(
+            self.request.user,
+            self.customuser.username
+        ).filter(person__roles__id=Role.ADMIN).exists()
+
+        admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
+
+        # Check if event is locked
+        if self.object.attendance_locked and not admin_override:
+            messages.error(self.request, "This event's attendance is locked. Contact an admin to unlock.")
+            return self.form_invalid(form)
+
         # CHANGED: Validate formsets BEFORE starting transaction for better error handling
         if not song_formset.is_valid():
             messages.error(self.request, "Please fix errors in the songs section.")
@@ -930,9 +952,26 @@ class EventUpdateView(UpdateView):
             song_formset.save()
 
             attendance_formset.instance = self.object
+
+            # Auto-lock modified attendance records
+            for attendance_form in attendance_formset:
+                if attendance_form.instance.pk and attendance_form.has_changed():
+                    # Record was modified - lock it (even if admin edited)
+                    attendance_form.instance.is_locked = True
+                    # Update lock reason if admin override
+                    if admin_override:
+                        attendance_form.instance.locked_reason = "Modified by admin (override)"
+                    else:
+                        attendance_form.instance.locked_reason = "Modified from event detail page"
+                    attendance_form.instance.last_modified_by = self.request.user
+
             attendance_formset.save()
 
-        messages.success(self.request, f"Event updated successfully!")  # ADDED: Success feedback message
+
+        if admin_override:
+            messages.success(self.request, f"Event updated successfully! (Admin override used)")
+        else:
+            messages.success(self.request, f"Event updated successfully!")
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
@@ -1103,20 +1142,44 @@ class AttendanceDashboardView(View):
                     _, event_id, person_id = key.split('_')
                     checked_attendances.add((int(event_id), int(person_id)))
 
+            skipped_count = 0
+
             # Update all attendance records
             for event in events:
+                # NEW: Skip if event is locked
+                if event.attendance_locked:
+                    skipped_count += event.attendance_set.count()
+                    continue
+
                 for member in members:
                     is_present = (event.id, member.id) in checked_attendances
                     attendance_type = present_type if is_present else absent_type
 
                     # Get or create attendance record
-                    Attendance.objects.update_or_create(
+                    attendance, created = Attendance.objects.get_or_create(
                         event=event,
                         person=member,
                         defaults={'attendance_type': attendance_type}
                     )
 
-            messages.success(request, "Attendance updated successfully!")
+                    # Skip if individual record is locked
+                    if not created and attendance.is_locked:
+                        skipped_count += 1
+                        continue
+
+                    # Update if not locked
+                    if attendance.attendance_type != attendance_type:
+                        attendance.attendance_type = attendance_type
+                        attendance.save()
+
+                # NEW: Show appropriate success message
+            if skipped_count > 0:
+                messages.warning(
+                    request,
+                    f"Attendance updated! ({skipped_count} locked records were skipped)"
+                )
+            else:
+                messages.success(request, "Attendance updated successfully!")
 
         # Redirect back to the same view with the same filters
         query_params = request.GET.urlencode()
@@ -1131,7 +1194,10 @@ class AttendanceDashboardView(View):
         attendance_lookup = {}
         for event in events:
             attendance_lookup[event.id] = {
-                att.person_id: att.attendance_type_id
+                att.person_id: {
+                    'type_id': att.attendance_type_id,
+                    'is_locked': att.is_locked
+                }
                 for att in event.attendance_set.all()
             }
 
@@ -1147,11 +1213,15 @@ class AttendanceDashboardView(View):
 
             # Build list of attendance cells in same order as events
             for event in events:
-                attendance_type_id = attendance_lookup.get(event.id, {}).get(member.id)
+                att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
+                attendance_type_id = att_data.get('type_id')
+                is_locked = att_data.get('is_locked', False) or event.attendance_locked  # NEW
+
                 row['attendance_cells'].append({
                     'event_id': event.id,
                     'is_present': attendance_type_id == present_type.id,
-                    'attendance_type_id': attendance_type_id
+                    'attendance_type_id': attendance_type_id,
+                    'is_locked': is_locked,  # NEW
                 })
 
                 if attendance_type_id == present_type.id:
@@ -1181,6 +1251,40 @@ class AttendanceDashboardView(View):
             })
 
         return totals
+
+
+@method_decorator(login_required, name='dispatch')
+class ToggleEventLockView(View):
+    """Admin-only view to lock/unlock event attendance."""
+
+    def post(self, request, username, pk):
+        org_user = get_object_or_404(CustomUser, username=username)
+        event = get_object_or_404(Event, pk=pk, user=org_user)
+
+        # Check if user is admin
+        context['is_admin'] = AccessControl.can_add_event(
+            self.request.user,
+            self.customuser.username
+        ).filter(person__roles__id=Role.ADMIN).exists()
+
+        if not is_admin:
+            return HttpResponseForbidden("Only admins can lock/unlock events.")
+
+        # Toggle lock
+        event.attendance_locked = not event.attendance_locked
+
+        if event.attendance_locked:
+            event.locked_by = request.user
+            event.locked_at = timezone.now()
+            messages.success(request, f" Event '{event.name}' attendance is now LOCKED.")
+        else:
+            event.locked_by = None
+            event.locked_at = None
+            messages.success(request, f" Event '{event.name}' attendance is now UNLOCKED.")
+
+        event.save()
+
+        return redirect('secondapp:event_detail', username=username, pk=pk)
 
 
 def quick_add_rehearsal(request, username):
@@ -1234,6 +1338,22 @@ def quick_add_rehearsal(request, username):
     return redirect('secondapp:attendance', username=username)
 
 
+def update_attendance_from_event_detail(request, attendance_id):
+    attendance = get_object_or_404(Attendance, id=attendance_id)
+
+    # Check if event is locked
+    if attendance.event.attendance_locked:
+        messages.error(request, "This event's attendance is locked")
+        return redirect('event_detail', event_id=attendance.event.id)
+
+    # Update attendance
+    attendance.status = request.POST.get('status')
+    attendance.is_locked = True  # Lock this record
+    attendance.locked_reason = "Modified in event details"
+    attendance.last_modified_by = request.user
+    attendance.save()
+
+    return redirect('event_detail', event_id=attendance.event.id)
 
 
 # @method_decorator(login_required, name='dispatch')
@@ -1368,7 +1488,7 @@ def quick_add_rehearsal(request, username):
 #             rehearsal.member_status = rehearsal.get_member_status()
 #
 #         happening_now = Rehearsal.objects.filter(
-#             is_cancelled=False,
+#             is_canceled=False,
 #             calendar__gte=now - timedelta(minutes=660),
 #             calendar__lte=now + timedelta(minutes=660)
 #         ).first()
@@ -1409,7 +1529,7 @@ def quick_add_rehearsal(request, username):
 #             rehearsal.member_status = rehearsal.get_member_status()
 #
 #         happening_now = Rehearsal.objects.filter(
-#             is_cancelled=False,
+#             is_canceled=False,
 #             calendar__gte=now - timedelta(minutes=660),
 #             calendar__lte=now + timedelta(minutes=660)
 #         ).first()

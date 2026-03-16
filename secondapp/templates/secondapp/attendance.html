@@ -11,6 +11,30 @@
     width: 40px;
     text-align: center;
 }
+
+.locked-cell {
+    background-color: #f5f5f5;
+    opacity: 0.6;
+}
+
+.locked-cell input[type="checkbox"] {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.locked-event-header {
+    background-color: #fff3cd;
+    position: relative;
+}
+
+.locked-event-header::after {
+    content: "🔒";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+}
+
 </style>
 <div class="attendance-dashboard">
     <h2>Attendance Dashboard - {{ org_user.username }}</h2>
@@ -48,9 +72,12 @@
                     <tr>
                         <th class="sticky-col">Member</th>
                         {% for event in events %}
-                            <th class="event-col" style="height: 10px; padding: 5px;">
+                            <th class="event-col {% if event.attendance_locked %}locked-event-header{% endif %}"
+                                style="height: 10px; padding: 5px;">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
+                                    <a href="{% url 'secondapp:event_update' url_username event.id %}">
                                     {{ event.event_type.name|first }}  {{ event.started_at|date:"m/d" }}
+                                    </a>
                                 </div>
                             </th>
                         {% endfor %}
@@ -63,13 +90,15 @@
                         <tr>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="attendance-cell">
+                                <td class="attendance-cell {% if cell.is_locked %}locked-cell{% endif %}">
                                     <input
                                         type="checkbox"
                                         name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
                                         value="present"
                                         {% if cell.is_present %}checked{% endif %}
+                                        {% if cell.is_locked %}disabled{% endif %}
                                         class="attendance-checkbox"
+                                        {% if cell.is_locked %}title="Locked - edit in event details to unlock"{% endif %}
                                     >
                                 </td>
                             {% endfor %}

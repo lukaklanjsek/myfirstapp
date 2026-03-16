@@ -265,7 +265,13 @@ class MembershipPeriod(models.Model):
     Tracks activity periods for each role assignment.
     Can have multiple periods of the same role, but only singular period at a given time.
     """
-    membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="membership_period")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="membership_period"
+    )
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="membership_period")
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="membership_period")
     started_at = models.DateField()
@@ -359,6 +365,11 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    attendance_locked = models.BooleanField(default=False)
+    locked_by = models.ForeignKey(CustomUser, null=True, blank=True,
+                                  on_delete=models.SET_NULL, related_name='locked_events')
+    locked_at = models.DateTimeField(null=True, blank=True)
+
 
 
 
@@ -395,6 +406,10 @@ class Attendance(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    is_locked = models.BooleanField(default=False)
+    locked_reason = models.CharField(max_length=100, blank=True)
+    last_modified_by = models.ForeignKey(CustomUser, null=True, on_delete=models.SET_NULL)
 
     class Meta:
         constraints = [

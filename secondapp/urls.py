@@ -23,6 +23,8 @@ urlpatterns = [
     path("<str:username>/events/add/", views.EventCreateView.as_view(), name="event_create"),
     path("<str:username>/events/<int:pk>/", views.EventDetailView.as_view(), name="event_detail"),
     path("<str:username>/events/<int:pk>/edit/", views.EventUpdateView.as_view(), name="event_update"),
+    path('<str:username>/event/<int:pk>/toggle-lock/', views.ToggleEventLockView.as_view(), name='toggle_event_lock'),
+
     path("<str:username>/members/", views.OrgMemberListView.as_view(), name="org_member_list"),
     path("<str:username>/members/add/", views.OrgMemberAddView.as_view(),name="org_member_add"),
     path("<str:username>/members/add-composer/",
