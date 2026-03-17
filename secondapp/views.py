@@ -777,9 +777,9 @@ class EventCreateView(CreateView):
     def form_valid(self, form):
         # Debug: print what's being assigned
         user_to_assign = self.customuser if self.customuser else self.request.user
-        print(f"DEBUG: Assigning event to user: {user_to_assign.username}")
-        print(f"DEBUG: self.customuser = {self.customuser}")
-        print(f"DEBUG: self.request.user = {self.request.user}")
+        # print(f"DEBUG: Assigning event to user: {user_to_assign.username}")
+        # print(f"DEBUG: self.customuser = {self.customuser}")
+        # print(f"DEBUG: self.request.user = {self.request.user}")
 
         form.instance.user = user_to_assign
         # form.instance.user =  self.request.user # self.customuser if self.customuser else
@@ -861,10 +861,24 @@ class EventUpdateView(UpdateView):
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
-            context['attendance_formset'] = AttendanceFormSet(
+
+            attendance_formset = AttendanceFormSet(
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
+
+            is_admin = AccessControl.can_add_event(
+                self.request.user,
+                self.customuser
+            ).filter(person__roles__id=Role.ADMIN).exists()
+
+            if not is_admin:
+                for form in attendance_formset:
+                    if form.instance.pk and form.instance.is_locked:
+                        for field in form.fields.values():
+                            field.disabled = True
+
+            context['attendance_formset'] = attendance_formset
 
         context['url_username'] = self.kwargs.get('username')
         context['is_event_locked'] = event.attendance_locked
@@ -917,18 +931,28 @@ class EventUpdateView(UpdateView):
         Save the event and related formsets in a transaction.
 
         All changes are saved atomically - if any save fails, all changes are rolled back.
-        """  # ADDED: Docstring
+        """
         context = self.get_context_data()
         song_formset = context['song_formset']
         attendance_formset = context['attendance_formset']
 
         # check if admin is overriding the lock
-        is_admin = AccessControl.can_add_event(
-            self.request.user,
-            self.customuser.username
-        ).filter(person__roles__id=Role.ADMIN).exists()
+        is_admin = context["is_admin"]
+
+        if not is_admin:
+            for attendance_form in attendance_formset:
+                if attendance_form.instance.pk and attendance_form.instance.is_locked:
+                    if attendance_form.has_changed():
+                        messages.error(
+                            self.request,
+                            "You cannot modify locked attendance records."
+                        )
+                        return self.form_invalid(form)
 
         admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
+
+        admin_override_pk = self.request.POST.get("admin_override")
+        edit_pk = self.request.POST.get("edit_attendance")
 
         # Check if event is locked
         if self.object.attendance_locked and not admin_override:
@@ -953,17 +977,22 @@ class EventUpdateView(UpdateView):
 
             attendance_formset.instance = self.object
 
-            # Auto-lock modified attendance records
-            for attendance_form in attendance_formset:
-                if attendance_form.instance.pk and attendance_form.has_changed():
-                    # Record was modified - lock it (even if admin edited)
-                    attendance_form.instance.is_locked = True
-                    # Update lock reason if admin override
-                    if admin_override:
-                        attendance_form.instance.locked_reason = "Modified by admin (override)"
-                    else:
-                        attendance_form.instance.locked_reason = "Modified from event detail page"
-                    attendance_form.instance.last_modified_by = self.request.user
+            # if is_admin:
+            #     for attendance_form in attendance_formset:
+            #         attendance = attendance_form.instance
+            #
+            #         if attendance.pk:  # Only process existing records
+            #             lock_checkbox_name = f"lock_{attendance.pk}"
+            #             lock_checked = self.request.POST.get(lock_checkbox_name) == "on"
+            #
+            #             if lock_checked:
+            #                 attendance.is_locked = True
+            #                 attendance.locked_reason = "Locked by admin"
+            #             else:
+            #                 attendance.is_locked = False
+            #                 attendance.locked_reason = ""
+            #
+            #             attendance.last_modified_by = self.request.user
 
             attendance_formset.save()
 
@@ -1144,12 +1173,19 @@ class AttendanceDashboardView(View):
 
             skipped_count = 0
 
+            is_admin = AccessControl.can_add_event(
+                request.user,
+                self.org_user
+            ).filter(person__roles__id=Role.ADMIN).exists()
+
             # Update all attendance records
             for event in events:
                 # NEW: Skip if event is locked
                 if event.attendance_locked:
                     skipped_count += event.attendance_set.count()
                     continue
+
+
 
                 for member in members:
                     is_present = (event.id, member.id) in checked_attendances
@@ -1163,13 +1199,20 @@ class AttendanceDashboardView(View):
                     )
 
                     # Skip if individual record is locked
-                    if not created and attendance.is_locked:
-                        skipped_count += 1
-                        continue
+                    # if not created and attendance.is_locked and not is_admin:
+                    #     skipped_count += 1
+                    #     continue
 
                     # Update if not locked
                     if attendance.attendance_type != attendance_type:
                         attendance.attendance_type = attendance_type
+
+                        # # LOCK after change (ONLY in dashboard!)
+                        # if not attendance.is_locked:
+                        #     attendance.is_locked = True
+                        #     attendance.locked_by = request.user
+                        #     attendance.locked_at = timezone.now()
+
                         attendance.save()
 
                 # NEW: Show appropriate success message
@@ -1262,9 +1305,9 @@ class ToggleEventLockView(View):
         event = get_object_or_404(Event, pk=pk, user=org_user)
 
         # Check if user is admin
-        context['is_admin'] = AccessControl.can_add_event(
-            self.request.user,
-            self.customuser.username
+        is_admin = AccessControl.can_add_event(
+            request.user,
+            org_user
         ).filter(person__roles__id=Role.ADMIN).exists()
 
         if not is_admin:

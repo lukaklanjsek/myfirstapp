@@ -205,25 +205,29 @@
         </thead>
         <tbody id="attendance-formset">
             {% for form in attendance_formset %}
-                <!-- NEW: Add locked class to row if locked -->
                 <tr class="formset-form {% if form.instance.is_locked or is_event_locked %}locked-attendance-row{% endif %}">
-                    <td>
-                        {{ form.person }}
-                        <!-- NEW: Show lock icon if individual record is locked -->
-                        {% if form.instance.is_locked %}
-                            <span style="color: #dc3545; font-size: 0.9em;" title="{{ form.instance.locked_reason }}">🔒</span>
-                        {% endif %}
-                    </td>
-                    {% for radio in form.attendance_type %}
-                        <td>{{ radio.tag }}</td>
-                    {% endfor %}
-                    <td style="display: none;">{{ form.id }}</td>
+                <td>
+                    {{ form.person }}
+                    {% if form.instance.is_locked %}
+                        <span style="color: #dc3545; font-size: 0.9em;" title="{{ form.instance.locked_reason }}">🔒</span>
+                    {% endif %}
+                </td>
+                {% for radio in form.attendance_type %}
+                    <td>{{ radio.tag }}</td>
+                {% endfor %}
+                <td>
+                    {% if user.is_superuser %}
+                        <input type="checkbox" name="lock_{{ form.instance.pk }}" {% if form.instance.is_locked %}checked{% endif %}>
+                        <label>Lock</label>
+                    {% endif %}
+                </td>
+                <td style="display: none;">{{ form.id }}</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- NEW: Disable submit button if event is locked and user is not admin -->
+    <!--: Disable submit button if event is locked and user is not admin -->
     <button type="submit" {% if is_event_locked and not is_admin %}disabled{% endif %}>Update Event</button>
 </form>
 {% endblock %}
