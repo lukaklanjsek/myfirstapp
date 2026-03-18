@@ -7,7 +7,7 @@ import datetime
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
-from .models import Event, EventSong, Attendance, AttendanceType
+from .models import Event, EventSong, Attendance, AttendanceType, Singer
 from django.forms import inlineformset_factory
 from django.db.models import Q
 
@@ -215,6 +215,29 @@ class AttendanceForm(forms.ModelForm):
                         Q(memberships__user=user, memberships__person__roles__id=Role.MEMBER) |
                         Q(pk=self.instance.person.pk)
                     ).distinct()
+
+
+class SingerForm(forms.Form):
+    options = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def __init__(self, choices=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if choices:
+            self.fields['options'].choices = choices
+
+class InstrumentalistForm(forms.Form):
+    options = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def __init__(self, choices=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if choices:
+            self.fields['options'].choices = choices
 
 
 # Formset factories  ------------------------------------------------------

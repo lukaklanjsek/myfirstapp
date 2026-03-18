@@ -63,6 +63,27 @@ class EventType(models.Model):
         return self.name
 
 
+class Voice(models.Model):
+    """
+    All possible voice declarations, imported from fixtures.
+    From Soprano 1 to Solo Bass 2.
+    """
+    name = models.CharField("voice", max_length=160, unique=True)
+    additional_notes = models.CharField("additional notes", max_length=250, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Instrument(models.Model):
+    """
+    All possible instrument declarations, imported from fixtures.
+    """
+    name = models.CharField("instrument", max_length=160, unique=True)
+    additional_notes = models.CharField("additional notes", max_length=250, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class AttendanceType(models.Model):
     PRESENT = 1
     ABSENT = 2
@@ -407,9 +428,9 @@ class Attendance(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    is_locked = models.BooleanField(default=False)
-    locked_reason = models.CharField(max_length=100, blank=True)
-    last_modified_by = models.ForeignKey(CustomUser, null=True, on_delete=models.SET_NULL)
+    # is_locked = models.BooleanField(default=False)
+    # locked_reason = models.CharField(max_length=100, blank=True)
+    # last_modified_by = models.ForeignKey(CustomUser, null=True, on_delete=models.SET_NULL)
 
     class Meta:
         constraints = [
@@ -418,6 +439,29 @@ class Attendance(models.Model):
                 name="unique_person_per_event"
             )
         ]
+
+
+class Singer(models.Model):
+    """Through table for person and voice."""
+    person = models.ForeignKey(Person, on_delete=models.PROTECT)
+    voice = models.ForeignKey(Voice, on_delete=models.PROTECT)
+
+
+
+class Instrumentalist(models.Model):
+    """Through table for person and instrument."""
+    person = models.ForeignKey(Person, on_delete=models.PROTECT)
+    instrument = models.ForeignKey(Instrument, on_delete=models.PROTECT)
+
+
+
+# class EventSinger(models.Model):
+#     """Through table for adding designated singers to specific events."""
+#     event = models.ForeignKey(Event, on_delete=models.PROTECT)
+#     singer = models.ForeignKey(Singer, on_delete=models.PROTECT)
+#
+#
+#########################################################################
 #
 # class SongOrganization(models.Model):
 #     """Relationship between song.pk and its org so each org only manages its own songs."""

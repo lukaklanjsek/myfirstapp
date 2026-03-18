@@ -47,9 +47,9 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
-from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill
-from .models import Event, EventSong, Attendance, AttendanceType, EventType
-from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm
+from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice
+from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm, SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
@@ -500,27 +500,27 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
     def dispatch(self, request, *args, **kwargs):
         url_username = self.kwargs["username"]
-        print("print orgmembereditview dispatch url_username:", url_username)
+        # print("print orgmembereditview dispatch url_username:", url_username)
 
         self.customuser = get_object_or_404(
             CustomUser,
             username=url_username
         )
-        print("orgmembereditview dispatch customuser", self.customuser)
+        # print("orgmembereditview dispatch customuser", self.customuser)
 
         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
-        print("orgmembereditview dispatch person", self.person)
+        # print("orgmembereditview dispatch person", self.person)
 
         viewer_role = AccessControl.get_org_roles(
             request.user,
             url_username
         )
-        print("orgmembereditview dispatch viewer_role", viewer_role)
+        # print("orgmembereditview dispatch viewer_role", viewer_role)
 
         is_admin = viewer_role.filter(id=Role.ADMIN).exists()
         is_owner = self.person.user == request.user
 
-        print("orgmembereditview dispatch is_admin, is_owner", is_admin, is_owner)
+        # print("orgmembereditview dispatch is_admin, is_owner", is_admin, is_owner)
 
         if not (is_admin or is_owner):
             raise PermissionDenied("No permission to edit")
@@ -648,6 +648,95 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         removed_skill_ids = current_skill_ids - new_skill_ids
         if removed_skill_ids:
             current_skills.filter(skill_id__in=removed_skill_ids).delete()
+
+#
+# @method_decorator(login_required, name="dispatch")
+# class OrgMemberDetailView(DetailView):
+#     model = Person
+#     template_name = "secondapp/org_person.html"
+#     permission_check_method = AccessControl.can_view_song
+
+
+
+@method_decorator(login_required, name="dispatch")
+class SingerFormView(FormView):
+    template_name = "secondapp/singer_form.html"
+    form_class = SingerForm
+    success_url = reverse_lazy('secondapp:org_person')
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs["username"]
+        self.customuser = get_object_or_404(
+            CustomUser,
+            username=url_username
+        )
+        self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
+        viewer_role = AccessControl.get_org_roles(
+            request.user,
+            url_username
+        )
+        is_admin = viewer_role.filter(id=Role.ADMIN).exists()
+        is_owner = self.person.user == request.user
+
+        if not (is_admin or is_owner):
+            raise PermissionDenied("No permission to edit")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, form_class=None):
+        # pre-fill form with existing data
+        form = super().get_form(form_class)
+
+        if self.request.method == "GET":
+            current_voice_ids = self.person.person_skill.values_list(
+                "voice_id", flat=True
+            )
+            form.initial = {
+                # person info
+                "voice": current_voice_ids,
+            }
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["organization"] = self.customuser
+        return context
+
+
+    # def form_valid(self, form):
+    #     selected = form.cleaned_data['options']
+    #     singer = Singer.objects.get_or_create(
+    #         person=self.person,
+    #         defaults={'voice': selected}
+    #     )
+    #
+    #
+    #     return super().form_valid(form)
+    def form_valid(self, form):
+        self._update_voice(form.cleaned_data["roles"])
+        return redirect("secondapp:org_member_list",username=self.kwargs["username"])
+
+    def _update_voice(self, new_skills):
+        """sync skills - add new, remove old"""
+        # current skills
+        current_voice = Singer.objects.filter(person=self.person)
+        current_voice_ids = set(current_voice.values_list("voice_id"))
+
+        # new skills
+        new_voice_ids = {voice.id for voice in new_voices}
+
+        # do the magic
+        for voice_id in (new_voice_ids - current_voice_ids):
+            Voice.objects.create(
+                person=self.person,
+                voice_id=voice_id
+            )
+
+        # remove old skills
+        removed_voice_ids = current_voice_ids - new_voice_ids
+        if removed_voice_ids:
+            current_voice.filter(voice_id__in=removed_voice_ids).delete()
+
 
 
 @method_decorator(login_required, name='dispatch')
@@ -873,10 +962,10 @@ class EventUpdateView(UpdateView):
             ).filter(person__roles__id=Role.ADMIN).exists()
 
             if not is_admin:
-                for form in attendance_formset:
-                    if form.instance.pk and form.instance.is_locked:
-                        for field in form.fields.values():
-                            field.disabled = True
+                # for form in attendance_formset:
+                #     if form.instance.pk and form.instance.is_locked:
+                #         for field in form.fields.values():
+                field.disabled = True
 
             context['attendance_formset'] = attendance_formset
 
@@ -940,14 +1029,14 @@ class EventUpdateView(UpdateView):
         is_admin = context["is_admin"]
 
         if not is_admin:
-            for attendance_form in attendance_formset:
-                if attendance_form.instance.pk and attendance_form.instance.is_locked:
-                    if attendance_form.has_changed():
-                        messages.error(
-                            self.request,
-                            "You cannot modify locked attendance records."
-                        )
-                        return self.form_invalid(form)
+            # for attendance_form in attendance_formset:
+            #     if attendance_form.instance.pk and attendance_form.instance.is_locked:
+            #         if attendance_form.has_changed():
+            #             messages.error(
+            #                 self.request,
+            #                 "You cannot modify locked attendance records."
+            #             )
+            return self.form_invalid(form)
 
         admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
 
@@ -1239,7 +1328,7 @@ class AttendanceDashboardView(View):
             attendance_lookup[event.id] = {
                 att.person_id: {
                     'type_id': att.attendance_type_id,
-                    'is_locked': att.is_locked
+                    # 'is_locked': att.is_locked
                 }
                 for att in event.attendance_set.all()
             }
@@ -1258,13 +1347,13 @@ class AttendanceDashboardView(View):
             for event in events:
                 att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
                 attendance_type_id = att_data.get('type_id')
-                is_locked = att_data.get('is_locked', False) or event.attendance_locked  # NEW
+                # is_locked = att_data.get('is_locked', False) or event.attendance_locked  # NEW
 
                 row['attendance_cells'].append({
                     'event_id': event.id,
                     'is_present': attendance_type_id == present_type.id,
                     'attendance_type_id': attendance_type_id,
-                    'is_locked': is_locked,  # NEW
+                    # 'is_locked': is_locked,  # NEW
                 })
 
                 if attendance_type_id == present_type.id:
@@ -1296,38 +1385,38 @@ class AttendanceDashboardView(View):
         return totals
 
 
-@method_decorator(login_required, name='dispatch')
-class ToggleEventLockView(View):
-    """Admin-only view to lock/unlock event attendance."""
-
-    def post(self, request, username, pk):
-        org_user = get_object_or_404(CustomUser, username=username)
-        event = get_object_or_404(Event, pk=pk, user=org_user)
-
-        # Check if user is admin
-        is_admin = AccessControl.can_add_event(
-            request.user,
-            org_user
-        ).filter(person__roles__id=Role.ADMIN).exists()
-
-        if not is_admin:
-            return HttpResponseForbidden("Only admins can lock/unlock events.")
-
-        # Toggle lock
-        event.attendance_locked = not event.attendance_locked
-
-        if event.attendance_locked:
-            event.locked_by = request.user
-            event.locked_at = timezone.now()
-            messages.success(request, f" Event '{event.name}' attendance is now LOCKED.")
-        else:
-            event.locked_by = None
-            event.locked_at = None
-            messages.success(request, f" Event '{event.name}' attendance is now UNLOCKED.")
-
-        event.save()
-
-        return redirect('secondapp:event_detail', username=username, pk=pk)
+# @method_decorator(login_required, name='dispatch')
+# class ToggleEventLockView(View):
+#     """Admin-only view to lock/unlock event attendance."""
+#
+#     def post(self, request, username, pk):
+#         org_user = get_object_or_404(CustomUser, username=username)
+#         event = get_object_or_404(Event, pk=pk, user=org_user)
+#
+#         # Check if user is admin
+#         is_admin = AccessControl.can_add_event(
+#             request.user,
+#             org_user
+#         ).filter(person__roles__id=Role.ADMIN).exists()
+#
+#         if not is_admin:
+#             return HttpResponseForbidden("Only admins can lock/unlock events.")
+#
+#         # Toggle lock
+#         event.attendance_locked = not event.attendance_locked
+#
+#         if event.attendance_locked:
+#             event.locked_by = request.user
+#             event.locked_at = timezone.now()
+#             messages.success(request, f" Event '{event.name}' attendance is now LOCKED.")
+#         else:
+#             event.locked_by = None
+#             event.locked_at = None
+#             messages.success(request, f" Event '{event.name}' attendance is now UNLOCKED.")
+#
+#         event.save()
+#
+#         return redirect('secondapp:event_detail', username=username, pk=pk)
 
 
 def quick_add_rehearsal(request, username):
@@ -1391,12 +1480,15 @@ def update_attendance_from_event_detail(request, attendance_id):
 
     # Update attendance
     attendance.status = request.POST.get('status')
-    attendance.is_locked = True  # Lock this record
-    attendance.locked_reason = "Modified in event details"
-    attendance.last_modified_by = request.user
+    # attendance.is_locked = True  # Lock this record
+    # attendance.locked_reason = "Modified in event details"
+    # attendance.last_modified_by = request.user
     attendance.save()
 
     return redirect('event_detail', event_id=attendance.event.id)
+
+
+
 
 
 # @method_decorator(login_required, name='dispatch')
