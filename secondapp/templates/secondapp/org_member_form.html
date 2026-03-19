@@ -13,7 +13,37 @@
 
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    <!-- Existing fields -->
+    <p>{{ form.first_name.label_tag }} {{ form.first_name }}</p>
+    <p>{{ form.last_name.label_tag }} {{ form.last_name }}</p>
+    <p>{{ form.email.label_tag }} {{ form.email }}</p>
+    <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
+    <p>{{ form.address.label_tag }} {{ form.address }}</p>
+
+    <!-- Roles -->
+    {{ form.roles.label_tag }}
+    {{ form.roles }}
+    <!-- Voices (renders as native <select multiple>) -->
+    <p>{{ form.voices.label_tag }}
+        {{ form.voices }}</p>
+    <small class="form-text">Hold Ctrl/Cmd to select multiple voices</small>
+
+    <!-- Instruments (renders as native <select multiple>) -->
+    <p>{{ form.instruments.label_tag }}
+    {{ form.instruments }}</p>
+    <small class="form-text">Hold Ctrl/Cmd to select multiple voices</small>
+    <p>
+        <small class="form-text">
+            If either voice or instrument get selected, options below get filled in automatically.
+        </small>
+    </p>
+
+
+    <!-- Skills -->
+    <p>{{ form.skills.label_tag }}
+        {{ form.skills }}</p>
+
+
     <button type="submit">Save</button>
 </form>
 

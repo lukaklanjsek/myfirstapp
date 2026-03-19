@@ -7,7 +7,7 @@ import datetime
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
-from .models import Event, EventSong, Attendance, AttendanceType, Singer
+from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
 from django.forms import inlineformset_factory
 from django.db.models import Q
 
@@ -96,6 +96,26 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
+    # Voice select multiple
+    voices = forms.ModelMultipleChoiceField(
+        queryset=Voice.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'size': '6',  # Shows 6 options at once
+            # 'class': 'form-select'  # Optional: for styling
+        }),
+        label='Voice Types'
+    )
+    # Instrument select multiple
+    instruments = forms.ModelMultipleChoiceField(
+        queryset=Instrument.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'size': '6',  # Shows 6 options at once
+            # 'class': 'form-select'  # Optional: for styling
+        }),
+        label='Instrument Types'
+    )
 
     def __init__(self, *args, preset=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -116,6 +136,12 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
             if poet_skill and external_role:
                 self.initial['roles'] = [external_role.id]
                 self.initial["skills"] = [poet_skill.id]
+
+        # For edit mode: pre-populate voice
+        # if person:
+        #     self.initial['voices'] = Voice.objects.filter(
+        #         singer__person=person
+        #     )
 
 
 class SongForm(forms.ModelForm):
@@ -217,27 +243,27 @@ class AttendanceForm(forms.ModelForm):
                     ).distinct()
 
 
-class SingerForm(forms.Form):
-    options = forms.MultipleChoiceField(
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
-
-    def __init__(self, choices=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if choices:
-            self.fields['options'].choices = choices
-
-class InstrumentalistForm(forms.Form):
-    options = forms.MultipleChoiceField(
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
-
-    def __init__(self, choices=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if choices:
-            self.fields['options'].choices = choices
+# class SingerForm(forms.Form):
+#     options = forms.MultipleChoiceField(
+#         required=False,
+#         widget=forms.CheckboxSelectMultiple,
+#     )
+#
+#     def __init__(self, choices=None, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         if choices:
+#             self.fields['options'].choices = choices
+#
+# class InstrumentalistForm(forms.Form):
+#     options = forms.MultipleChoiceField(
+#         required=False,
+#         widget=forms.CheckboxSelectMultiple,
+#     )
+#
+#     def __init__(self, choices=None, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         if choices:
+#             self.fields['options'].choices = choices
 
 
 # Formset factories  ------------------------------------------------------

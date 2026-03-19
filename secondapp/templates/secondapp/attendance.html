@@ -10,7 +10,19 @@
     width: 40px;
     text-align: center;
 }
+.grayed-out {
+    background-color: #f0f0f0;
+    opacity: 0.6;
+}
 
+.grayed-out-checkbox {
+    cursor: not-allowed;
+}
+
+.grayed-out input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
 </style>
 <div class="attendance-dashboard">
@@ -69,12 +81,14 @@
                         <tr>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="attendance-cell {% if cell.is_locked %}locked-cell{% endif %}">
+                                <td class="{% if cell.is_grayed_out %}grayed-out{% endif %}">
                                     <input
                                         type="checkbox"
                                         name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
                                         value="present"
                                         {% if cell.is_present %}checked{% endif %}
+                                        {% if cell.is_grayed_out %}disabled{% endif %}
+                                        class="{% if cell.is_grayed_out %}grayed-out-checkbox{% endif %}"
                                     >
                                 </td>
                             {% endfor %}

@@ -12,8 +12,7 @@
     </tr>
     {% for event in events %}
         <tr>
-            <td> <a href="{% url 'secondapp:event_update' url_username event.id %}">
-                   (Edit:)
+            <td> <a href="{% url 'secondapp:event_detail' url_username event.id %}">
                 {{ event.started_at }}
                 </a>
             </td>

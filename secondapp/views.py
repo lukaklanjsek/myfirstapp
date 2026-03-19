@@ -48,8 +48,8 @@ from .models import Organization, Person, Membership, MembershipPeriod, Role, Pe
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
-from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice
-from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm, SingerForm, InstrumentalistForm
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument
+from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
@@ -416,6 +416,12 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
             # 3. add skills
             self._add_skills(person, form.cleaned_data["skills"])
 
+            # 4. add voices
+            self._add_voices(person, form.cleaned_data["voices"])
+
+            # 5. add instruments
+            self._add_instruments(person, form.cleaned_data["instruments"])
+
         return redirect(
             "secondapp:org_member_list",
             username=self.kwargs["username"]
@@ -490,6 +496,49 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
                 skill=skill
             )
 
+    def _add_voices(self, person, selected_voices):
+        """Create Singer entries and ensure 'singer' skill is added."""
+        if not selected_voices:
+            return
+
+        # Create Singer entries for each selected voice
+        for voice in selected_voices:
+            Singer.objects.create(
+                person=person,
+                voice=voice
+            )
+
+        # Automatically add 'singer' skill if voices were selected
+        singer_skill = Skill.objects.filter(title__iexact='singer').first()
+        if singer_skill:
+            PersonSkill.objects.get_or_create(
+                person=person,
+                skill=singer_skill
+            )
+
+    def _add_instruments(self, person, selected_instruments):
+        """Create Instrumentalist entries and ensure 'instrumentalist' skill is added."""
+        if not selected_instruments:
+            return
+
+        # Create Instrumentalist entries for each selected instrument
+        for instrument in selected_instruments:
+            Instrumentalist.objects.create(
+                person=person,
+                instrument=instrument
+            )
+
+        # Automatically add 'instrumentalist' skill if instruments were selected
+        instrumentalist_skill = Skill.objects.filter(title__iexact='instrumentalist').first()
+        if instrumentalist_skill:
+            PersonSkill.objects.get_or_create(
+                person=person,
+                skill=instrumentalist_skill
+            )
+
+
+
+
 
 @method_decorator(login_required, name='dispatch')
 class OrgMemberEditView( FormView):  # OrgMemberMixin,
@@ -540,6 +589,16 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                 "skill_id", flat=True
             )
 
+            # current voices
+            current_voice_ids = Voice.objects.filter(
+                singer__person=self.person
+            ).values_list("id", flat=True)
+
+            # current instruments
+            current_instrument_ids = Instrument.objects.filter(
+                instrumentalist__person=self.person
+            ).values_list("id", flat=True)
+
             # dict of the checkboxes
             form.initial = {
                 # person info
@@ -551,6 +610,8 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                 # m2m relationships
                 "roles": current_role_ids,
                 "skills": current_skill_ids,
+                "voices": current_voice_ids,
+                "instruments": current_instrument_ids,
             }
 
         return form
@@ -570,6 +631,12 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
             # 3. update skills
             self._update_skills(form.cleaned_data["skills"])
+
+            # 4. update voices
+            self._update_voices(form.cleaned_data["voices"])
+
+            # 5. update instruments
+            self._update_instruments(form.cleaned_data["instruments"])
 
         return redirect("secondapp:org_member_list",username=self.kwargs["username"])
 
@@ -649,6 +716,80 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
         if removed_skill_ids:
             current_skills.filter(skill_id__in=removed_skill_ids).delete()
 
+    def _update_voices(self, new_voices):
+        """Sync voices - add new ones, remove old ones."""
+        # Current voices
+        current_singers = Singer.objects.filter(person=self.person)
+        current_voice_ids = set(current_singers.values_list("voice_id", flat=True))
+
+        # New voices from form
+        new_voice_ids = {voice.id for voice in new_voices}
+
+        # Add new voices
+        for voice_id in (new_voice_ids - current_voice_ids):
+            Singer.objects.create(
+                person=self.person,
+                voice_id=voice_id
+            )
+
+        # Remove old voices
+        removed_voice_ids = current_voice_ids - new_voice_ids
+        if removed_voice_ids:
+            current_singers.filter(voice_id__in=removed_voice_ids).delete()
+
+        # Handle 'singer' skill
+        singer_skill = Skill.objects.filter(title__iexact='singer').first()
+        if singer_skill:
+            if new_voices:
+                # If voices selected, ensure singer skill exists
+                PersonSkill.objects.get_or_create(
+                    person=self.person,
+                    skill=singer_skill
+                )
+            else:
+                # If no voices selected, remove singer skill
+                PersonSkill.objects.filter(
+                    person=self.person,
+                    skill=singer_skill
+                ).delete()
+
+    def _update_instruments(self, new_instruments):
+        """Sync instruments - add new ones, remove old ones."""
+        # Current instruments
+        current_instrumentalists = Instrumentalist.objects.filter(person=self.person)
+        current_instrument_ids = set(current_instrumentalists.values_list("instrument_id", flat=True))
+
+        # New instruments from form
+        new_instrument_ids = {instrument.id for instrument in new_instruments}
+
+        # Add new voices
+        for instrument_id in (new_instrument_ids - current_instrument_ids):
+            Instrumentalist.objects.create(
+                person=self.person,
+                instrument_id=instrument_id
+            )
+
+        # Remove old instruments
+        removed_instrument_ids = current_instrument_ids - new_instrument_ids
+        if removed_instrument_ids:
+            current_instrumentalists.filter(instrument_id__in=removed_instrument_ids).delete()
+
+        # Handle 'instrumentalist' skill
+        instrumentalist_skill = Skill.objects.filter(title__iexact='instrumentalist').first()
+        if instrumentalist_skill:
+            if new_instruments:
+                # If instruments selected, ensure instrumentalist skill exists
+                PersonSkill.objects.get_or_create(
+                    person=self.person,
+                    skill=instrumentalist_skill
+                )
+            else:
+                # If no voices selected, remove singer skill
+                PersonSkill.objects.filter(
+                    person=self.person,
+                    skill=instrumentalist_skill
+                ).delete()
+
 #
 # @method_decorator(login_required, name="dispatch")
 # class OrgMemberDetailView(DetailView):
@@ -658,84 +799,84 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
 
 
-@method_decorator(login_required, name="dispatch")
-class SingerFormView(FormView):
-    template_name = "secondapp/singer_form.html"
-    form_class = SingerForm
-    success_url = reverse_lazy('secondapp:org_person')
-
-    def dispatch(self, request, *args, **kwargs):
-        url_username = self.kwargs["username"]
-        self.customuser = get_object_or_404(
-            CustomUser,
-            username=url_username
-        )
-        self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
-        viewer_role = AccessControl.get_org_roles(
-            request.user,
-            url_username
-        )
-        is_admin = viewer_role.filter(id=Role.ADMIN).exists()
-        is_owner = self.person.user == request.user
-
-        if not (is_admin or is_owner):
-            raise PermissionDenied("No permission to edit")
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_form(self, form_class=None):
-        # pre-fill form with existing data
-        form = super().get_form(form_class)
-
-        if self.request.method == "GET":
-            current_voice_ids = self.person.person_skill.values_list(
-                "voice_id", flat=True
-            )
-            form.initial = {
-                # person info
-                "voice": current_voice_ids,
-            }
-        return form
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["organization"] = self.customuser
-        return context
-
-
-    # def form_valid(self, form):
-    #     selected = form.cleaned_data['options']
-    #     singer = Singer.objects.get_or_create(
-    #         person=self.person,
-    #         defaults={'voice': selected}
-    #     )
-    #
-    #
-    #     return super().form_valid(form)
-    def form_valid(self, form):
-        self._update_voice(form.cleaned_data["roles"])
-        return redirect("secondapp:org_member_list",username=self.kwargs["username"])
-
-    def _update_voice(self, new_skills):
-        """sync skills - add new, remove old"""
-        # current skills
-        current_voice = Singer.objects.filter(person=self.person)
-        current_voice_ids = set(current_voice.values_list("voice_id"))
-
-        # new skills
-        new_voice_ids = {voice.id for voice in new_voices}
-
-        # do the magic
-        for voice_id in (new_voice_ids - current_voice_ids):
-            Voice.objects.create(
-                person=self.person,
-                voice_id=voice_id
-            )
-
-        # remove old skills
-        removed_voice_ids = current_voice_ids - new_voice_ids
-        if removed_voice_ids:
-            current_voice.filter(voice_id__in=removed_voice_ids).delete()
+# @method_decorator(login_required, name="dispatch")
+# class SingerFormView(FormView):
+#     template_name = "secondapp/singer_form.html"
+#     form_class = SingerForm
+#     success_url = reverse_lazy('secondapp:org_person')
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         url_username = self.kwargs["username"]
+#         self.customuser = get_object_or_404(
+#             CustomUser,
+#             username=url_username
+#         )
+#         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
+#         viewer_role = AccessControl.get_org_roles(
+#             request.user,
+#             url_username
+#         )
+#         is_admin = viewer_role.filter(id=Role.ADMIN).exists()
+#         is_owner = self.person.user == request.user
+#
+#         if not (is_admin or is_owner):
+#             raise PermissionDenied("No permission to edit")
+#
+#         return super().dispatch(request, *args, **kwargs)
+#
+#     def get_form(self, form_class=None):
+#         # pre-fill form with existing data
+#         form = super().get_form(form_class)
+#
+#         if self.request.method == "GET":
+#             current_voice_ids = self.person.person_skill.values_list(
+#                 "voice_id", flat=True
+#             )
+#             form.initial = {
+#                 # person info
+#                 "voice": current_voice_ids,
+#             }
+#         return form
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["organization"] = self.customuser
+#         return context
+#
+#
+#     # def form_valid(self, form):
+#     #     selected = form.cleaned_data['options']
+#     #     singer = Singer.objects.get_or_create(
+#     #         person=self.person,
+#     #         defaults={'voice': selected}
+#     #     )
+#     #
+#     #
+#     #     return super().form_valid(form)
+#     def form_valid(self, form):
+#         self._update_voice(form.cleaned_data["roles"])
+#         return redirect("secondapp:org_member_list",username=self.kwargs["username"])
+#
+#     def _update_voice(self, new_voices):
+#         """sync skills - add new, remove old"""
+#         # current skills
+#         current_voice = Singer.objects.filter(person=self.person)
+#         current_voice_ids = set(current_voice.values_list("voice_id"))
+#
+#         # new skills
+#         new_voice_ids = {voice.id for voice in new_voices}
+#
+#         # do the magic
+#         for voice_id in (new_voice_ids - current_voice_ids):
+#             Voice.objects.create(
+#                 person=self.person,
+#                 voice_id=voice_id
+#             )
+#
+#         # remove old skills
+#         removed_voice_ids = current_voice_ids - new_voice_ids
+#         if removed_voice_ids:
+#             current_voice.filter(voice_id__in=removed_voice_ids).delete()
 
 
 
@@ -1201,6 +1342,23 @@ class AttendanceDashboardView(View):
         # Get the last N events and reverse them
         events = list(reversed(list(events_query[:event_limit])))
 
+        # Determine which events should be grayed out
+        # Gray out past events except the most recent past event
+        now = timezone.now()
+        most_recent_past_event = None
+
+        for event in reversed(events):  # Check from most recent
+            if event.started_at < now:
+                most_recent_past_event = event
+                break
+
+        # Mark events as grayed out
+        for event in events:
+            if event.started_at < now and event != most_recent_past_event:
+                event.is_grayed_out = True
+            else:
+                event.is_grayed_out = False
+
         # Get all current members, ordered alphabetically for now
         members = Person.objects.filter(
             memberships__user=self.org_user,
@@ -1243,6 +1401,21 @@ class AttendanceDashboardView(View):
                 )
             events = list(reversed(list(events_query[:event_limit])))
 
+            # Determine which events should be grayed out (same logic as GET)
+            now = timezone.now()
+            most_recent_past_event = None
+
+            for event in reversed(events):
+                if event.started_at < now:
+                    most_recent_past_event = event
+                    break
+
+            # Create set of grayed out event IDs for quick lookup
+            grayed_out_event_ids = {
+                event.id for event in events
+                if event.started_at < now and event != most_recent_past_event
+            }
+
             members = Person.objects.filter(
                 memberships__user=self.org_user,
                 memberships__person__roles__id=Role.MEMBER
@@ -1269,9 +1442,14 @@ class AttendanceDashboardView(View):
 
             # Update all attendance records
             for event in events:
-                # NEW: Skip if event is locked
+                # Skip if event is locked
                 if event.attendance_locked:
                     skipped_count += event.attendance_set.count()
+                    continue
+
+                # Skip if event is grayed out (past event, not the most recent)
+                if event.id in grayed_out_event_ids:
+                    skipped_count += members.count()
                     continue
 
 
@@ -1349,11 +1527,15 @@ class AttendanceDashboardView(View):
                 attendance_type_id = att_data.get('type_id')
                 # is_locked = att_data.get('is_locked', False) or event.attendance_locked  # NEW
 
+                # Check if this event is grayed out
+                is_grayed_out = getattr(event, 'is_grayed_out', False)
+
                 row['attendance_cells'].append({
                     'event_id': event.id,
                     'is_present': attendance_type_id == present_type.id,
                     'attendance_type_id': attendance_type_id,
                     # 'is_locked': is_locked,  # NEW
+                    'is_grayed_out': is_grayed_out,  # NEW: for template to disable checkbox
                 })
 
                 if attendance_type_id == present_type.id:
@@ -1440,8 +1622,8 @@ def quick_add_rehearsal(request, username):
             name=f"Rehearsal - {timezone.now().strftime('%B %d, %Y')}",
             event_type=rehearsal_type,
             started_at=timezone.now(),
-            ended_at=timezone.now() + timedelta(hours=2),
-            location="TBD"
+            ended_at=timezone.now() + timedelta(hours=3),
+            location="usual"
         )
 
         # Get all current members

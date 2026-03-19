@@ -23,6 +23,7 @@
         <th>Name</th>
         <th>Email</th>
         <th>Skill</th>
+        <th>Voice/Instrument</th>
         <th>Roles</th>
         <th>Actions</th>
     </tr>
@@ -37,6 +38,17 @@
                     {{ skill.title }}
                 {% empty %}
                     No skills
+                {% endfor %}
+            </td>
+            <td>
+                {% for singer in membership.person.singer_set.all %}
+                    {{ singer.voice.name }}
+                {% empty %}
+
+                {% endfor %}
+                {% for instrumentalist in membership.person.instrumentalist_set.all %}
+                    {{ instrumentalist.instrument.name }}
+                {% empty %}
                 {% endfor %}
             </td>
             <td>{% for role in membership.person.roles.all %}

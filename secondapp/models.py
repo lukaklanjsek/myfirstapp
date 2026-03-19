@@ -1,13 +1,13 @@
 
 from django.db import models
-from django.db.models import PROTECT, CASCADE
+from django.db.models import PROTECT #, CASCADE
 # from django.db import transaction
 # from django.urls import reverse
 # import datetime
 # from datetime import date
 # from enum import Enum
 from django.utils import timezone
-from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import  AbstractBaseUser, BaseUserManager, PermissionsMixin #AbstractUser,
 from django.conf import settings
 
 
@@ -73,6 +73,9 @@ class Voice(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Instrument(models.Model):
     """
@@ -82,6 +85,9 @@ class Instrument(models.Model):
     additional_notes = models.CharField("additional notes", max_length=250, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
 
 
 class AttendanceType(models.Model):
