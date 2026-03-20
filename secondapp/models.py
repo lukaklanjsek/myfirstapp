@@ -407,7 +407,7 @@ class EventSong(models.Model):
     """
     event = models.ForeignKey(Event, on_delete=models.PROTECT)
     song = models.ForeignKey(Song, on_delete=models.PROTECT)
-    order = models.IntegerField()
+    order = models.IntegerField(null=True, blank=True)
     encore = models.BooleanField("additional songs after the end (encore)",blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

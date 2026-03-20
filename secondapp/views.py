@@ -1159,37 +1159,50 @@ class EventUpdateView(UpdateView):
     def form_valid(self, form):
         """
         Save the event and related formsets in a transaction.
-
-        All changes are saved atomically - if any save fails, all changes are rolled back.
         """
         context = self.get_context_data()
         song_formset = context['song_formset']
         attendance_formset = context['attendance_formset']
-
-        # check if admin is overriding the lock
         is_admin = context["is_admin"]
 
         if not is_admin:
-            # for attendance_form in attendance_formset:
-            #     if attendance_form.instance.pk and attendance_form.instance.is_locked:
-            #         if attendance_form.has_changed():
-            #             messages.error(
-            #                 self.request,
-            #                 "You cannot modify locked attendance records."
-            #             )
             return self.form_invalid(form)
 
         admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
 
-        admin_override_pk = self.request.POST.get("admin_override")
-        edit_pk = self.request.POST.get("edit_attendance")
+        # admin_override_pk = self.request.POST.get("admin_override")
+        # edit_pk = self.request.POST.get("edit_attendance")
 
-        # Check if event is locked
-        if self.object.attendance_locked and not admin_override:
-            messages.error(self.request, "This event's attendance is locked. Contact an admin to unlock.")
-            return self.form_invalid(form)
+        # # Check if event is locked
+        # if self.object.attendance_locked and not admin_override:
+        #     messages.error(self.request, "This event's attendance is locked. Contact an admin to unlock.")
+        #     return self.form_invalid(form)
 
-        # CHANGED: Validate formsets BEFORE starting transaction for better error handling
+        # # CHANGED: Clear unique constraint errors for song order before validation
+        # for form_instance in song_formset.forms:
+        #     if '__all__' in form_instance.errors:
+        #         # Remove unique constraint errors related to order
+        #         form_instance.errors['__all__'] = [
+        #             e for e in form_instance.errors['__all__']
+        #             if 'Order already exists' not in str(e) and 'unique_order_per_event' not in str(e)
+        #         ]
+        #         if not form_instance.errors['__all__']:
+        #             del form_instance.errors['__all__']
+        #
+        # # CHANGED: Validate formsets BEFORE starting transaction for better error handling
+        # if not song_formset.is_valid():
+        #     # Print errors for debugging
+        #     for i, form_instance in enumerate(song_formset.forms):
+        #         if form_instance.errors:
+        #             messages.error(self.request, f"Song #{i + 1} errors: {form_instance.errors}")
+        #     messages.error(self.request, "Please fix errors in the songs section.")
+        #     return self.form_invalid(form)
+        #
+        # if not attendance_formset.is_valid():
+        #     messages.error(self.request, "Please fix errors in the attendance section.")
+        #     return self.form_invalid(form)
+
+        # Basic formset validation (non-unique errors only)
         if not song_formset.is_valid():
             messages.error(self.request, "Please fix errors in the songs section.")
             return self.form_invalid(form)
@@ -1198,32 +1211,39 @@ class EventUpdateView(UpdateView):
             messages.error(self.request, "Please fix errors in the attendance section.")
             return self.form_invalid(form)
 
-        # CHANGED: Save everything in atomic transaction for data integrity
         with transaction.atomic():
+            # Save the main event
             self.object = form.save()
 
-            song_formset.instance = self.object
-            song_formset.save()
+            # Delete all existing event songs for this event
+            EventSong.objects.filter(event=self.object).delete()
 
+            # Collect valid songs from the formset
+            valid_songs = []
+            for form_instance in song_formset.forms:
+                if form_instance.cleaned_data and not form_instance.cleaned_data.get('DELETE'):
+                    song = form_instance.cleaned_data.get('song')
+                    if song:  # Only if a song was selected
+                        valid_songs.append({
+                            'song': song,
+                            'order': form_instance.cleaned_data.get('order'),
+                            'encore': form_instance.cleaned_data.get('encore', False),
+                        })
+
+            # Sort by order and recreate all songs
+            valid_songs.sort(key=lambda x: x['order'] if x['order'] is not None else 999)
+
+            # Save songs with fresh, clean order values
+            for idx, song_data in enumerate(valid_songs):
+                EventSong.objects.create(
+                    event=self.object,
+                    song=song_data['song'],
+                    order=idx + 1,  # Fresh order: 1, 2, 3, etc.
+                    encore=song_data['encore']
+                )
+
+            # Save attendance normally
             attendance_formset.instance = self.object
-
-            # if is_admin:
-            #     for attendance_form in attendance_formset:
-            #         attendance = attendance_form.instance
-            #
-            #         if attendance.pk:  # Only process existing records
-            #             lock_checkbox_name = f"lock_{attendance.pk}"
-            #             lock_checked = self.request.POST.get(lock_checkbox_name) == "on"
-            #
-            #             if lock_checked:
-            #                 attendance.is_locked = True
-            #                 attendance.locked_reason = "Locked by admin"
-            #             else:
-            #                 attendance.is_locked = False
-            #                 attendance.locked_reason = ""
-            #
-            #             attendance.last_modified_by = self.request.user
-
             attendance_formset.save()
 
 
@@ -1452,35 +1472,27 @@ class AttendanceDashboardView(View):
                     skipped_count += members.count()
                     continue
 
-
-
                 for member in members:
                     is_present = (event.id, member.id) in checked_attendances
-                    attendance_type = present_type if is_present else absent_type
 
-                    # Get or create attendance record
-                    attendance, created = Attendance.objects.get_or_create(
-                        event=event,
-                        person=member,
-                        defaults={'attendance_type': attendance_type}
-                    )
+                    # Get existing attendance if it exists
+                    try:
+                        attendance = Attendance.objects.get(event=event, person=member)
+                        current_is_present = attendance.attendance_type == present_type
 
-                    # Skip if individual record is locked
-                    # if not created and attendance.is_locked and not is_admin:
-                    #     skipped_count += 1
-                    #     continue
+                        # Only update if state changed
+                        if is_present != current_is_present:
+                            attendance.attendance_type = present_type if is_present else absent_type
+                            attendance.save()
 
-                    # Update if not locked
-                    if attendance.attendance_type != attendance_type:
-                        attendance.attendance_type = attendance_type
-
-                        # # LOCK after change (ONLY in dashboard!)
-                        # if not attendance.is_locked:
-                        #     attendance.is_locked = True
-                        #     attendance.locked_by = request.user
-                        #     attendance.locked_at = timezone.now()
-
-                        attendance.save()
+                    except Attendance.DoesNotExist:
+                        # Create new record
+                        attendance_type = present_type if is_present else absent_type
+                        Attendance.objects.create(
+                            event=event,
+                            person=member,
+                            attendance_type=attendance_type
+                        )
 
                 # NEW: Show appropriate success message
             if skipped_count > 0:
@@ -1565,6 +1577,277 @@ class AttendanceDashboardView(View):
             })
 
         return totals
+
+
+@method_decorator(login_required, name="dispatch")
+class ImportDashboardView(View):
+    template_name = 'secondapp/songs/import.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
+        url_username = self.kwargs.get("username")
+        self.org_user = get_object_or_404(CustomUser, username=url_username)
+
+        if request.user != self.org_user:
+            has_permission = AccessControl.can_edit_event(
+                request.user, self.org_user
+            ).exists()
+
+            if not has_permission:
+                return HttpResponseForbidden("You don't have permission to view this dashboard.")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        """Display the import form"""
+        context = {
+            'org_user': self.org_user,
+            'url_username': username,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        """Handle both preview and actual import"""
+        action = request.POST.get('action')  # This tells us which step we're on
+
+        if action == 'preview':
+            # Step 1: Show column mapping form
+            return self.preview_columns(request)
+        elif action == 'import':
+            # Step 2: Actually import the data
+            return self.import_data(request)
+        else:
+            messages.error(request, 'Invalid action')
+            return redirect(request.path)
+
+    def preview_columns(self, request):
+        """Step 1: Read CSV and show columns for mapping"""
+        csv_file = request.FILES.get('csv_file')
+
+        if not csv_file:
+            messages.error(request, 'Please select a CSV file')
+            return redirect(request.path)
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'File must be a CSV')
+            return redirect(request.path)
+
+        try:
+            # Read the CSV to get column names
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            csv_columns = reader.fieldnames  # This is the list of column names from row 1
+
+            # Also get first few rows as preview
+            preview_rows = []
+            for i, row in enumerate(reader):
+                if i >= 3:  # Only show 3 rows as preview
+                    break
+                preview_rows.append(row)
+
+            # Save the CSV content temporarily in session
+            # (so we don't have to upload it again in step 2)
+            request.session['csv_content'] = '\n'.join([','.join(csv_columns)] +
+                                                       [csv_file.read().decode('utf-8')])
+            csv_file.seek(0)  # Reset file pointer
+            request.session['csv_content'] = csv_file.read().decode('utf-8')
+
+            context = {
+                'org_user': self.org_user,
+                'url_username': username,
+                'csv_columns': csv_columns,  # Column names from CSV
+                'preview_rows': preview_rows,  # Sample data
+                'show_mapping': True,  # Flag to show mapping form in template
+            }
+            return render(request, self.template_name, context)
+
+        except Exception as e:
+            messages.error(request, f'Error reading CSV: {str(e)}')
+            return redirect(request.path)
+
+    def import_data(self, request):
+        """Step 2: Import data using the column mapping"""
+        # Get the CSV content from session
+        csv_content = request.session.get('csv_content')
+
+        if not csv_content:
+            messages.error(request, 'Session expired. Please upload the file again.')
+            return redirect(request.path)
+
+        # Get the column mappings from the form
+        column_mapping = {
+            "internal_id": request.POST.get("internal_id"),
+            'title': request.POST.get('map_title'),
+            'composer_last_name': request.POST.get('map_composer_last_name'),
+            'composer_first_name': request.POST.get('map_composer_first_name'),
+            'poet_last_name': request.POST.get('map_poet_last_name'),
+            'poet_first_name': request.POST.get('map_poet_first_name'),
+            'year': request.POST.get('map_year'),
+            'group': request.POST.get('map_group'),
+            'number_of_pages': request.POST.get('map_number_of_pages'),
+            'number_of_copies': request.POST.get('map_number_of_copies'),
+            'number_of_voices': request.POST.get('map_number_of_voices'),
+            'additional_notes': request.POST.get('map_additional_notes'),
+        }
+
+        # Validate that required mappings are provided
+        required_fields = ['title', 'composer_last_name', 'poet_last_name']
+        missing_mappings = [field for field in required_fields if not column_mapping[field]]
+
+        if missing_mappings:
+            messages.error(request, f'Please map these required fields: {", ".join(missing_mappings)}')
+            return redirect(request.path)
+
+        try:
+            # Read CSV from session
+            csv_lines = csv_content.splitlines()
+            reader = csv.DictReader(csv_lines)
+
+            errors = []
+            songs_to_create = []
+
+            # Process each row using the user's column mapping
+            for row_number, row in enumerate(reader, start=2):
+                try:
+                    # Get values using the mapped column names
+                    title = row.get(column_mapping['title'], '').strip()
+                    composer_last_name = row.get(column_mapping['composer_last_name'], '').strip()
+                    composer_first_name = row.get(column_mapping['composer_first_name'], '').strip()
+                    poet_last_name = row.get(column_mapping['poet_last_name'], '').strip()
+                    poet_first_name = row.get(column_mapping['poet_first_name'], '').strip()
+
+                    # Validate required fields
+                    if not title or not composer_last_name or not poet_last_name:
+                        errors.append(f"Row {row_number}: Missing title, composer's, or poet's last name")
+                        continue
+
+                    # Get or create composer (with COMPOSER skill)
+                    composer, created = Person.objects.get_or_create(
+                        first_name= composer_first_name,
+                        last_name = composer_last_name,
+                    )
+                    if created:
+                        # Add COMPOSER skill and role EXTERNAL to this person
+                        PersonSkill.objects.create(
+                            person=composer,
+                            skill_id=Skill.COMPOSER
+                        )
+                        PersonRole.objects.create(
+                            person=composer,
+                            role_id=Role.EXTERNAL
+                        )
+
+                    # Get or create poet (with POET skill)
+                    poet, created = Person.objects.get_or_create(
+                        name=poet_name
+                    )
+                    if created:
+                        # Add POET skill to this person
+                        PersonSkill.objects.create(
+                            person=poet,
+                            skill_id=Skill.POET
+                        )
+
+                    # Get optional fields
+                    internal_id = None
+                    if column_mapping.get('internal_id'):
+                        internal_id_str = row.get(column_mapping['internal_id'], '').strip()
+                        if internal_id_str:
+                            try:
+                                internal_id = int(internal_id_str)
+                            except ValueError:
+                                errors.append(f"Row {row_number}: Invalid internal_id '{internal_id_str}'")
+                                continue
+
+                    year = None
+                    if column_mapping.get('year'):
+                        year_str = row.get(column_mapping['year'], '').strip()
+                        if year_str:
+                            try:
+                                year = int(year_str)
+                            except ValueError:
+                                errors.append(f"Row {row_number}: Invalid year '{year_str}'")
+                                continue
+
+                    number_of_pages = None
+                    if column_mapping.get('number_of_pages'):
+                        pages_str = row.get(column_mapping['number_of_pages'], '').strip()
+                        if pages_str:
+                            try:
+                                number_of_pages = int(pages_str)
+                            except ValueError:
+                                errors.append(f"Row {row_number}: Invalid number_of_pages '{pages_str}'")
+                                continue
+
+                    number_of_copies = None
+                    if column_mapping.get('number_of_copies'):
+                        copies_str = row.get(column_mapping['number_of_copies'], '').strip()
+                        if copies_str:
+                            try:
+                                number_of_copies = int(copies_str)
+                            except ValueError:
+                                errors.append(f"Row {row_number}: Invalid number_of_copies '{copies_str}'")
+                                continue
+
+                    number_of_voices = None
+                    if column_mapping.get('number_of_voices'):
+                        voices_str = row.get(column_mapping['number_of_voices'], '').strip()
+                        if voices_str:
+                            try:
+                                number_of_voices = int(voices_str)
+                            except ValueError:
+                                errors.append(f"Row {row_number}: Invalid number_of_voices '{voices_str}'")
+                                continue
+
+                    group = ''
+                    if column_mapping.get('group'):
+                        group = row.get(column_mapping['group'], '').strip()
+
+                    additional_notes = ''
+                    if column_mapping.get('additional_notes'):
+                        additional_notes = row.get(column_mapping['additional_notes'], '').strip()
+
+                    # Create song object (don't save yet - we'll bulk create)
+                    song = Song(
+                        title=title,
+                        composer=composer,
+                        poet=poet,
+                        user=self.org_user,  # The user from the URL
+                        internal_id=internal_id,
+                        year=year,
+                        group=group,
+                        number_of_pages=number_of_pages,
+                        number_of_copies=number_of_copies,
+                        number_of_voices=number_of_voices,
+                        additional_notes=additional_notes,
+                    )
+                    songs_to_create.append(song)
+
+                except Exception as e:
+                errors.append(f"Row {row_number}: {str(e)}")
+
+                # If errors, show them and don't save
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+                return redirect(request.path)
+
+                # Save everything in a transaction
+            with transaction.atomic():
+                Song.objects.bulk_create(songs_to_create)
+
+                # Clear session
+            del request.session['csv_content']
+
+            messages.success(request, f'Successfully imported {len(songs_to_create)} songs!')
+            return redirect(request.path)
+
+        except Exception as e:
+            messages.error(request, f'Error during import: {str(e)}')
+            return redirect(request.path)
+
+
+
 
 
 # @method_decorator(login_required, name='dispatch')

@@ -8,7 +8,7 @@ import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 
 # class SongWidget(ModelSelect2MultipleWidget):
@@ -204,12 +204,33 @@ class EventSongForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # make song not required in empty
+        self.fields['song'].required = False
 
         if user:
             # Filter songs belonging to this user directly
             self.fields['song'].queryset = Song.objects.filter(
                 user=user  # Song has a user field according to the error
             ).order_by('title')
+
+
+class EventSongFormSet(BaseInlineFormSet):
+    def clean(self):
+        """
+        Skip unique validation - we'll handle order assignment during save
+        """
+        # Don't call super().clean() to skip Django's unique validation
+        if any(self.errors):
+            # Only keep non-unique errors
+            for form in self.forms:
+                if '__all__' in form.errors:
+                    form.errors.pop('__all__', None)
+
+        # Basic validation only
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get('DELETE'):
+                # Just check that if there's data, it's valid
+                pass
 
 
 class AttendanceForm(forms.ModelForm):
@@ -271,7 +292,8 @@ EventSongFormSet = inlineformset_factory(
     Event,
     EventSong,
     form=EventSongForm,
-    extra=1,
+    formset=EventSongFormSet,
+    extra=6,
     can_delete=True,
 )
 
@@ -281,6 +303,8 @@ AttendanceFormSet = inlineformset_factory(
     form=AttendanceForm,
     extra=5,  # We'll manually create initial data for all members
     can_delete=False,
+    validate_min=True,  # Allows extra empty forms to be ignored
+    min_num=0,  # Minimum required forms
 )
 
 ##########################################################################
