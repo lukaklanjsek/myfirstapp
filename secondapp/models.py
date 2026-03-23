@@ -371,6 +371,7 @@ class Song(models.Model):
     )
 
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
+    lyrics = models.TextField("song text", blank=True, null=True)
 
     def __str__(self):
         return self.title

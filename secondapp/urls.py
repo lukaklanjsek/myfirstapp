@@ -41,8 +41,9 @@ urlpatterns = [
     path('<str:username>/attendance/', views.AttendanceDashboardView.as_view(), name='attendance'),
     path('<str:username>/attendance/quick-add/', views.quick_add_rehearsal, name='quick_add_rehearsal'),
     path("skill/", views.SkillListAndCreateView.as_view(), name="skill"),
+    path("<str:username>/import/", views.ImportDashboardView.as_view(), name="import_dashboard"),
 
-#    path("", include("django.contrib.auth.urls")),
+    #    path("", include("django.contrib.auth.urls")),
 
     # path("login/", views.AccountLoginView.as_view(), name="login"),
     #

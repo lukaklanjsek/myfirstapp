@@ -158,7 +158,14 @@ class SongForm(forms.ModelForm):
             "group",
             "number_of_voices",
             "additional_notes",
+            "lyrics",
         ]
+        widgets = {
+            "year": forms.SelectDateWidget(
+                years=range(datetime.date.today().year, 1200, -1)
+            ),
+            "lyrics": forms.Textarea(attrs={'rows': 9}),
+        }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
