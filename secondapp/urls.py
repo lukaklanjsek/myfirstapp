@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path # , include
 
 
 from . import views
@@ -19,6 +19,7 @@ urlpatterns = [
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
 
     path("<str:username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
+    path("<str:username>/<str:method>/import/", views.ImportDashboardView.as_view(), name="import_dashboard"),
     path("<str:username>/events/", views.EventListView.as_view(), name="event_list"),
     path("<str:username>/events/add/", views.EventCreateView.as_view(), name="event_create"),
     path("<str:username>/events/<int:pk>/", views.EventDetailView.as_view(), name="event_detail"),
@@ -31,6 +32,8 @@ urlpatterns = [
          views.OrgMemberAddView.as_view(),{'preset': 'composer'},name="org_member_add_composer"),
     path("<str:username>/members/add-poet/",
          views.OrgMemberAddView.as_view(),{'preset': 'poet'},name="org_member_add_poet"),
+    path("<str:username>/members/add-translator/",
+         views.OrgMemberAddView.as_view(),{'preset': 'translator'},name="org_member_add_translator"),
     path("<str:username>/members/<int:pk>/edit/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
 
     path("<str:username>/songs/", views.SongListView.as_view(), name="song_dashboard"),
@@ -41,7 +44,7 @@ urlpatterns = [
     path('<str:username>/attendance/', views.AttendanceDashboardView.as_view(), name='attendance'),
     path('<str:username>/attendance/quick-add/', views.quick_add_rehearsal, name='quick_add_rehearsal'),
     path("skill/", views.SkillListAndCreateView.as_view(), name="skill"),
-    path("<str:username>/import/", views.ImportDashboardView.as_view(), name="import_dashboard"),
+
 
     #    path("", include("django.contrib.auth.urls")),
 

@@ -6,12 +6,14 @@
 <p>Song ID: {{ song.internal_id }}</p>
 <p>Title: {{ song.title }}</p>
 <p>Number of copies: {{ song.number_of_copies }}</p>
-<p>Number of voices: {{ song.nubmer_of_voices }}</p>
+<p>Number of voices: {{ song.number_of_voices }}</p>
 <p>Composer: {{ song.composer }}</p>
 <p>Poet: {{ song.poet }}</p>
 <p>Type of song: {{ song.group }}</p>
 <p>Number of pages: {{ song.number_of_pages }}</p>
 <p>Year of creation: {{ song.year }}</p>
 <p>Additional notes: {{ song.additional_notes }}</p>
+
+<p>Lyrics: {{ song.lyrics|linebreaks }}</p>
 
 {% endblock %}

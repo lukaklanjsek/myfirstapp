@@ -2,6 +2,8 @@
 from .models import Song, Membership, CustomUser, Person, PersonRole, PersonSkill, MembershipPeriod, Role, Skill
 import csv, datetime
 from django.contrib import messages
+from .permissions import AccessControl
+# from django.http import HttpResponseForbidden
 
 class SongQueryHelper:
     @staticmethod
@@ -47,7 +49,7 @@ NUMBER_OF_VOICES_KEY = "number_of_voices"
 ADDITIONAL_NOTES_KEY = "additional_notes"
 LYRICS_KEY = "lyrics"
 
-ALLOWED_KEYS = [
+ALLOWED_SONG_KEYS = [
     INTERNAL_ID_KEY,
     TITLE_KEY,
     COMPOSER_LAST_NAME_KEY,
@@ -63,20 +65,39 @@ ALLOWED_KEYS = [
     LYRICS_KEY,
 ]
 
-def import_data(self, file_path, delimiter=";"):
-    url_username = self.kwargs.get("username")
-    # viewer_user = self.request.user
+def import_songs(org_user, request, file_path, delimiter=";"):
+    """
+    Import songs from a CSV file into the database for a given organization user.
+
+
+    Potential issues identified:
+    - Line 54: Membership filter syntax error: "person in owned_persons" should use __in
+    - Empty string checks: Some fields may need better None handling
+    - No validation for duplicate songs (same title/composer combination)
+    - No transaction rollback if bulk import partially fails
+    - PersonSkill.COMPOSER and Skill.COMPOSER naming inconsistency needs verification
+    """
+    viewer_user = request.user
+    imported_count = 0
+
+    # Check if viewer can manage this org_user
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(
+            request.user, org_user
+        ).exists()
+
+        if not has_permission:
+            messages.error(request, "You don't have permission to import.")
 
     with open(file_path, 'r') as f:
         reader = csv.DictReader(f, delimiter=delimiter)
         headers = reader.fieldnames
-        messages.info(self.request, f"headers: {headers}")
+        messages.info(request, f"headers: {headers}")
 
         for h in headers:
-            if h not in ALLOWED_KEYS:
+            if h not in ALLOWED_SONG_KEYS:
                 return None
         today = datetime.date.today()
-        org_user = CustomUser.objects.get(username=url_username)
 
         for row in reader:
             # Split the row data according to headers
@@ -98,7 +119,8 @@ def import_data(self, file_path, delimiter=";"):
                 existing_composer = Person.objects.filter(   # does composer already exist in our membership?
                     last_name=composer_last_name,
                     first_name=composer_first_name,
-                    memberships__user=org_user
+                    memberships__user=org_user,
+                    person_skill__skill_id = Skill.COMPOSER
                 ).first()
 
                 if existing_composer:
@@ -114,17 +136,18 @@ def import_data(self, file_path, delimiter=";"):
                     PersonRole.objects.create(person=composer, role_id=Role.EXTERNAL)
                     MembershipPeriod.objects.create(user=org_user, person=composer, role_id=Role.EXTERNAL,
                                                     started_at=today)
-                    PersonSkill.objects.create(person=composer, role_id=Skill.COMPOSER)
+                    PersonSkill.objects.create(person=composer, skill_id=Skill.COMPOSER)
 
                 existing_poet = Person.objects.filter(
                     last_name=poet_last_name,
                     first_name=poet_first_name,
-                    memberships__user=org_user
+                    memberships__user=org_user,
+                    person_skill__skill_id = Skill.POET
                 ).first()
+
                 if existing_poet:
                     poet = existing_poet
-                else:
-                    # Create new composer if not found in organization's membership
+                else:    # Create new composer if not found in organization's membership
                     poet = Person.objects.create(
                         last_name=poet_last_name,
                         first_name=poet_first_name,
@@ -135,17 +158,7 @@ def import_data(self, file_path, delimiter=";"):
                     PersonRole.objects.create(person=poet, role_id=Role.EXTERNAL)
                     MembershipPeriod.objects.create(user=org_user, person=poet, role_id=Role.EXTERNAL,
                                                     started_at=today)
-                    PersonSkill.objects.create(person=poet, role_id=Skill.POET)
-                # # Check if song already exists to avoid duplicates
-                # existing_song = Song.objects.filter(
-                #     title=title_value,
-                #     composer=composer,
-                #     poet=poet,
-                #     user=org_user  # Also check user to ensure uniqueness per organization
-                # ).first()
-                #
-                # if existing_song:
-                #     continue  # Skip creating duplicate song
+                    PersonSkill.objects.create(person=poet, skill_id=Skill.POET)
 
                 Song.objects.create(   # Create new song with validated data
                     user=org_user,
@@ -163,10 +176,126 @@ def import_data(self, file_path, delimiter=";"):
                     created_at=today,
                     updated_at=today,
                 )
-            except CustomUser.DoesNotExist:
-                # Handle case where url_username doesn't exist
-                return ValueError("your logged in user does not exist")
+                imported_count += 1
             except Exception as e:
                 message_text = f"Error importing row {reader.line_num}: {str(e)}"
-                messages.error(self.request, message_text)
-            continue
+                messages.error(request, message_text)
+                continue  # Continue to next row on error
+
+        return {
+            'success': True,
+            'count': imported_count
+        }
+
+FIRST_NAME_KEY = "first_name"
+LAST_NAME_KEY = "last_name"
+EMAIL_KEY = "email"
+ADDRESS_KEY = "address"
+BIRTH_DATE_KEY = "birth_date"
+LANDLINE_PHONE_KEY = "phone"
+MOBILE_PHONE_KEY = "phone"
+VOICE_KEY = "voice"
+ACTIVITY_KEY = "activity"
+
+
+ALLOWED_PERSON_KEYS = [
+    FIRST_NAME_KEY,
+    LAST_NAME_KEY,
+    EMAIL_KEY,
+    ADDRESS_KEY,
+    BIRTH_DATE_KEY,
+    LANDLINE_PHONE_KEY,
+    MOBILE_PHONE_KEY,
+    VOICE_KEY,
+    ACTIVITY_KEY,
+]
+
+def import_members(org_user, request, file_path, delimiter=";"):
+    viewer_user = request.user
+    imported_count = 0
+
+    # Check if viewer can manage this org_user
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(
+            request.user, org_user
+        ).exists()
+
+        if not has_permission:
+            messages.error(request, "You don't have permission to import.")
+
+    with open(file_path, 'r') as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        headers = reader.fieldnames
+        messages.info(request, f"headers: {headers}")
+
+        for h in headers:
+            if h not in ALLOWED_PERSON_KEYS:
+                return None
+        today = datetime.date.today()
+
+        for row in reader:
+            # Split the row data according to headers
+            first_name_value = row.get(FIRST_NAME_KEY, '').strip()
+            last_name_value = row.get(LAST_NAME_KEY, '').strip()
+            email_value = row.get(EMAIL_KEY, '').strip()
+            address_value = row.get(ADDRESS_KEY, '').split()
+            birth_date_value = row.get(BIRTH_DATE_KEY, '').split()
+            landline_phone_value = row.get(LANDLINE_PHONE_KEY, '').split() or None
+            mobile_phone_value = row.get(MOBILE_PHONE_KEY, '').split() or None
+            voice_value = row.get(VOICE_KEY, '').split()
+
+            phone_value = mobile_phone_value or landline_phone_value
+
+            activity_raw_value = row.get(ACTIVITY_KEY, '').split()
+
+            activity_parsed_value = [a.strip() for a in activity_raw_value.split(',') if a.strip()]
+
+            try:   # get organization username from url
+                # Check if person exists in the organization's membership
+                existing_person = Person.objects.filter(   # does person already exist in our membership?
+                    last_name=last_name_value,
+                    first_name=first_name_value,
+                    memberships__user=org_user,
+                    person__role__role_id = Role.MEMBER,
+                ).first()
+
+                if existing_person:
+                    continue
+                else:   # Create a new person if not found in organization's membership
+                    person = Person.objects.create(
+                        last_name=last_name_value,
+                        first_name=first_name_value,
+                        user=None,
+                        owner=None,
+                        address=address_value or None,
+                        email=email_value or None,
+                        birth_date=birth_date_value or None,
+                        phone=phone_value,
+                    )
+                    ### DO TU SEM PRIŠEL ###
+                    PersonSkill.objects.create(person=person, skill_id=Skill.COMPOSER)
+
+                    Membership.objects.create(user=org_user, person=person)
+
+                    PersonRole.objects.create(person=person, role_id=Role.EXTERNAL)
+
+                    MembershipPeriod.objects.create(user=org_user, person=person, role_id=Role.MEMBER,
+                                                    started_at=started_at, ended_at=ended_at)
+
+
+
+            except Exception as e:
+                message_text = f"Error importing row {reader.line_num}: {str(e)}"
+                messages.error(request, message_text)
+            continue  # Continue to next row on error
+
+    return {
+        'success': True,
+        'count': imported_count
+    }
+
+def import_events(org_user, request, file_path, delimiter=";"):
+    url_username = self.kwargs.get("username")
+    pass
+
+

@@ -193,6 +193,7 @@ class Skill(models.Model):
     SINGER = 4
     INSTRUMENTALIST = 5
     CONDUCTOR = 6
+    TRANSLATOR = 7
 
     title = models.CharField("name of skill",max_length=50, unique=True)
     additional_notes = models.CharField("short explanation of skill",max_length=255, blank=True, null=True)
@@ -383,7 +384,7 @@ class Event(models.Model):
         on_delete=models.CASCADE,
         related_name="events"
     )
-
+    internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
     name = models.CharField("name of the event", max_length=250)
     location = models.TextField(blank=True, null=True)
     started_at = models.DateTimeField("start date hour")

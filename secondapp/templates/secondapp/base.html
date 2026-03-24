@@ -51,6 +51,9 @@
                                                     <li><a href="{% url 'secondapp:attendance' org.user.username %}">ATTENDANCE</a></li>
                                                     <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
                                                     <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='songs' %}">Import Songs</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='members' %}">Import Members</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='events' %}">Import Events</a></li>
                                                 {% endif %}
                                             </ul>
                                         </li>

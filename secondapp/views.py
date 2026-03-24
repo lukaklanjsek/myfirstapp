@@ -51,7 +51,7 @@ from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillFo
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
-from .utils import import_data
+from .utils import import_songs, import_members, import_events
 
 
 class SignUp(generic.CreateView):
@@ -1063,12 +1063,6 @@ class EventUpdateView(UpdateView):
             'attendance_set__person'
         )
 
-    # def get_form_kwargs(self):
-    #     """Pass the organization/user to the form."""  # ADDED: Docstring
-    #     kwargs = super().get_form_kwargs()
-    #     kwargs['user'] = self.customuser
-    #     return kwargs
-
     def get_context_data(self, **kwargs):
         """Prepare formsets and context data for the template."""  # ADDED: Docstring
         context = super().get_context_data(**kwargs)
@@ -1102,9 +1096,6 @@ class EventUpdateView(UpdateView):
             ).filter(person__roles__id=Role.ADMIN).exists()
 
             if not is_admin:
-                # for form in attendance_formset:
-                #     if form.instance.pk and form.instance.is_locked:
-                #         for field in form.fields.values():
                 field.disabled = True
 
             context['attendance_formset'] = attendance_formset
@@ -1121,39 +1112,7 @@ class EventUpdateView(UpdateView):
 
         return context
 
-    # def _get_prepopulated_attendance_formset(self, event):
-    #     """
-    #     Pre-populate attendance formset with all members of the organization.
-    #     Only creates initial entries for members who don't already have attendance records.
-    #     """  # ADDED: Docstring
-    #     url_username = self.kwargs.get('username')
-    #     org_user = get_object_or_404(CustomUser, username=url_username)
-    #
-    #     # # ADDED: Get existing attendance to avoid duplicates
-    #     # existing_attendance_ids = set(
-    #     #     event.attendances.values_list('person_id', flat=True)
-    #     # )
-    #
-    #     # CHANGED: Filter out members who already have attendance records
-    #     # ADDED: select_related to reduce queries
-    #     members = Person.objects.filter(
-    #         memberships__user=org_user,
-    #         memberships__person__roles__id=Role.MEMBER
-    #     ).distinct().select_related('user') #.exclude(id__in=existing_attendance_ids)
-    #
-    #     initial_data = [
-    #         {'person': person.id}
-    #         for person in members
-    #     ]
-    #
-    #     # CHANGED: Create formset with both existing instances and initial data for new members
-    #     formset = AttendanceFormSet(
-    #         instance=event,
-    #         initial=initial_data,
-    #         # extra=len(initial_data)
-    #     )
-    #
-    #     return formset
+
 
     def form_valid(self, form):
         """
@@ -1169,37 +1128,6 @@ class EventUpdateView(UpdateView):
 
         admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
 
-        # admin_override_pk = self.request.POST.get("admin_override")
-        # edit_pk = self.request.POST.get("edit_attendance")
-
-        # # Check if event is locked
-        # if self.object.attendance_locked and not admin_override:
-        #     messages.error(self.request, "This event's attendance is locked. Contact an admin to unlock.")
-        #     return self.form_invalid(form)
-
-        # # CHANGED: Clear unique constraint errors for song order before validation
-        # for form_instance in song_formset.forms:
-        #     if '__all__' in form_instance.errors:
-        #         # Remove unique constraint errors related to order
-        #         form_instance.errors['__all__'] = [
-        #             e for e in form_instance.errors['__all__']
-        #             if 'Order already exists' not in str(e) and 'unique_order_per_event' not in str(e)
-        #         ]
-        #         if not form_instance.errors['__all__']:
-        #             del form_instance.errors['__all__']
-        #
-        # # CHANGED: Validate formsets BEFORE starting transaction for better error handling
-        # if not song_formset.is_valid():
-        #     # Print errors for debugging
-        #     for i, form_instance in enumerate(song_formset.forms):
-        #         if form_instance.errors:
-        #             messages.error(self.request, f"Song #{i + 1} errors: {form_instance.errors}")
-        #     messages.error(self.request, "Please fix errors in the songs section.")
-        #     return self.form_invalid(form)
-        #
-        # if not attendance_formset.is_valid():
-        #     messages.error(self.request, "Please fix errors in the attendance section.")
-        #     return self.form_invalid(form)
 
         # Basic formset validation (non-unique errors only)
         if not song_formset.is_valid():
@@ -1299,13 +1227,6 @@ class EventListView(ListView):
     model = Event
     ordering = ['-started_at']
 
-    # def setup(self, request, *args, **kwargs):
-    #     super().setup(request, *args, **kwargs)
-    #     url_username = self.kwargs["username"]
-    #     self.customuser = get_object_or_404(
-    #         CustomUser,
-    #         username=url_username
-    #     )
 
 
 @method_decorator(login_required, name='dispatch')
@@ -1581,7 +1502,9 @@ class AttendanceDashboardView(View):
 
 @method_decorator(login_required, name="dispatch")
 class ImportDashboardView(View):
-    template_name = 'secondapp/import.html'
+    template_name = 'secondapp/import_dashboard.html'
+
+    VALID_METHODS = ["songs", "members", "events"]
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -1596,44 +1519,77 @@ class ImportDashboardView(View):
             if not has_permission:
                 return HttpResponseForbidden("You don't have permission to view this dashboard.")
 
+        # Validate the import method from URL
+        self.import_method = self.kwargs.get('method')
+        if self.import_method not in self.VALID_METHODS:
+            return HttpResponseForbidden(f"Invalid import method: {self.import_method}")
+
         return super().dispatch(request, *args, **kwargs)
 
-    def post(self, request, username):
+    def get(self, request, username, method):
+        """Render the import dashboard with the appropriate method."""
+        context = {
+            'import_method': self.import_method,
+            'org_user': self.org_user,
+            'url_username': username,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, username, method):
         """Handle file upload and import."""
         if 'file' not in request.FILES:
             messages.error(request, "No file uploaded")
-            return redirect('secondapp:import_dashboard', username=username)
+            return redirect('secondapp:import_dashboard', username=username, method=method)
 
         uploaded_file = request.FILES['file']
-        # import_mode = request.POST.get('import_mode')
-        delimiter=";"
-        #
-        # if not import_mode:
-        #     messages.error(request, "Please select an import mode")
-        #     return redirect('secondapp:import_dashboard', username=username)
+        delimiter = request.POST.get('delimiter', ';')
+        if delimiter == '\\t':  # Convert literal '\t' string to actual tab character
+            delimiter = '\t'
 
         try:
-            # Read and decode the CSV file
-            file_content = uploaded_file.read().decode('utf-8')
+            # Save uploaded file temporarily
+            import tempfile
+            import os
 
-            # Call the import_data utility function
-            result = import_data(self, file_content, delimiter)
+            # Create a temporary file
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', encoding='utf-8') as tmp_file:
+                # Write the uploaded content to temp file
+                file_content = uploaded_file.read().decode('utf-8')
+                tmp_file.write(file_content)
+                tmp_file_path = tmp_file.name
 
-            if result['success']:
-                messages.success(
-                    request,
-                    f"Successfully imported {result.get('count', 0)}" # {import_mode}"
-                )
-            else:
-                messages.error(
-                    request,
-                    f"Import failed: {result.get('error', 'Unknown error')}"
-                )
+            try:
+                # Call the appropriate import function based on method
+                if self.import_method == 'songs':
+                    result = import_songs(self.org_user, request, tmp_file_path, delimiter)
+                elif self.import_method == 'members':
+                    result = import_members(self.org_user, request, tmp_file_path, delimiter)
+                elif self.import_method == 'events':
+                    result = import_events(self.org_user, request, tmp_file_path, delimiter)
+                else:
+                    messages.error(request, f"Invalid import method: {self.import_method}")
+                    return redirect('secondapp:import_dashboard', username=username, method=method)
+
+                # Check result if your import functions return a dict
+                if isinstance(result, dict) and result.get('success'):
+                    messages.success(
+                        request,
+                        f"Successfully imported {result.get('count', 0)} {self.import_method}"
+                    )
+                elif result:  # If function returns True or similar
+                    messages.success(request, f"Successfully imported {self.import_method}")
+                else:
+                    messages.warning(request, "Import completed with some issues")
+
+            finally:
+                # Clean up: delete the temporary file
+                if os.path.exists(tmp_file_path):
+                    os.unlink(tmp_file_path)
 
         except Exception as e:
             messages.error(request, f"Error during import: {str(e)}")
 
-        return redirect('secondapp:import_dashboard', username=username)
+        return redirect('secondapp:import_dashboard', username=username, method=method)
 
 
 

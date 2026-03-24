@@ -77,7 +77,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
-    VALID_PRESETS = {'composer', 'poet'}
+    VALID_PRESETS = {'composer', 'poet', 'translator'}
     # Person
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
@@ -137,6 +137,13 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
                 self.initial['roles'] = [external_role.id]
                 self.initial["skills"] = [poet_skill.id]
 
+        elif preset == 'translator':
+            poet_skill = Skill.objects.filter(title__iexact="poet").first()
+            external_role = Role.objects.filter(title__iexact="external").first()
+            if poet_skill and external_role:
+                self.initial['roles'] = [external_role.id]
+                self.initial["skills"] = [poet_skill.id]
+
         # For edit mode: pre-populate voice
         # if person:
         #     self.initial['voices'] = Voice.objects.filter(
@@ -161,10 +168,10 @@ class SongForm(forms.ModelForm):
             "lyrics",
         ]
         widgets = {
-            "year": forms.SelectDateWidget(
-                years=range(datetime.date.today().year, 1200, -1)
-            ),
-            "lyrics": forms.Textarea(attrs={'rows': 9}),
+            "year_of_creation": forms.NumberInput(attrs={
+                "placeholder": "2000"
+            }),
+            "lyrics": forms.Textarea(attrs={'rows': 12}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -174,6 +181,7 @@ class SongForm(forms.ModelForm):
             # for more skills later just add one line
             self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER)
             self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
+            self.fields['translator'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.TRANSLATOR)
 
 
 
