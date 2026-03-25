@@ -105,19 +105,19 @@ def import_songs(org_user, request, file_path, delimiter=";"):
 
         for row in reader:
             # Split the row data according to headers
-            internal_id_value = row.get(INTERNAL_ID_KEY, '').strip()
-            title_value = row.get(TITLE_KEY, '').strip()
-            composer_last_name = row.get(COMPOSER_LAST_NAME_KEY, '').strip()
-            composer_first_name = row.get(COMPOSER_FIRST_NAME_KEY, '').strip()
-            poet_last_name = row.get(POET_LAST_NAME_KEY, '').strip()
-            poet_first_name = row.get(POET_FIRST_NAME_KEY, '').strip()
-            year_value = row.get(YEAR_KEY, '').strip()
-            group_value = row.get(GROUP_KEY, '').strip()
-            number_of_pages_value = row.get(NUMBER_OF_PAGES_KEY, '').strip()
-            number_of_copies_value = row.get(NUMBER_OF_COPIES_KEY, '').strip()
-            number_of_voices_value = row.get(NUMBER_OF_VOICES_KEY, '').strip()
-            additional_notes_value = row.get(ADDITIONAL_NOTES_KEY, '').strip()
-            lyrics_value = row.get(LYRICS_KEY, '').strip()
+            internal_id_value = (row.get(INTERNAL_ID_KEY) or '').strip()
+            title_value = (row.get(TITLE_KEY) or '').strip()
+            composer_last_name = (row.get(COMPOSER_LAST_NAME_KEY) or '').strip()
+            composer_first_name = (row.get(COMPOSER_FIRST_NAME_KEY) or '').strip()
+            poet_last_name = (row.get(POET_LAST_NAME_KEY) or '').strip()
+            poet_first_name = (row.get(POET_FIRST_NAME_KEY) or '').strip()
+            year_value = (row.get(YEAR_KEY) or '').strip()
+            group_value = (row.get(GROUP_KEY) or '').strip()
+            number_of_pages_value = (row.get(NUMBER_OF_PAGES_KEY) or '').strip()
+            number_of_copies_value = (row.get(NUMBER_OF_COPIES_KEY) or '').strip()
+            number_of_voices_value = (row.get(NUMBER_OF_VOICES_KEY) or '').strip()
+            additional_notes_value = (row.get(ADDITIONAL_NOTES_KEY) or '').strip()
+            lyrics_value = (row.get(LYRICS_KEY) or '').strip()
             try:   # get organization username from url
                 # Check if person exists in the organization's membership
                 existing_composer = Person.objects.filter(   # does composer already exist in our membership?
@@ -280,14 +280,14 @@ def import_persons(org_user, request, file_path, delimiter=";"):
         for row in reader:
             try:
                 # Extract and clean data
-                first_name = row.get(FIRST_NAME_KEY, '').strip()
-                last_name = row.get(LAST_NAME_KEY, '').strip()
-                email = row.get(EMAIL_KEY, '').strip() or None
-                address = row.get(ADDRESS_KEY, '').strip() or None
-                birth_date = parse_date(row.get(BIRTH_DATE_KEY, '').strip())
-                phone = row.get(MOBILE_PHONE_KEY, '').strip() or row.get(LANDLINE_PHONE_KEY, '').strip() or None
-                voice = row.get(VOICE_KEY, '').strip()
-                activity_ranges = parse_activity(row.get(ACTIVITY_KEY, '').strip())
+                first_name = (row.get(FIRST_NAME_KEY) or '').strip()
+                last_name = (row.get(LAST_NAME_KEY) or '').strip()
+                email = (row.get(EMAIL_KEY) or '').strip() or None
+                address = (row.get(ADDRESS_KEY) or '').strip() or None
+                birth_date = parse_date(row.get(BIRTH_DATE_KEY) or '')
+                phone = (row.get(MOBILE_PHONE_KEY) or row.get(LANDLINE_PHONE_KEY) or '').strip() or None
+                voice = (row.get(VOICE_KEY) or '').strip()
+                activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '')
 
                 # Validate required fields
                 if not first_name or not last_name:
@@ -369,5 +369,3 @@ def import_persons(org_user, request, file_path, delimiter=";"):
 def import_events(self, org_user, request, file_path, delimiter=";"):
     url_username = self.kwargs.get("username")
     pass
-
-
