@@ -1,9 +1,13 @@
 # utils.py
-from .models import Song, Membership, CustomUser, Person, PersonRole, PersonSkill, MembershipPeriod, Role, Skill
+from .models import (Song, Membership, CustomUser,
+                     Person, PersonRole, PersonSkill,
+                     MembershipPeriod, Role, Skill,
+                     Singer)
 import csv, datetime
 from django.contrib import messages
 from .permissions import AccessControl
-# from django.http import HttpResponseForbidden
+from django.db import transaction
+from django.http import HttpResponseForbidden
 
 class SongQueryHelper:
     @staticmethod
@@ -187,16 +191,16 @@ def import_songs(org_user, request, file_path, delimiter=";"):
             'count': imported_count
         }
 
+
 FIRST_NAME_KEY = "first_name"
 LAST_NAME_KEY = "last_name"
 EMAIL_KEY = "email"
 ADDRESS_KEY = "address"
 BIRTH_DATE_KEY = "birth_date"
-LANDLINE_PHONE_KEY = "phone"
-MOBILE_PHONE_KEY = "phone"
+LANDLINE_PHONE_KEY = "landline_phone"
+MOBILE_PHONE_KEY = "mobile_phone"
 VOICE_KEY = "voice"
 ACTIVITY_KEY = "activity"
-
 
 ALLOWED_PERSON_KEYS = [
     FIRST_NAME_KEY,
@@ -210,91 +214,159 @@ ALLOWED_PERSON_KEYS = [
     ACTIVITY_KEY,
 ]
 
-def import_members(org_user, request, file_path, delimiter=";"):
-    viewer_user = request.user
+VOICE_TYPES = {
+    'Soprano': {"Soprano", "SOPRANO", "soprano", "Sopran", "SOPRAN", "sopran", "Sop", "SOP", "sop", "S", "s"},
+    'Alto': {"Alto", "ALTO", "alto", "Alt", "ALT", "alt", "A", "a", "Contralto", "CONTRALTO", "contralto"},
+    'Tenor': {"Tenor", "TENOR", "tenor", "Ten", "TEN", "ten", "T", "t"},
+    'Bass': {"Bass", "BASS", "bass", "Basso", "BASSO", "basso", "Bas", "BAS", "bas", "B", "b"}
+}
+
+# Reverse mapping for O(1) lookup
+VOICE_LOOKUP = {variant: voice for voice, variants in VOICE_TYPES.items() for variant in variants}
+
+# ALLOWED_HEADERS = ['first_name', 'last_name', 'email', 'address', 'birth_date',
+#                    'landline_phone', 'mobile_phone', 'voice', 'activity']
+
+
+def import_persons(org_user, request, file_path, delimiter=";"):
+    """Import persons from CSV file."""
     imported_count = 0
+    skipped_count = 0
+    error_details = []
 
-    # Check if viewer can manage this org_user
+    # Check permissions
     if request.user != org_user:
-        has_permission = AccessControl.can_edit_event(
-            request.user, org_user
-        ).exists()
-
+        has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
         if not has_permission:
             messages.error(request, "You don't have permission to import.")
+            return {'success': False, 'count': 0, 'error': 'Permission denied'}
 
-    with open(file_path, 'r') as f:
+    # Helper: parse date from multiple formats
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d.%m.%Y']:
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    # Helper: parse activity date ranges
+    def parse_activity(activity_str):
+        if not activity_str:
+            return []
+
+        ranges = []
+        for date_range in activity_str.split(','):
+            parts = date_range.strip().replace(' ', '').split('-')
+
+            if len(parts) == 3:  # Ongoing: YYYY-MM-DD
+                start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
+                if start:
+                    ranges.append({'start': start, 'end': None})
+            elif len(parts) == 6:  # Completed: YYYY-MM-DD-YYYY-MM-DD
+                start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
+                end = parse_date(f"{parts[3]}-{parts[4]}-{parts[5]}")
+                if start and end:
+                    ranges.append({'start': start, 'end': end})
+
+        return ranges
+
+    # Process CSV
+    with open(file_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=delimiter)
-        headers = reader.fieldnames
-        messages.info(request, f"headers: {headers}")
-
-        for h in headers:
-            if h not in ALLOWED_PERSON_KEYS:
-                return None
-        today = datetime.date.today()
 
         for row in reader:
-            # Split the row data according to headers
-            first_name_value = row.get(FIRST_NAME_KEY, '').strip()
-            last_name_value = row.get(LAST_NAME_KEY, '').strip()
-            email_value = row.get(EMAIL_KEY, '').strip()
-            address_value = row.get(ADDRESS_KEY, '').split()
-            birth_date_value = row.get(BIRTH_DATE_KEY, '').split()
-            landline_phone_value = row.get(LANDLINE_PHONE_KEY, '').split() or None
-            mobile_phone_value = row.get(MOBILE_PHONE_KEY, '').split() or None
-            voice_value = row.get(VOICE_KEY, '').split()
+            try:
+                # Extract and clean data
+                first_name = row.get(FIRST_NAME_KEY, '').strip()
+                last_name = row.get(LAST_NAME_KEY, '').strip()
+                email = row.get(EMAIL_KEY, '').strip() or None
+                address = row.get(ADDRESS_KEY, '').strip() or None
+                birth_date = parse_date(row.get(BIRTH_DATE_KEY, '').strip())
+                phone = row.get(MOBILE_PHONE_KEY, '').strip() or row.get(LANDLINE_PHONE_KEY, '').strip() or None
+                voice = row.get(VOICE_KEY, '').strip()
+                activity_ranges = parse_activity(row.get(ACTIVITY_KEY, '').strip())
 
-            phone_value = mobile_phone_value or landline_phone_value
-
-            activity_raw_value = row.get(ACTIVITY_KEY, '').split()
-
-            activity_parsed_value = [a.strip() for a in activity_raw_value.split(',') if a.strip()]
-
-            try:   # get organization username from url
-                # Check if person exists in the organization's membership
-                existing_person = Person.objects.filter(   # does person already exist in our membership?
-                    last_name=last_name_value,
-                    first_name=first_name_value,
-                    memberships__user=org_user,
-                    person__role__role_id = Role.MEMBER,
-                ).first()
-
-                if existing_person:
+                # Validate required fields
+                if not first_name or not last_name:
+                    error_details.append(f"Row {reader.line_num}: Missing name")
+                    skipped_count += 1
                     continue
-                else:   # Create a new person if not found in organization's membership
+
+                with transaction.atomic():
+                    # Check if person already exists
+                    if Person.objects.filter(
+                            last_name=last_name,
+                            first_name=first_name,
+                            memberships__user=org_user
+                    ).exists():
+                        skipped_count += 1
+                        continue
+
+                    # Create person
                     person = Person.objects.create(
-                        last_name=last_name_value,
-                        first_name=first_name_value,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        address=address,
+                        birth_date=birth_date,
+                        phone=phone,
                         user=None,
-                        owner=None,
-                        address=address_value or None,
-                        email=email_value or None,
-                        birth_date=birth_date_value or None,
-                        phone=phone_value,
+                        owner=None
                     )
-                    ### DO TU SEM PRIŠEL ###
-                    PersonSkill.objects.create(person=person, skill_id=Skill.COMPOSER)
 
-                    Membership.objects.create(user=org_user, person=person)
+                    # Assign voice and skill
+                    voice_type = VOICE_LOOKUP.get(voice)
+                    if voice_type:
+                        Singer.objects.create(person=person, voice=voice_type)
+                        PersonSkill.objects.create(person=person, skill_id=Skill.SINGER)
+                    else:
+                        if voice:
+                            error_details.append(f"Row {reader.line_num}: Unknown voice '{voice}', assigned Conductor")
+                        PersonSkill.objects.create(person=person, skill_id=Skill.CONDUCTOR)
 
-                    PersonRole.objects.create(person=person, role_id=Role.EXTERNAL)
+                    # Process membership periods
+                    has_active = any(period['end'] is None for period in activity_ranges)
 
-                    MembershipPeriod.objects.create(user=org_user, person=person, role_id=Role.MEMBER,
-                                                    started_at=started_at, ended_at=ended_at)
+                    #  Only create Membership when has_active=True
+                    if has_active:
+                        Membership.objects.create(user=org_user, person=person)
 
+                    for period in activity_ranges:
+                        MembershipPeriod.objects.create(
+                            user=org_user,
+                            person=person,
+                            role_id=Role.MEMBER,
+                            started_at=period['start'],
+                            ended_at=period['end']
+                        )
 
+                    # Assign role
+                    PersonRole.objects.create(
+                        person=person,
+                        role_id=Role.MEMBER if has_active else Role.EXTERNAL
+                    )
+
+                    imported_count += 1
 
             except Exception as e:
-                message_text = f"Error importing row {reader.line_num}: {str(e)}"
-                messages.error(request, message_text)
-            continue  # Continue to next row on error
+                error_details.append(f"Row {reader.line_num}: {str(e)}")
+                continue
+
+    messages.success(request, f"Import complete: {imported_count} imported, {skipped_count} skipped")
 
     return {
         'success': True,
-        'count': imported_count
+        'count': imported_count,
+        'skipped': skipped_count,
+        'errors': len(error_details),
+        'error_details': error_details
     }
 
-def import_events(org_user, request, file_path, delimiter=";"):
+
+def import_events(self, org_user, request, file_path, delimiter=";"):
     url_username = self.kwargs.get("username")
     pass
 

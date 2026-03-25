@@ -31,7 +31,6 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.utils.text import slugify
-
 import datetime
 from django.views.generic import FormView, TemplateView
 from django.shortcuts import redirect
@@ -40,18 +39,16 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
-
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
-
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
 from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
-from .utils import import_songs, import_members, import_events
+from .utils import import_songs, import_persons, import_events
 
 
 class SignUp(generic.CreateView):
@@ -1563,7 +1560,7 @@ class ImportDashboardView(View):
                 if self.import_method == 'songs':
                     result = import_songs(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'members':
-                    result = import_members(self.org_user, request, tmp_file_path, delimiter)
+                    result = import_persons(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'events':
                     result = import_events(self.org_user, request, tmp_file_path, delimiter)
                 else:
