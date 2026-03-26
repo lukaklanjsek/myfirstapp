@@ -2,8 +2,9 @@
 from .models import (Song, Membership, CustomUser,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill,
-                     Singer)
+                     Singer, Voice)
 import csv, datetime
+from datetime import datetime, date
 from django.contrib import messages
 from .permissions import AccessControl
 from django.db import transaction
@@ -70,17 +71,7 @@ ALLOWED_SONG_KEYS = [
 ]
 
 def import_songs(org_user, request, file_path, delimiter=";"):
-    """
-    Import songs from a CSV file into the database for a given organization user.
-
-
-    Potential issues identified:
-    - Line 54: Membership filter syntax error: "person in owned_persons" should use __in
-    - Empty string checks: Some fields may need better None handling
-    - No validation for duplicate songs (same title/composer combination)
-    - No transaction rollback if bulk import partially fails
-    - PersonSkill.COMPOSER and Skill.COMPOSER naming inconsistency needs verification
-    """
+    """Import songs from a CSV file into the database for a given organization user."""
     viewer_user = request.user
     imported_count = 0
 
@@ -101,7 +92,7 @@ def import_songs(org_user, request, file_path, delimiter=";"):
         for h in headers:
             if h not in ALLOWED_SONG_KEYS:
                 return None
-        today = datetime.date.today()
+        today = date.today()
 
         for row in reader:
             # Split the row data according to headers
@@ -245,37 +236,44 @@ def import_persons(org_user, request, file_path, delimiter=";"):
     def parse_date(date_str):
         if not date_str:
             return None
-        for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d.%m.%Y']:
+        for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d.%m.%Y', '%d. %m. %Y']:
             try:
-                return datetime.datetime.strptime(date_str, fmt).date()
+                return datetime.strptime(date_str, fmt).date()
             except ValueError:
                 continue
         return None
 
     # Helper: parse activity date ranges
     def parse_activity(activity_str):
-        if not activity_str:
-            return []
-
-        ranges = []
-        for date_range in activity_str.split(','):
-            parts = date_range.strip().replace(' ', '').split('-')
-
-            if len(parts) == 3:  # Ongoing: YYYY-MM-DD
-                start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
+        def parse_datee(d):
+            try:
+                return datetime.strptime(d, '%Y-%m-%d').date()
+            except ValueError:
+                return None
+        intervals = []
+        for item in activity_str.split(','):
+            item = item.strip()
+            if not item:
+                continue
+            if item.endswith('-'):
+                start = parse_datee(item[:-1])
                 if start:
-                    ranges.append({'start': start, 'end': None})
-            elif len(parts) == 6:  # Completed: YYYY-MM-DD-YYYY-MM-DD
-                start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
-                end = parse_date(f"{parts[3]}-{parts[4]}-{parts[5]}")
-                if start and end:
-                    ranges.append({'start': start, 'end': end})
-
-        return ranges
+                    intervals.append({'start': start, 'end': None})
+            else:
+                parts = item.split('-')
+                if len(parts) == 6:
+                    start = parse_datee(f"{parts[0]}-{parts[1]}-{parts[2]}")
+                    end = parse_datee(f"{parts[3]}-{parts[4]}-{parts[5]}")
+                    if start and end:
+                        intervals.append({'start': start, 'end': end})
+                else:
+                    print("wrong date format:", item)
+        return intervals
 
     # Process CSV
     with open(file_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=delimiter)
+        print(reader.fieldnames)
 
         for row in reader:
             try:
@@ -289,52 +287,49 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                 voice = (row.get(VOICE_KEY) or '').strip()
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '')
 
-                # Validate required fields
-                if not first_name or not last_name:
-                    error_details.append(f"Row {reader.line_num}: Missing name")
-                    skipped_count += 1
-                    continue
+                person = Person.objects.create(     # Create person
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    address=address,
+                    birth_date=birth_date,
+                    phone=phone,
+                    user=None,
+                    owner=None
+                )
 
-                with transaction.atomic():
-                    # Check if person already exists
-                    if Person.objects.filter(
-                            last_name=last_name,
-                            first_name=first_name,
-                            memberships__user=org_user
-                    ).exists():
-                        skipped_count += 1
-                        continue
-
-                    # Create person
-                    person = Person.objects.create(
-                        first_name=first_name,
-                        last_name=last_name,
-                        email=email,
-                        address=address,
-                        birth_date=birth_date,
-                        phone=phone,
-                        user=None,
-                        owner=None
-                    )
-
-                    # Assign voice and skill
+                try:
                     voice_type = VOICE_LOOKUP.get(voice)
                     if voice_type:
-                        Singer.objects.create(person=person, voice=voice_type)
                         PersonSkill.objects.create(person=person, skill_id=Skill.SINGER)
+                        voice_instance = Voice.objects.get(name=voice_type)
+                        Singer.objects.create(person=person, voice=voice_instance)
+                        # print(f"Successfully assigned voice {voice_type} to {first_name}")
                     else:
-                        if voice:
-                            error_details.append(f"Row {reader.line_num}: Unknown voice '{voice}', assigned Conductor")
                         PersonSkill.objects.create(person=person, skill_id=Skill.CONDUCTOR)
+                        # print(f"Assigned skill conductor to {first_name}")
+                except Exception as e:
+                    # print(f"Warning: Failed to assign voice/skill to {first_name}: {str(e)}")
+                    error_details.append(f"Row {reader.line_num} - Voice assignment failed for {first_name}: {str(e)}")
 
-                    # Process membership periods
-                    has_active = any(period['end'] is None for period in activity_ranges)
+                has_active = bool(activity_ranges and any(period['end'] is None for period in activity_ranges))
 
-                    #  Only create Membership when has_active=True
-                    if has_active:
-                        Membership.objects.create(user=org_user, person=person)
+                # Create membership - with error handling and duplicate prevention
+                try: # Check if membership already exists to prevent duplicates
+                    membership, created = Membership.objects.get_or_create(
+                        user=org_user,
+                        person=person
+                    )
+                    if created:
+                        print(f"Created membership for {org_user} and {first_name}")
+                    else:
+                        print(f"Membership already exists for {org_user} and {first_name}")
+                except Exception as e:
+                    # print(f"Warning: Failed to create membership for {first_name}: {str(e)}")
+                    error_details.append(f"Row {reader.line_num} - Membership failed for {first_name}: {str(e)}")
 
-                    for period in activity_ranges:
+                for period in activity_ranges:    # Process membership periods
+                    try:
                         MembershipPeriod.objects.create(
                             user=org_user,
                             person=person,
@@ -342,17 +337,29 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                             started_at=period['start'],
                             ended_at=period['end']
                         )
+                        print(f"added membership period to {first_name} {period['start']} - {period['end']}")
+                    except Exception as e:
+                        print(f"Warning: Failed to create membership period for {first_name}: {str(e)}")
+                        error_details.append(
+                            f"Row {reader.line_num} - Membership period failed for {first_name}: {str(e)}")
 
-                    # Assign role
+                # Assign role with error handling
+                try:
                     PersonRole.objects.create(
                         person=person,
                         role_id=Role.MEMBER if has_active else Role.EXTERNAL
                     )
+                    # print(f"person role {first_name} - {Role.MEMBER if has_active else Role.EXTERNAL}")
+                except Exception as e:
+                    print(f"Warning: Failed to assign role to {first_name}: {str(e)}")
+                    error_details.append(f"Row {reader.line_num} - Role assignment failed for {first_name}: {str(e)}")
 
-                    imported_count += 1
+                imported_count += 1
 
             except Exception as e:
+                skipped_count += 1
                 error_details.append(f"Row {reader.line_num}: {str(e)}")
+                print(f"Error processing row {reader.line_num}: {str(e)}")
                 continue
 
     messages.success(request, f"Import complete: {imported_count} imported, {skipped_count} skipped")
