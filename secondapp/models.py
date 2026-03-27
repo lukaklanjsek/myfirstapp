@@ -339,6 +339,11 @@ class PersonRole(models.Model):
         ]
 
 
+class Project(models.Model):
+    """Collection of Events under a common project."""
+    title = models.CharField(max_length=250)
+
+
 class Song(models.Model):
     title = models.CharField(max_length=250)
     number_of_pages = models.PositiveIntegerField(blank=True, null=True)
@@ -375,7 +380,7 @@ class Song(models.Model):
     lyrics = models.TextField("song text", blank=True, null=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} - {self.composer.last_name}"
 
 
 class Event(models.Model):
@@ -390,6 +395,8 @@ class Event(models.Model):
     started_at = models.DateTimeField("start date hour")
     ended_at = models.DateTimeField("end date hour")
     event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
+    details = models.TextField(blank=True, null=True)
+    num_visitors = models.PositiveIntegerField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -399,8 +406,13 @@ class Event(models.Model):
                                   on_delete=models.SET_NULL, related_name='locked_events')
     locked_at = models.DateTimeField(null=True, blank=True)
 
-
-
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='events'
+    )
 
 
 class EventSong(models.Model):
@@ -460,6 +472,7 @@ class Instrumentalist(models.Model):
     """Through table for person and instrument."""
     person = models.ForeignKey(Person, on_delete=models.PROTECT)
     instrument = models.ForeignKey(Instrument, on_delete=models.PROTECT)
+
 
 
 

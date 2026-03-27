@@ -1224,6 +1224,10 @@ class EventListView(ListView):
     model = Event
     ordering = ['-started_at']
 
+    def get_queryset(self):
+        url_username = self.kwargs.get("username")
+        customuser = get_object_or_404(CustomUser, username=url_username)
+        return Event.objects.filter(user=customuser)
 
 
 @method_decorator(login_required, name='dispatch')

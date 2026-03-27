@@ -27,7 +27,7 @@ EDIT
             {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
             <tr>
                 <td>{{ eventsong.order }}</td>
-                <td>{{ eventsong.song.title }}</td>
+                <td>{{ eventsong.song.internal_id }} - {{ eventsong.song.title }} - {{ eventsong.song.composer.last_name }}</td>
 
             </tr>
             {% endfor %}

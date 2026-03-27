@@ -219,11 +219,9 @@ class EventSongForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        # make song not required in empty
-        self.fields['song'].required = False
+        self.fields['song'].required = False  # make song not required in empty
 
-        if user:
-            # Filter songs belonging to this user directly
+        if user:   # Filter songs belonging to this user directly
             self.fields['song'].queryset = Song.objects.filter(
                 user=user  # Song has a user field according to the error
             ).order_by('title')
@@ -316,7 +314,7 @@ AttendanceFormSet = inlineformset_factory(
     Event,
     Attendance,
     form=AttendanceForm,
-    extra=5,  # We'll manually create initial data for all members
+    extra=0,  # We'll manually create initial data for all members
     can_delete=False,
     validate_min=True,  # Allows extra empty forms to be ignored
     min_num=0,  # Minimum required forms

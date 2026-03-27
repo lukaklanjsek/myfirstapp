@@ -2,7 +2,7 @@
 from .models import (Song, Membership, CustomUser,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill,
-                     Singer, Voice)
+                     Singer, Voice, Event, Project)
 import csv, datetime
 from datetime import datetime, date
 from django.contrib import messages
@@ -215,9 +215,6 @@ VOICE_TYPES = {
 # Reverse mapping for O(1) lookup
 VOICE_LOOKUP = {variant: voice for voice, variants in VOICE_TYPES.items() for variant in variants}
 
-# ALLOWED_HEADERS = ['first_name', 'last_name', 'email', 'address', 'birth_date',
-#                    'landline_phone', 'mobile_phone', 'voice', 'activity']
-
 
 def import_persons(org_user, request, file_path, delimiter=";"):
     """Import persons from CSV file."""
@@ -233,10 +230,10 @@ def import_persons(org_user, request, file_path, delimiter=";"):
             return {'success': False, 'count': 0, 'error': 'Permission denied'}
 
     # Helper: parse date from multiple formats
-    def parse_date(date_str):
+    def parse_bday(date_str):
         if not date_str:
             return None
-        for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d.%m.%Y', '%d. %m. %Y']:
+        for fmt in ['%Y-%m-%d']:
             try:
                 return datetime.strptime(date_str, fmt).date()
             except ValueError:
@@ -245,7 +242,7 @@ def import_persons(org_user, request, file_path, delimiter=";"):
 
     # Helper: parse activity date ranges
     def parse_activity(activity_str):
-        def parse_datee(d):
+        def parse_date(d):
             try:
                 return datetime.strptime(d, '%Y-%m-%d').date()
             except ValueError:
@@ -256,24 +253,35 @@ def import_persons(org_user, request, file_path, delimiter=";"):
             if not item:
                 continue
             if item.endswith('-'):
-                start = parse_datee(item[:-1])
+                start = parse_date(item[:-1])
                 if start:
                     intervals.append({'start': start, 'end': None})
             else:
-                parts = item.split('-')
-                if len(parts) == 6:
-                    start = parse_datee(f"{parts[0]}-{parts[1]}-{parts[2]}")
-                    end = parse_datee(f"{parts[3]}-{parts[4]}-{parts[5]}")
-                    if start and end:
-                        intervals.append({'start': start, 'end': end})
+                start = parse_date(item[0:10])
+                end = parse_date(item[11:21])
+                if start and end:
+                    intervals.append({'start': start, 'end': end})
                 else:
                     print("wrong date format:", item)
+                # parts = item.split('-')
+                # if len(parts) == 6:
+                #     start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
+                #     end = parse_date(f"{parts[3]}-{parts[4]}-{parts[5]}")
+                #     if start and end:
+                #         intervals.append({'start': start, 'end': end})
+                # else:
+                #     print("wrong date format:", item)
         return intervals
 
     # Process CSV
     with open(file_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter=delimiter)
-        print(reader.fieldnames)
+        headers = reader.fieldnames
+        print(headers)
+
+        for h in headers:
+            if h not in ALLOWED_PERSON_KEYS:
+                return None
 
         for row in reader:
             try:
@@ -282,7 +290,7 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                 last_name = (row.get(LAST_NAME_KEY) or '').strip()
                 email = (row.get(EMAIL_KEY) or '').strip() or None
                 address = (row.get(ADDRESS_KEY) or '').strip() or None
-                birth_date = parse_date(row.get(BIRTH_DATE_KEY) or '')
+                birth_date = parse_bday(row.get(BIRTH_DATE_KEY) or '')
                 phone = (row.get(MOBILE_PHONE_KEY) or row.get(LANDLINE_PHONE_KEY) or '').strip() or None
                 voice = (row.get(VOICE_KEY) or '').strip()
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '')
@@ -298,15 +306,15 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                     owner=None
                 )
 
-                try:
+                try:    # PersonSkill and Voice
                     voice_type = VOICE_LOOKUP.get(voice)
                     if voice_type:
                         PersonSkill.objects.create(person=person, skill_id=Skill.SINGER)
                         voice_instance = Voice.objects.get(name=voice_type)
                         Singer.objects.create(person=person, voice=voice_instance)
                         # print(f"Successfully assigned voice {voice_type} to {first_name}")
-                    else:
-                        PersonSkill.objects.create(person=person, skill_id=Skill.CONDUCTOR)
+                    # else:
+                        # PersonSkill.objects.create(person=person, skill_id=Skill.CONDUCTOR)
                         # print(f"Assigned skill conductor to {first_name}")
                 except Exception as e:
                     # print(f"Warning: Failed to assign voice/skill to {first_name}: {str(e)}")
@@ -314,7 +322,6 @@ def import_persons(org_user, request, file_path, delimiter=";"):
 
                 has_active = bool(activity_ranges and any(period['end'] is None for period in activity_ranges))
 
-                # Create membership - with error handling and duplicate prevention
                 try: # Check if membership already exists to prevent duplicates
                     membership, created = Membership.objects.get_or_create(
                         user=org_user,
@@ -328,6 +335,7 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                     # print(f"Warning: Failed to create membership for {first_name}: {str(e)}")
                     error_details.append(f"Row {reader.line_num} - Membership failed for {first_name}: {str(e)}")
 
+                # MembershipPeriod
                 for period in activity_ranges:    # Process membership periods
                     try:
                         MembershipPeriod.objects.create(
@@ -343,7 +351,7 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                         error_details.append(
                             f"Row {reader.line_num} - Membership period failed for {first_name}: {str(e)}")
 
-                # Assign role with error handling
+                # Role
                 try:
                     PersonRole.objects.create(
                         person=person,
@@ -373,6 +381,96 @@ def import_persons(org_user, request, file_path, delimiter=";"):
     }
 
 
-def import_events(self, org_user, request, file_path, delimiter=";"):
-    url_username = self.kwargs.get("username")
-    pass
+
+EVENT_INTERNAL_ID_KEY = "internal_id"
+EVENT_NAME_KEY = "title"
+EVENT_LOCATION_KEY = "location_city"
+EVENT_LOCATION_RID_KEY = "location_rid"
+EVENT_LOCATION_CUSTOM_KEY = "location_custom"
+EVENT_STARTED_AT_KEY = "start_date"
+EVENT_STARTED_AT_HOUR_KEY = "start_hour"
+EVENT_ENDED_AT_KEY = "end_date"
+EVENT_TYPE_KEY = "duration_rid"
+EVENT_DETAILS_KEY = "description"
+EVENT_NUM_VISITORS_KEY = "num_visitors"
+EVENT_PROJECT_KEY = "project"
+
+ALLOWED_EVENT_KEYS = [
+    EVENT_INTERNAL_ID_KEY,
+    EVENT_NAME_KEY,
+    EVENT_LOCATION_KEY,
+    EVENT_LOCATION_CUSTOM_KEY,
+    EVENT_LOCATION_RID_KEY,
+    EVENT_STARTED_AT_KEY,
+    EVENT_ENDED_AT_KEY,
+    EVENT_TYPE_KEY,
+    EVENT_DETAILS_KEY,
+    EVENT_NUM_VISITORS_KEY,
+    EVENT_PROJECT_KEY,
+    EVENT_STARTED_AT_HOUR_KEY,
+]
+
+
+def import_events(org_user, request, file_path, delimiter=";"):
+    """Import events from CSV file."""
+    imported_count = 0
+    skipped_count = 0
+    error_details = []
+
+    # Check permissions
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
+        if not has_permission:
+            messages.error(request, "You don't have permission to import.")
+            return {'success': False, 'count': 0, 'error': 'Permission denied'}
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        headers = reader.fieldnames
+        print(headers)
+
+        for h in headers:
+            if h not in ALLOWED_EVENT_KEYS:
+                return None
+
+        for row in reader:
+            try:
+                # internal_id = (row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
+                name = (row.get(EVENT_NAME_KEY) or '').strip() or None
+                location = (row.get(EVENT_LOCATION_KEY) or '').strip() or None
+                started_at = (row.get(EVENT_STARTED_AT_KEY) or '').strip() or None
+                started_hour = (row.get(EVENT_STARTED_AT_HOUR_KEY) or '').strip() or None
+                ended_at = (row.get(EVENT_ENDED_AT_KEY) or '').strip() or None
+                event_type = (row.get(EVENT_TYPE_KEY) or '').strip() or None
+                details = (row.get(EVENT_DETAILS_KEY) or '').strip() or None
+                num_visitors = (row.get(EVENT_NUM_VISITORS_KEY) or '').strip() or None
+                project_title = (row.get(EVENT_PROJECT_KEY) or '').strip() or None
+
+                Event.objects.create(
+                    user=org_user,
+                    # internal_id=internal_id,
+                    name=name,
+                    location=location,
+                    started_at=started_at,
+                    ended_at=ended_at,
+                    event_type=event_type,
+                    details=details,
+                    num_visitors=num_visitors,
+                )
+                if project_title:
+                    Project.objects.get_or_create(
+                        title=project_title
+                    )
+
+                imported_count += 1
+
+            except Exception as e:
+                skipped_count += 1
+                error_details.append(f"Row {reader.line_num}: {str(e)}")
+                print(f"Error processing row {reader.line_num}: {str(e)}")
+                continue
+
+        return {
+            'success': True,
+            'count': imported_count
+        }
