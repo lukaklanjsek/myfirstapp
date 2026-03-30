@@ -2,7 +2,7 @@
 from .models import (Song, Membership, CustomUser,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill,
-                     Singer, Voice, Event, Project)
+                     Singer, Voice, Event, Project, EventType)
 import csv, datetime
 from datetime import datetime, date
 from django.contrib import messages
@@ -10,33 +10,33 @@ from .permissions import AccessControl
 from django.db import transaction
 from django.http import HttpResponseForbidden
 
-class SongQueryHelper:
-    @staticmethod
-    def get_personal_songs(user):
-        return Song.objects.filter(user = user)
-
-    @staticmethod
-    def get_organization_songs(organization):
-        return Song.objects.filter(user = organization.user)
-
-    @staticmethod
-    def get_user_accessible_songs(user):
-        personal = Song.objects.filter(user=user)
-
-        person = user.persons.first()
-        if not person:
-            return personal
-
-        owned_persons = person.owned_persons.all()
-        memberships = Membership.objects.filter(
-            person in owned_persons,
-            # is_active = True
-        ).select_related("organization__user")
-
-        org_user = [m.organization.user for m in memberships]
-        org_songs = Song.objects.filter(user__in=org_user)
-
-        return personal | org_songs
+# class SongQueryHelper:
+#     @staticmethod
+#     def get_personal_songs(user):
+#         return Song.objects.filter(user = user)
+#
+#     @staticmethod
+#     def get_organization_songs(organization):
+#         return Song.objects.filter(user = organization.user)
+#
+#     @staticmethod
+#     def get_user_accessible_songs(user):
+#         personal = Song.objects.filter(user=user)
+#
+#         person = user.persons.first()
+#         if not person:
+#             return personal
+#
+#         owned_persons = person.owned_persons.all()
+#         memberships = Membership.objects.filter(
+#             person in owned_persons,
+#             # is_active = True
+#         ).select_related("organization__user")
+#
+#         org_user = [m.organization.user for m in memberships]
+#         org_songs = Song.objects.filter(user__in=org_user)
+#
+#         return personal | org_songs
 
 
 
@@ -382,32 +382,38 @@ def import_persons(org_user, request, file_path, delimiter=";"):
 
 
 
-EVENT_INTERNAL_ID_KEY = "internal_id"
+# EVENT_INTERNAL_ID_KEY = "internal_id"
 EVENT_NAME_KEY = "title"
-EVENT_LOCATION_KEY = "location_city"
-EVENT_LOCATION_RID_KEY = "location_rid"
+EVENT_LOCATION_CITY_KEY = "location_city"
+# EVENT_LOCATION_RID_KEY = "location_rid"
 EVENT_LOCATION_CUSTOM_KEY = "location_custom"
-EVENT_STARTED_AT_KEY = "start_date"
-EVENT_STARTED_AT_HOUR_KEY = "start_hour"
+EVENT_START_DATE_KEY = "start_date"
+EVENT_START_HOUR_KEY = "start_hour"
 EVENT_ENDED_AT_KEY = "end_date"
 EVENT_TYPE_KEY = "duration_rid"
 EVENT_DETAILS_KEY = "description"
 EVENT_NUM_VISITORS_KEY = "num_visitors"
 EVENT_PROJECT_KEY = "project"
+EVENT_INCOME_KEY = "income"
+EVENT_OUTCOME_KEY = "outcome"
+EVENT_ADDITIONAL_TEXTFIELD_KEY = "notes"
+EVENT_PRODUCERS_GROUP_KEY = "producers_group"
 
 ALLOWED_EVENT_KEYS = [
-    EVENT_INTERNAL_ID_KEY,
+    # EVENT_INTERNAL_ID_KEY,
     EVENT_NAME_KEY,
-    EVENT_LOCATION_KEY,
+    EVENT_LOCATION_CITY_KEY,
     EVENT_LOCATION_CUSTOM_KEY,
-    EVENT_LOCATION_RID_KEY,
-    EVENT_STARTED_AT_KEY,
+    # EVENT_LOCATION_RID_KEY,
+    EVENT_START_DATE_KEY,
+    EVENT_START_HOUR_KEY,
     EVENT_ENDED_AT_KEY,
     EVENT_TYPE_KEY,
     EVENT_DETAILS_KEY,
     EVENT_NUM_VISITORS_KEY,
     EVENT_PROJECT_KEY,
-    EVENT_STARTED_AT_HOUR_KEY,
+    EVENT_ADDITIONAL_TEXTFIELD_KEY,
+    EVENT_PRODUCERS_GROUP_KEY,
 ]
 
 
@@ -430,21 +436,51 @@ def import_events(org_user, request, file_path, delimiter=";"):
         print(headers)
 
         for h in headers:
-            if h not in ALLOWED_EVENT_KEYS:
+            valid_headers = [h for h in reader.fieldnames if h in ALLOWED_EVENT_KEYS]
+            if not valid_headers:
+                messages.error(request, "Your headers are wrong")
                 return None
 
         for row in reader:
+            f_row = {k: v for k, v in row.items() if k in valid_headers}
             try:
-                # internal_id = (row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
-                name = (row.get(EVENT_NAME_KEY) or '').strip() or None
-                location = (row.get(EVENT_LOCATION_KEY) or '').strip() or None
-                started_at = (row.get(EVENT_STARTED_AT_KEY) or '').strip() or None
-                started_hour = (row.get(EVENT_STARTED_AT_HOUR_KEY) or '').strip() or None
-                ended_at = (row.get(EVENT_ENDED_AT_KEY) or '').strip() or None
-                event_type = (row.get(EVENT_TYPE_KEY) or '').strip() or None
-                details = (row.get(EVENT_DETAILS_KEY) or '').strip() or None
-                num_visitors = (row.get(EVENT_NUM_VISITORS_KEY) or '').strip() or None
-                project_title = (row.get(EVENT_PROJECT_KEY) or '').strip() or None
+                # internal_id = (f_row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
+                name = (f_row.get(EVENT_NAME_KEY) or '').strip() or None
+                location_city = (f_row.get(EVENT_LOCATION_CITY_KEY) or '').strip() or None
+                # location_rid = (f_row.get(EVENT_LOCATION_RID_KEY) or '').strip() or None
+                location_custom = (f_row.get(EVENT_LOCATION_CUSTOM_KEY) or '').strip() or None
+                start_date = (f_row.get(EVENT_START_DATE_KEY) or '').strip()  # or None
+                start_hour = (f_row.get(EVENT_START_HOUR_KEY) or '').strip()  # or None
+                ended_at = (f_row.get(EVENT_ENDED_AT_KEY) or '').strip() or None
+                event_typo = (f_row.get(EVENT_TYPE_KEY) or '').strip() or None
+                details = (f_row.get(EVENT_DETAILS_KEY) or '').strip() or None
+                num_visitors = (f_row.get(EVENT_NUM_VISITORS_KEY) or '').strip() or None
+                project_title = (f_row.get(EVENT_PROJECT_KEY) or '').strip() or None
+                notes = (f_row.get(EVENT_ADDITIONAL_TEXTFIELD_KEY) or '').strip or None
+                income = (f_row.get(EVENT_INCOME_KEY) or '').strip() or None
+                outcome = (f_row.get(EVENT_OUTCOME_KEY) or '').strip() or None
+                producers = (f_row.get(EVENT_PRODUCERS_GROUP_KEY) or '').strip() or None
+
+                location = f"{location_city}, {location_custom}"
+
+                started_at = datetime.combine(
+                    datetime.fromisoformat(start_date).date(),
+                    datetime.strptime(start_hour, "%H:%M").time()
+                )
+
+                if event_typo == "Krajši nastop do 20 minut":
+                    event_type = EventType.objects.get(name="Performance")
+                else:
+                    event_type = EventType.objects.get(name="Concert")
+
+                additional_notes = []
+                if income != 0 or not None:
+                    additional_notes.append(income)
+                if outcome != 0 or not None:
+                    additional_notes.append(outcome)
+
+                additional_notes.append(notes)
+
 
                 Event.objects.create(
                     user=org_user,
@@ -456,6 +492,10 @@ def import_events(org_user, request, file_path, delimiter=";"):
                     event_type=event_type,
                     details=details,
                     num_visitors=num_visitors,
+                    additional_notes=additional_notes,
+                    # income=income,
+                    # outcome=outcome,
+                    producers=producers,
                 )
                 if project_title:
                     Project.objects.get_or_create(

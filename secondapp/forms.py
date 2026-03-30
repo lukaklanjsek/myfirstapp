@@ -196,9 +196,16 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = ['name',
                   'location',
+                  'description',
                   'started_at',
                   'ended_at',
-                  'event_type'
+                  'event_type',
+                  'details',
+                  'income',
+                  'outcome',
+                  'producers',
+                  'additional_notes',
+                  'num_visitors',
                   ]
         widgets = {
             'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),

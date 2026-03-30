@@ -342,6 +342,7 @@ class PersonRole(models.Model):
 class Project(models.Model):
     """Collection of Events under a common project."""
     title = models.CharField(max_length=250)
+    details = models.TextField(blank=True, null=True)
 
 
 class Song(models.Model):
@@ -397,6 +398,11 @@ class Event(models.Model):
     event_type = models.ForeignKey(EventType, on_delete=models.PROTECT)
     details = models.TextField(blank=True, null=True)
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    additional_notes = models.TextField(blank=True, null=True)
+    # income = models.IntegerField(blank=True, null=True)
+    # outcome = models.IntegerField(blank=True, null=True)
+    producers = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
