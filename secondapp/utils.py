@@ -9,6 +9,7 @@ from django.contrib import messages
 from .permissions import AccessControl
 from django.db import transaction
 from django.http import HttpResponseForbidden
+from django.utils import timezone
 
 # class SongQueryHelper:
 #     @staticmethod
@@ -467,6 +468,14 @@ def import_events(org_user, request, file_path, delimiter=";"):
                     datetime.fromisoformat(start_date).date(),
                     datetime.strptime(start_hour, "%H:%M").time()
                 )
+                started_at = timezone.make_aware(started_at)
+                if ended_at:
+                    try:
+                        ended_at = timezone.make_aware(datetime.fromisoformat(ended_at))
+                    except (ValueError, TypeError):
+                        ended_at = None
+                else:
+                    ended_at = None
 
                 if event_typo == "Krajši nastop do 20 minut":
                     event_type = EventType.objects.get(name="Performance")
@@ -493,8 +502,6 @@ def import_events(org_user, request, file_path, delimiter=";"):
                     details=details,
                     num_visitors=num_visitors,
                     additional_notes=additional_notes,
-                    # income=income,
-                    # outcome=outcome,
                     producers=producers,
                 )
                 if project_title:

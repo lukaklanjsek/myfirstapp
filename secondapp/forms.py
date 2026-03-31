@@ -201,8 +201,7 @@ class EventForm(forms.ModelForm):
                   'ended_at',
                   'event_type',
                   'details',
-                  'income',
-                  'outcome',
+
                   'producers',
                   'additional_notes',
                   'num_visitors',
@@ -256,32 +255,71 @@ class EventSongFormSet(BaseInlineFormSet):
 class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
-        fields = ['person', 'attendance_type']
+        fields = [
+            'attendance_type',
+            'person'
+        ]
         widgets = {
             "attendance_type": forms.RadioSelect()
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        event = kwargs.pop('event', None)
         super().__init__(*args, **kwargs)
 
+        if self.instance and self.instance.pk:
+            # disable persons
+            self.fields['person'].disabled = True
+
         if user:
-            # Limit person choices to members of this organization
-            self.fields['person'].queryset = Person.objects.filter(
-                memberships__user=user,
-                memberships__person__roles__id=Role.MEMBER
-            ).distinct()
+            # Get the event date to filter active members
+            event_date = None
+            if event:
+                event_date = event.started_at
+            elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
+                event_date = self.instance.event.started_at
+
+            # if event_date:
+            #     # Limit person choices to members who have active membership_period at the time of the event
+            #     # self.fields['person'].queryset = Person.objects.filter(
+            #     #     membership_period__user=user,
+            #     #     membership_period__person__roles__id=Role.MEMBER,
+            #     #     membership_period__started_at__lte=event_date,
+            #     #     membership_period__ended_at__gte=event_date
+            #     # ).distinct()
+            #     pass
+            # else:
+            #     # Fallback: if no event date, just filter by user and role
+            #     self.fields['person'].queryset = Person.objects.filter(
+            #         membership__user=user,
+            #         membership__person__roles__id=Role.MEMBER
+            #     ).distinct()
 
         # ensure the current person is in the queryset even if they're no longer a member
         if self.instance and self.instance.pk and self.instance.person:
+            event_date = None
             if user:
+                if event:
+                    event_date = event.started_at
+                elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
+                    event_date = self.instance.event.started_at
                 # Make sure the existing person is included in the queryset
                 current_queryset = self.fields['person'].queryset
-                if not current_queryset.filter(pk=self.instance.person.pk).exists():
-                    self.fields['person'].queryset = Person.objects.filter(
-                        Q(memberships__user=user, memberships__person__roles__id=Role.MEMBER) |
-                        Q(pk=self.instance.person.pk)
-                    ).distinct()
+                # if not current_queryset.filter(pk=self.instance.person.pk).exists():
+                    # if event_date:
+                    #     self.fields['person'].queryset = Person.objects.filter(
+                    #         Q(membership_period__user=user,
+                    #           membership_period__person__roles__id=Role.MEMBER,
+                    #           membership_period__started_at__lte=event_date,
+                    #           membership_period__ended_at__gte=event_date) |
+                    #         Q(pk=self.instance.person.pk)
+                    #     ).distinct()
+                    # else:
+                    #     self.fields['person'].queryset = Person.objects.filter(
+                    #         Q(membership_period__user=user, membership_period__person__roles__id=Role.MEMBER) |
+                    #         Q(pk=self.instance.person.pk)
+                    #     ).distinct()
 
 
 # class SingerForm(forms.Form):

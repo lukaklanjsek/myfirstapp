@@ -400,8 +400,6 @@ class Event(models.Model):
     num_visitors = models.PositiveIntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
-    # income = models.IntegerField(blank=True, null=True)
-    # outcome = models.IntegerField(blank=True, null=True)
     producers = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

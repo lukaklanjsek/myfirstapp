@@ -39,9 +39,6 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
-# from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
-# from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
-# from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
 from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
@@ -49,6 +46,10 @@ from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, Attendan
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 from .utils import import_songs, import_persons, import_events
+# from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
+# from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
+# from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
+
 
 
 class SignUp(generic.CreateView):
@@ -581,7 +582,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
             current_role_ids = self.person.roles.values_list("id", flat=True)
 
             # current skills
-            current_skill_ids = self.person.person_skill.values_list(
+            current_skill_ids = self.person.skills.values_list(
                 "skill_id", flat=True
             )
 
