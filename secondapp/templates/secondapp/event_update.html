@@ -12,30 +12,7 @@
     pointer-events: none;
 }
 
-<!--.event-lock-section {-->
-<!--    background-color: #fff3cd;-->
-<!--    border: 1px solid #ffc107;-->
-<!--    padding: 15px;-->
-<!--    margin-bottom: 20px;-->
-<!--    border-radius: 4px;-->
-<!--}-->
 
-<!--.lock-button {-->
-<!--    padding: 8px 16px;-->
-<!--    border: none;-->
-<!--    border-radius: 4px;-->
-<!--    cursor: pointer;-->
-<!--    font-weight: bold;-->
-<!--}-->
-
-<!--.lock-button.locked {-->
-<!--    background-color: #ffc107;-->
-<!--    color: #000;-->
-<!--}-->
-
-<!--.lock-button.unlocked {-->
-<!--    background-color: #dc3545;-->
-<!--    color: #fff;-->
 }
 </style>
 
@@ -49,46 +26,9 @@
     </div>
 {% endif %}
 
-<!-- NEW: Admin Lock Button Section -->
-<!--{% if is_admin %}-->
-<!--<div class="event-lock-section">-->
-<!--    <form method="POST" >-->
-<!--        {% csrf_token %}-->
-<!--        <button type="submit" class="lock-button {% if is_event_locked %}locked{% else %}unlocked{% endif %}">-->
-<!--            {% if is_event_locked %}-->
-<!--                 Unlock Event Attendance-->
-<!--            {% else %}-->
-<!--                 Lock Event Attendance-->
-<!--            {% endif %}-->
-<!--        </button>-->
-<!--    </form>-->
-
-<!--    {% if is_event_locked %}-->
-<!--        <small style="display: block; margin-top: 10px; color: #856404;">-->
-<!--             Locked by {{ object.locked_by.get_full_name }} on {{ object.locked_at|date:"d, M, Y H:i" }}-->
-<!--            <br>No attendance changes allowed except by admins.-->
-<!--        </small>-->
-<!--        {% if not admin_override %}-->
-<!--            <a href="?admin_override=true" class="lock-button unlocked" style="display: inline-block; margin-top: 10px; text-decoration: none;">-->
-<!--                ✏️ Edit Anyway (Admin Override)-->
-<!--            </a>-->
-<!--        {% else %}-->
-<!--            <div style="background-color: #fff; border: 2px solid #dc3545; padding: 10px; margin-top: 10px; border-radius: 4px;">-->
-<!--                <strong style="color: #dc3545;"> ADMIN OVERRIDE MODE</strong><br>-->
-<!--                <small>You can now edit locked attendance. Changes will remain locked after saving.</small><br>-->
-<!--                <a href="?" style="color: #007bff; text-decoration: underline;">Cancel Override</a>-->
-<!--            </div>-->
-<!--        {% endif %}-->
-<!--    {% endif %}-->
-<!--</div>-->
-<!--{% endif %}-->
 
 <!-- NEW: Warning for non-admins when event is locked -->
-{% if is_event_locked and not is_admin %}
-<div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: 15px;">
-    This event's attendance is locked. Contact an admin to make changes.
-</div>
-{% endif %}
+
 
 <h2>Update Your Event</h2>
 <form method="post">
@@ -195,38 +135,31 @@
         <thead>
             <tr>
                 <th>Person</th>
-                {% with attendance_formset.forms.0.attendance_type as first_attendance %}
-                    {% for radio in first_attendance %}
-                        <th>{{ radio.choice_label }}</th>
+                {% with attendance_formset.forms.0.fields.attendance_type as first_field %}
+                    {% for radio in first_field.widget.choices %}
+                        <th>{{ radio.1 }}</th>
                     {% endfor %}
+                TEST PRINT template
                 {% endwith %}
             </tr>
         </thead>
         <tbody id="attendance-formset">
-            {% for form in attendance_formset %}
-                <tr class="formset-form {% if form.instance.is_locked or is_event_locked %}locked-attendance-row{% endif %}">
-                <td>
-                    {{ form.person }}
-<!--                    {% if form.instance.is_locked %}-->
-<!--                        <span style="color: #dc3545; font-size: 0.9em;" title="{{ form.instance.locked_reason }}">🔒</span>-->
-<!--                    {% endif %}-->
-                </td>
-                {% for radio in form.attendance_type %}
-                    <td>{{ radio.tag }}</td>
-                {% endfor %}
-                <td>
-<!--                    {% if user.is_superuser %}-->
-<!--                        <input type="checkbox" name="lock_{{ form.instance.pk }}" {% if form.instance.is_locked %}checked{% endif %}>-->
-<!--                        <label>Lock</label>-->
-<!--                    {% endif %}-->
-                </td>
-                <td style="display: none;">{{ form.id }}</td>
+            {% for person, form in attendance_rows %}
+                <tr>
+                    <td>{{ person }}</td>
+                    {{ form.person }}  {# Hidden field #}
+                    {{ form.id }}      {# Hidden field for existing records #}
+                    {% for radio in form.attendance_type %}
+                        <td>{{ radio.tag }}</td>
+                    {% endfor %}
                 </tr>
             {% endfor %}
+
+            {# Keep the management form #}
+            {{ attendance_formset.management_form }}
         </tbody>
     </table>
 
-    <!--: Disable submit button if event is locked and user is not admin -->
-    <button type="submit" {% if is_event_locked and not is_admin %}disabled{% endif %}>Update Event</button>
+    <button type="submit" >Update Event</button>
 </form>
 {% endblock %}

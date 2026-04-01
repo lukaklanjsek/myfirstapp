@@ -1053,7 +1053,6 @@ class EventUpdateView(UpdateView):
 
     def get_queryset(self):
         """Return only events belonging to the organization/user from URL."""
-        # ADDED: select_related and prefetch_related to reduce database queries
         return Event.objects.filter(
             user=self.customuser
         ).select_related('user', 'event_type').prefetch_related(
@@ -1062,51 +1061,107 @@ class EventUpdateView(UpdateView):
         )
 
     def get_context_data(self, **kwargs):
-        """Prepare formsets and context data for the template."""  # ADDED: Docstring
+        """Prepare formsets and context data for the template."""
         context = super().get_context_data(**kwargs)
         event = self.object
 
+        # Get event date (use current date for new events)
+        event_date = event.started_at if event.started_at else timezone.now().date()
+
+        # Get members active at the time of the event
+        members = list(Person.objects.filter(
+            membership_period__user=self.customuser,
+            membership_period__person__roles__id=Role.MEMBER,
+            membership_period__started_at__lte=event_date,
+        ).filter(
+            Q(membership_period__ended_at__gte=event_date) |
+            Q(membership_period__ended_at__isnull=True)
+        ).select_related('user').prefetch_related('roles').distinct())
+
+        # Check if attendance records exist for this event
+
+
+        # if event.attendance_set.count() == 0 and members:
+            # No attendance records exist - pre-fill for all active members
+            ###### PREFILL ATTENDANCE
+        #     Attendance.objects.get(Attendance(event=event, person=member, attendance_type=missing_type)
+        #         for member in members)
+        # else:
+
+
         if self.request.POST:
+            # Song formset
             context['song_formset'] = EventSongFormSet(
                 self.request.POST,
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
-            context['attendance_formset'] = AttendanceFormSet(
+
+            # Attendance formset
+            attendance_formset = AttendanceFormSet(
                 self.request.POST,
                 instance=event,
-                form_kwargs={'user': self.customuser}
+                form_kwargs={'user': self.customuser, 'event': event}
             )
         else:
+            # Song formset
             context['song_formset'] = EventSongFormSet(
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
 
+            # Get existing attendance records
+            existing_attendance = {
+                att.person_id: att
+                for att in event.attendance_set.select_related('person').all()
+            }
+
+            # Create initial data for each member
+            initial_data = []
+            for member in members:
+                if member.id in existing_attendance:
+                    # Use existing attendance data
+                    att = existing_attendance[member.id]
+                    initial_data.append({
+                        'person': member,
+                        'attendance_type': att.attendance_type,
+                        'id': att.id
+                    })
+                else:
+                    # New attendance record
+                    initial_data.append({
+                        'person': member,
+                        'attendance_type': None
+                    })
+
+            # Attendance formset with proper queryset
             attendance_formset = AttendanceFormSet(
                 instance=event,
-                form_kwargs={'user': self.customuser}
+                queryset=event.attendance_set.all(),
+                initial=initial_data,
+                form_kwargs={'user': self.customuser, 'event': event}
             )
 
-            is_admin = AccessControl.can_add_event(
-                self.request.user,
-                self.customuser
-            ).filter(person__roles__id=Role.ADMIN).exists()
-
-            if not is_admin:
-                field.disabled = True
-
-            context['attendance_formset'] = attendance_formset
-
-        context['url_username'] = self.kwargs.get('username')
-        context['is_event_locked'] = event.attendance_locked
-        context['is_admin'] = AccessControl.can_add_event(
+        is_admin = AccessControl.can_add_event(
             self.request.user,
             self.customuser
         ).filter(person__roles__id=Role.ADMIN).exists()
 
+        if not is_admin:
+            for form in attendance_formset:
+                for field in form.fields.values():
+                    field.disabled = True
+
+
+        context['attendance_formset'] = attendance_formset
+        context['attendance_rows'] = list(zip(members, attendance_formset.forms))
+        context['url_username'] = self.kwargs.get('username')
+        context['current_member_ids'] = [m.id for m in members]
+        context['is_event_locked'] = event.attendance_locked
+        context['is_admin'] = is_admin
+
         # Check if admin is in override mode
-        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and context['is_admin']
+        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and is_admin
 
         return context
 
@@ -1223,7 +1278,8 @@ class EventListView(ListView):
     template_name = "secondapp/event_list.html"
     context_object_name = "events"
     model = Event
-    ordering = ['-started_at']
+    ordering = ['started_at']
+
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
@@ -1239,6 +1295,7 @@ class EventDetailView(DetailView):
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
+
         return Event.objects.filter(user=customuser)
 
 @method_decorator(login_required, name="dispatch")
@@ -1309,9 +1366,10 @@ class AttendanceDashboardView(View):
 
         # Get attendance types
         present_type = AttendanceType.objects.get(name='Present')
+        absent_type = AttendanceType.objects.get(name="Absent")
 
         # Build attendance matrix
-        dashboard_data = self._build_attendance_matrix(members, events, present_type)
+        dashboard_data = self._build_attendance_matrix(members, events, present_type, absent_type)
 
         # Calculate totals per event
         event_totals = self._calculate_event_totals(events, members, present_type)
@@ -1432,8 +1490,9 @@ class AttendanceDashboardView(View):
             redirect_url += f'?{query_params}'
         return redirect(redirect_url)
 
-    def _build_attendance_matrix(self, members, events, present_type):
+    def _build_attendance_matrix(self, members, events, present_type, absent_type):
         """Build efficient attendance lookup matrix."""
+        absent_type = AttendanceType.objects.get(name='Absent')
         # Create lookup dict: {event_id: {person_id: attendance_type_id}}
         attendance_lookup = {}
         for event in events:
@@ -1450,7 +1509,7 @@ class AttendanceDashboardView(View):
         for member in members:
             row = {
                 'member': member,
-                'attendance_cells': [],  # Changed: list instead of dict
+                'attendance_cells': [],
                 'total_present': 0,
                 'total_events': len(events),
             }
@@ -1459,17 +1518,20 @@ class AttendanceDashboardView(View):
             for event in events:
                 att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
                 attendance_type_id = att_data.get('type_id')
-                # is_locked = att_data.get('is_locked', False) or event.attendance_locked  # NEW
 
                 # Check if this event is grayed out
                 is_grayed_out = getattr(event, 'is_grayed_out', False)
+
+                # Also gray out if attendance type is not Present or Absent
+                if attendance_type_id is not None:
+                    if attendance_type_id not in [present_type.id, absent_type.id]:
+                        is_grayed_out = True
 
                 row['attendance_cells'].append({
                     'event_id': event.id,
                     'is_present': attendance_type_id == present_type.id,
                     'attendance_type_id': attendance_type_id,
-                    # 'is_locked': is_locked,  # NEW
-                    'is_grayed_out': is_grayed_out,  # NEW: for template to disable checkbox
+                    'is_grayed_out': is_grayed_out,
                 })
 
                 if attendance_type_id == present_type.id:

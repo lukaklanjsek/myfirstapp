@@ -255,12 +255,10 @@ class EventSongFormSet(BaseInlineFormSet):
 class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
-        fields = [
-            'attendance_type',
-            'person'
-        ]
+        fields = ['person', 'attendance_type']
         widgets = {
-            "attendance_type": forms.RadioSelect()
+            "attendance_type": forms.RadioSelect(),
+            "person": forms.HiddenInput()  # Hide the person field since it's shown in table
         }
 
     def __init__(self, *args, **kwargs):
@@ -268,58 +266,65 @@ class AttendanceForm(forms.ModelForm):
         event = kwargs.pop('event', None)
         super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.pk:
-            # disable persons
-            self.fields['person'].disabled = True
+        # Get the event date
+        event_date = None
+        if event:
+            event_date = event.started_at if event.started_at else timezone.now().date()
+        elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
+            event_date = self.instance.event.started_at
 
-        if user:
-            # Get the event date to filter active members
-            event_date = None
-            if event:
-                event_date = event.started_at
-            elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
-                event_date = self.instance.event.started_at
+        if user and event_date:
+            # Filter persons who were members at the time of the event
+            # FIXED: Handle NULL ended_at for ongoing memberships
+            base_filter = Q(
+                membership_period__user=user,
+                membership_period__person__roles__id=Role.MEMBER,
+                membership_period__started_at__lte=event_date,
+            ) & (
+                                  Q(membership_period__ended_at__gte=event_date) |
+                                  Q(membership_period__ended_at__isnull=True)
+                          )
 
-            # if event_date:
-            #     # Limit person choices to members who have active membership_period at the time of the event
-            #     # self.fields['person'].queryset = Person.objects.filter(
-            #     #     membership_period__user=user,
-            #     #     membership_period__person__roles__id=Role.MEMBER,
-            #     #     membership_period__started_at__lte=event_date,
-            #     #     membership_period__ended_at__gte=event_date
-            #     # ).distinct()
-            #     pass
-            # else:
-            #     # Fallback: if no event date, just filter by user and role
-            #     self.fields['person'].queryset = Person.objects.filter(
-            #         membership__user=user,
-            #         membership__person__roles__id=Role.MEMBER
-            #     ).distinct()
+            # Ensure the current person is always in the queryset (for existing records)
+            if self.instance and self.instance.pk and self.instance.person:
+                base_filter |= Q(pk=self.instance.person.pk)
 
-        # ensure the current person is in the queryset even if they're no longer a member
-        if self.instance and self.instance.pk and self.instance.person:
-            event_date = None
-            if user:
-                if event:
-                    event_date = event.started_at
-                elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
-                    event_date = self.instance.event.started_at
-                # Make sure the existing person is included in the queryset
-                current_queryset = self.fields['person'].queryset
-                # if not current_queryset.filter(pk=self.instance.person.pk).exists():
-                    # if event_date:
-                    #     self.fields['person'].queryset = Person.objects.filter(
-                    #         Q(membership_period__user=user,
-                    #           membership_period__person__roles__id=Role.MEMBER,
-                    #           membership_period__started_at__lte=event_date,
-                    #           membership_period__ended_at__gte=event_date) |
-                    #         Q(pk=self.instance.person.pk)
-                    #     ).distinct()
-                    # else:
-                    #     self.fields['person'].queryset = Person.objects.filter(
-                    #         Q(membership_period__user=user, membership_period__person__roles__id=Role.MEMBER) |
-                    #         Q(pk=self.instance.person.pk)
-                    #     ).distinct()
+            self.fields['person'].queryset = Person.objects.filter(base_filter).distinct()
+
+        elif user:
+            # Fallback: current members
+            base_filter = Q(
+                membership_period__user=user,
+                membership_period__person__roles__id=Role.MEMBER
+            )
+
+            # Ensure the current person is always in the queryset (for existing records)
+            if self.instance and self.instance.pk and self.instance.person:
+                base_filter |= Q(pk=self.instance.person.pk)
+
+            self.fields['person'].queryset = Person.objects.filter(base_filter).distinct()
+
+
+
+# Formset factories  ------------------------------------------------------
+EventSongFormSet = inlineformset_factory(
+    Event,
+    EventSong,
+    form=EventSongForm,
+    formset=EventSongFormSet,
+    extra=3,
+    can_delete=True,
+)
+
+AttendanceFormSet = inlineformset_factory(
+    Event,
+    Attendance,
+    form=AttendanceForm,
+    extra=0,  # We'll manually create initial data for all members
+    can_delete=False,
+    validate_min=True,  # Allows extra empty forms to be ignored
+    min_num=0,  # Minimum required forms
+)
 
 
 # class SingerForm(forms.Form):
@@ -345,25 +350,6 @@ class AttendanceForm(forms.ModelForm):
 #             self.fields['options'].choices = choices
 
 
-# Formset factories  ------------------------------------------------------
-EventSongFormSet = inlineformset_factory(
-    Event,
-    EventSong,
-    form=EventSongForm,
-    formset=EventSongFormSet,
-    extra=6,
-    can_delete=True,
-)
-
-AttendanceFormSet = inlineformset_factory(
-    Event,
-    Attendance,
-    form=AttendanceForm,
-    extra=0,  # We'll manually create initial data for all members
-    can_delete=False,
-    validate_min=True,  # Allows extra empty forms to be ignored
-    min_num=0,  # Minimum required forms
-)
 
 ##########################################################################
 # class BaseForm(forms.ModelForm):

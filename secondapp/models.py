@@ -305,6 +305,12 @@ class MembershipPeriod(models.Model):
     started_at = models.DateField()
     ended_at = models.DateField(null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'started_at', 'ended_at']),
+            models.Index(fields=['person', 'started_at', 'ended_at']),
+        ]
+
 
 
 class PersonSkill(models.Model):
@@ -462,6 +468,9 @@ class Attendance(models.Model):
                 fields=["event", "person"],
                 name="unique_person_per_event"
             )
+        ]
+        indexes = [
+            models.Index(fields=['event', 'person']),
         ]
 
 
