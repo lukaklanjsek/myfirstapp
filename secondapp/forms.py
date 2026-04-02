@@ -10,6 +10,7 @@ from .models import CustomUser, Organization, Person, Song, Skill, Role
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
+from django.utils import timezone
 
 # class SongWidget(ModelSelect2MultipleWidget):
 #     model = Song
@@ -255,8 +256,9 @@ class EventSongFormSet(BaseInlineFormSet):
 class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
-        fields = ['person', 'attendance_type']
+        fields = ["id", 'person', 'attendance_type']
         widgets = {
+            "id": forms.HiddenInput(),
             "attendance_type": forms.RadioSelect(),
             "person": forms.HiddenInput()  # Hide the person field since it's shown in table
         }
@@ -275,15 +277,14 @@ class AttendanceForm(forms.ModelForm):
 
         if user and event_date:
             # Filter persons who were members at the time of the event
-            # FIXED: Handle NULL ended_at for ongoing memberships
             base_filter = Q(
                 membership_period__user=user,
-                membership_period__person__roles__id=Role.MEMBER,
+                membership_period__role_id=Role.MEMBER,
                 membership_period__started_at__lte=event_date,
             ) & (
-                                  Q(membership_period__ended_at__gte=event_date) |
-                                  Q(membership_period__ended_at__isnull=True)
-                          )
+                Q(membership_period__ended_at__gte=event_date) |
+                Q(membership_period__ended_at__isnull=True)
+            )
 
             # Ensure the current person is always in the queryset (for existing records)
             if self.instance and self.instance.pk and self.instance.person:
@@ -325,8 +326,12 @@ AttendanceFormSet = inlineformset_factory(
     validate_min=True,  # Allows extra empty forms to be ignored
     min_num=0,  # Minimum required forms
 )
-
-
+# initial = []
+# if 'members' in context:
+#     for member in context['members']:
+#         initial.append({'person': member.id})
+# formset = AttendanceFormSet(instance=event, initial=initial)
+######################################
 # class SingerForm(forms.Form):
 #     options = forms.MultipleChoiceField(
 #         required=False,
@@ -465,7 +470,7 @@ AttendanceFormSet = inlineformset_factory(
 #     def __init__(self, *args, **kwargs):
 #         super().__init__(*args, **kwargs)
 #         self.fields['songs'].required = False
-#         self.fields['is_cancelled'].label = "Mark as cancelled"
+#         self.fields['is_canceled'].label = "Mark as cancelled"
 #
 #         self.active_members = Member.objects.filter(is_active=True).order_by('last_name', 'first_name')
 #         self.active_conductors = Conductor.objects.filter(is_active=True).order_by('last_name', 'first_name')

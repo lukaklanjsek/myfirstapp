@@ -34,6 +34,7 @@ urlpatterns = [
          views.OrgMemberAddView.as_view(),{'preset': 'poet'},name="org_member_add_poet"),
     path("<str:username>/members/add-translator/",
          views.OrgMemberAddView.as_view(),{'preset': 'translator'},name="org_member_add_translator"),
+    path("<str:username>/members/<int:pk>/", views.OrgMemberDetailView.as_view(), name="org_member_detail"),
     path("<str:username>/members/<int:pk>/edit/", views.OrgMemberEditView.as_view(), name="org_member_edit"),
 
     path("<str:username>/songs/", views.SongListView.as_view(), name="song_dashboard"),

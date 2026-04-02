@@ -329,25 +329,44 @@ class OrgMemberDetailView(DetailView):
     template_name = "secondapp/org_member_detail.html"
     context_object_name = "person"
 
-    def get_queryset(self):
-        url_username = self.kwargs["username"]
-        organization = get_object_or_404(CustomUser, username=url_username)
-        # check user role
-        viewer_role = AccessControl.get_org_roles(
-            self.request.user,
-            organization
-        )
-        if not viewer_role.exists():
-            raise PermissionDenied("No access to this organization")
-        # get memberships
-        visible_memberships = AccessControl.get_visible_members(
-            self.request.user,
-            organization
-        )
-        # get only persons from this membership
-        return Person.objects.filter(
-            memberships__in=visible_memberships
-        ).distinct()
+    def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
+        url_username = self.kwargs.get("username")
+
+        if url_username:
+            self.customuser = get_object_or_404(CustomUser, username=url_username)
+
+            if request.user != self.customuser:
+                self.has_edit_permission = AccessControl.can_edit_event(
+                    request.user, self.customuser
+                ).exists()
+
+                if not self.has_edit_permission:  # CHANGED: Use cached result
+                    return HttpResponseForbidden("You don't have permission to edit this event.")
+        else:
+            self.customuser = request.user
+
+        return super().dispatch(request, *args, **kwargs)
+    #
+    # def get_queryset(self):
+    #     url_username = self.kwargs["username"]
+    #     organization = get_object_or_404(CustomUser, username=url_username)
+    #     # check user role
+    #     viewer_role = AccessControl.get_org_roles(
+    #         self.request.user,
+    #         organization
+    #     )
+    #     if not viewer_role.exists():
+    #         raise PermissionDenied("No access to this organization")
+    #     # get memberships
+    #     visible_memberships = AccessControl.get_visible_members(
+    #         self.request.user,
+    #         organization
+    #     )
+    #     # get only persons from this membership
+    #     return Person.objects.filter(
+    #         memberships__in=visible_memberships
+    #     ).distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -583,7 +602,7 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
             # current skills
             current_skill_ids = self.person.skills.values_list(
-                "skill_id", flat=True
+                "id", flat=True
             )
 
             # current voices
@@ -1069,24 +1088,25 @@ class EventUpdateView(UpdateView):
         event_date = event.started_at if event.started_at else timezone.now().date()
 
         # Get members active at the time of the event
-        members = list(Person.objects.filter(
+        members = Person.objects.filter(
             membership_period__user=self.customuser,
-            membership_period__person__roles__id=Role.MEMBER,
+            membership_period__role_id=Role.MEMBER,
             membership_period__started_at__lte=event_date,
         ).filter(
             Q(membership_period__ended_at__gte=event_date) |
             Q(membership_period__ended_at__isnull=True)
-        ).select_related('user').prefetch_related('roles').distinct())
+        ).distinct().select_related('user').prefetch_related('roles').distinct()
 
-        # Check if attendance records exist for this event
+        context['members'] = members
 
+        absent_type = AttendanceType.objects.get(name="Absent")
 
-        # if event.attendance_set.count() == 0 and members:
-            # No attendance records exist - pre-fill for all active members
-            ###### PREFILL ATTENDANCE
-        #     Attendance.objects.get(Attendance(event=event, person=member, attendance_type=missing_type)
-        #         for member in members)
-        # else:
+        for member in members:
+            Attendance.objects.get_or_create(
+                event=event,
+                person=member,
+                defaults={'attendance_type': absent_type}
+            )
 
 
         if self.request.POST:
@@ -1101,6 +1121,7 @@ class EventUpdateView(UpdateView):
             attendance_formset = AttendanceFormSet(
                 self.request.POST,
                 instance=event,
+                queryset=event.attendance_set.select_related('person').order_by('person__last_name'),
                 form_kwargs={'user': self.customuser, 'event': event}
             )
         else:
@@ -1109,48 +1130,53 @@ class EventUpdateView(UpdateView):
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
-
-            # Get existing attendance records
-            existing_attendance = {
-                att.person_id: att
-                for att in event.attendance_set.select_related('person').all()
-            }
-
-            # Create initial data for each member
-            initial_data = []
-            for member in members:
-                if member.id in existing_attendance:
-                    # Use existing attendance data
-                    att = existing_attendance[member.id]
-                    initial_data.append({
-                        'person': member,
-                        'attendance_type': att.attendance_type,
-                        'id': att.id
-                    })
-                else:
-                    # New attendance record
-                    initial_data.append({
-                        'person': member,
-                        'attendance_type': None
-                    })
-
-            # Attendance formset with proper queryset
             attendance_formset = AttendanceFormSet(
                 instance=event,
-                queryset=event.attendance_set.all(),
-                initial=initial_data,
+                queryset=event.attendance_set.select_related('person').order_by('person__last_name'),
                 form_kwargs={'user': self.customuser, 'event': event}
             )
+
+            # # Get existing attendance records
+            # existing_attendance = {
+            #     att.person_id: att
+            #     for att in event.attendance_set.select_related('person').all()
+            # }
+            #
+            # # Create initial data for each member
+            # initial_data = []
+            # for member in members:
+            #     if member.id in existing_attendance:
+            #         # Use existing attendance data
+            #         att = existing_attendance[member.id]
+            #         initial_data.append({
+            #             'person': member,
+            #             'attendance_type': att.attendance_type,
+            #             'id': att.id
+            #         })
+            #     else:
+            #         # New attendance record
+            #         initial_data.append({
+            #             'person': member,
+            #             'attendance_type': None
+            #         })
+            #
+            # # Attendance formset with proper queryset
+            # attendance_formset = AttendanceFormSet(
+            #     instance=event,
+            #     # queryset=event.attendance_set.all(),
+            #     initial=initial_data,
+            #     form_kwargs={'user': self.customuser, 'event': event}
+            # )
 
         is_admin = AccessControl.can_add_event(
             self.request.user,
             self.customuser
         ).filter(person__roles__id=Role.ADMIN).exists()
-
-        if not is_admin:
-            for form in attendance_formset:
-                for field in form.fields.values():
-                    field.disabled = True
+        #
+        # if not is_admin:
+        #     for form in attendance_formset:
+        #         for field in form.fields.values():
+        #             field.disabled = True
 
 
         context['attendance_formset'] = attendance_formset

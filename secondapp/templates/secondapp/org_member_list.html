@@ -31,7 +31,11 @@
         {% for membership in members %}
         <tr>
             
-            <td>{{ membership.person.first_name }} {{ membership.person.last_name }}</td>
+            <td>
+                <a href="{% url 'secondapp:org_member_detail' url_username membership.person.id %}">
+                {{ membership.person.first_name }} {{ membership.person.last_name }}
+                </a>
+            </td>
             <td>{{ membership.person.email }}</td>
             <td>
                 {% for skill in membership.person.skills.all %}

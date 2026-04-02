@@ -13,7 +13,7 @@
 }
 
 
-}
+
 </style>
 
 {% if messages %}
@@ -27,7 +27,6 @@
 {% endif %}
 
 
-<!-- NEW: Warning for non-admins when event is locked -->
 
 
 <h2>Update Your Event</h2>
@@ -139,24 +138,24 @@
                     {% for radio in first_field.widget.choices %}
                         <th>{{ radio.1 }}</th>
                     {% endfor %}
-                TEST PRINT template
+
                 {% endwith %}
             </tr>
         </thead>
         <tbody id="attendance-formset">
-            {% for person, form in attendance_rows %}
+            {% for form in attendance_formset %}
                 <tr>
-                    <td>{{ person }}</td>
-                    {{ form.person }}  {# Hidden field #}
-                    {{ form.id }}      {# Hidden field for existing records #}
+                    <td>
+                        {{ form.instance.person.first_name }} {{ form.instance.person.last_name }}
+                        {{ form.id}} {{ form.person }}
+                    </td>
+
                     {% for radio in form.attendance_type %}
                         <td>{{ radio.tag }}</td>
                     {% endfor %}
                 </tr>
             {% endfor %}
 
-            {# Keep the management form #}
-            {{ attendance_formset.management_form }}
         </tbody>
     </table>
 
