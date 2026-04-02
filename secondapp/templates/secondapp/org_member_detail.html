@@ -1,8 +1,8 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Details2{% endblock %}
 {% block content %}
-<p><a href="{% url 'secondapp:org_member_form' url_username membership.person.pk %}">EDIT person</a></p>
+<p><a href="{% url 'secondapp:org_member_edit' url_username person.pk %}">EDIT person</a></p>
 
 <p>{{ person }}</p>
-
+<p>PLACEHOLDER</p>
 {% endblock %}

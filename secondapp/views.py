@@ -1083,10 +1083,8 @@ class EventUpdateView(UpdateView):
         """Prepare formsets and context data for the template."""
         context = super().get_context_data(**kwargs)
         event = self.object
-
         # Get event date (use current date for new events)
         event_date = event.started_at if event.started_at else timezone.now().date()
-
         # Get members active at the time of the event
         members = Person.objects.filter(
             membership_period__user=self.customuser,
@@ -1121,18 +1119,27 @@ class EventUpdateView(UpdateView):
             attendance_formset = AttendanceFormSet(
                 self.request.POST,
                 instance=event,
-                queryset=event.attendance_set.select_related('person').order_by('person__last_name'),
                 form_kwargs={'user': self.customuser, 'event': event}
             )
         else:
-            # Song formset
             context['song_formset'] = EventSongFormSet(
                 instance=event,
                 form_kwargs={'user': self.customuser}
             )
+            # Create initial data for members without attendance
+            existing_attendance = event.attendance_set.values_list('person_id', flat=True)
+            initial_data = []
+
+            for member in members:
+                if member.id not in existing_attendance:
+                    initial_data.append({
+                        'person': member.id,
+                        'attendance_type': AttendanceType.objects.get(name="Absent").id
+                    })
+
             attendance_formset = AttendanceFormSet(
                 instance=event,
-                queryset=event.attendance_set.select_related('person').order_by('person__last_name'),
+                initial=initial_data,
                 form_kwargs={'user': self.customuser, 'event': event}
             )
 

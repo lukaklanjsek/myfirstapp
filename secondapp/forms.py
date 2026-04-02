@@ -260,7 +260,7 @@ class AttendanceForm(forms.ModelForm):
         widgets = {
             "id": forms.HiddenInput(),
             "attendance_type": forms.RadioSelect(),
-            "person": forms.HiddenInput()  # Hide the person field since it's shown in table
+            # "person": forms.HiddenInput()  # Hide the person field since it's shown in table
         }
 
     def __init__(self, *args, **kwargs):
@@ -270,10 +270,13 @@ class AttendanceForm(forms.ModelForm):
 
         # Get the event date
         event_date = None
-        if event:
+        if event:  # Use the passed event first
             event_date = event.started_at if event.started_at else timezone.now().date()
         elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
-            event_date = self.instance.event.started_at
+            event_date = self.instance.event.started_at if self.instance.event.started_at else timezone.now().date()
+        else:
+            # Fallback for new forms
+            event_date = timezone.now().date()
 
         if user and event_date:
             # Filter persons who were members at the time of the event
@@ -305,6 +308,12 @@ class AttendanceForm(forms.ModelForm):
 
             self.fields['person'].queryset = Person.objects.filter(base_filter).distinct()
 
+        # attempt to make "person" hidden for existant but not for new
+        if self.instance and self.instance.pk:
+            self.fields['person'].widget = forms.HiddenInput()
+        else:
+            self.fields['person'].widget = forms.Select()
+
 
 
 # Formset factories  ------------------------------------------------------
@@ -321,9 +330,9 @@ AttendanceFormSet = inlineformset_factory(
     Event,
     Attendance,
     form=AttendanceForm,
-    extra=0,  # We'll manually create initial data for all members
-    can_delete=False,
-    validate_min=True,  # Allows extra empty forms to be ignored
+    extra=1,  # We'll manually create initial data for all members
+    can_delete=True,
+    validate_min=False,  # Allows extra empty forms to be ignored
     min_num=0,  # Minimum required forms
 )
 # initial = []

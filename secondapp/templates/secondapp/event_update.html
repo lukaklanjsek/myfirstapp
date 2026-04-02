@@ -35,6 +35,7 @@
     {{ form.as_p }}
 
     <h3>Songs</h3>
+    <button type="submit" name="action" value="save_and_add_song">Save Current State & Add Song</button>
     {{ song_formset.management_form }}
     <table id="song-table">
         <thead>
@@ -143,20 +144,30 @@
             </tr>
         </thead>
         <tbody id="attendance-formset">
-            {% for form in attendance_formset %}
-                <tr>
-                    <td>
+        {% for form in attendance_formset %}
+            <tr>
+                <td>
+                    {% if form.instance.pk %}
+                        {# Existing record - show name only #}
                         {{ form.instance.person.first_name }} {{ form.instance.person.last_name }}
-                        {{ form.id}} {{ form.person }}
-                    </td>
-
-                    {% for radio in form.attendance_type %}
-                        <td>{{ radio.tag }}</td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-
-        </tbody>
+                        {{ form.person }}  {# Hidden field #}
+                    {% else %}
+                        {# New record - show dropdown #}
+                        {{ form.person }}
+                    {% endif %}
+                    {{ form.id }}
+                </td>
+                {% for radio in form.attendance_type %}
+                    <td>{{ radio.tag }}</td>
+                {% endfor %}
+                <td>
+<!--                    {% if form.instance.pk %}-->
+<!--                        {{ form.DELETE }}-->
+<!--                    {% endif %}-->
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
     </table>
 
     <button type="submit" >Update Event</button>
