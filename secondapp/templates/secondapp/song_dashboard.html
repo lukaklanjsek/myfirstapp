@@ -1,38 +1,52 @@
 {% extends "secondapp/base.html" %}
-{% block title %}Songs2{% endblock %}
+{% block title %}Songs{% endblock %}
 {% block content %}
 
-{% if url_username == user.username %}
-    <p>
-        This is your personal bubble.
-        <a href="{% url 'secondapp:org_member_list' user.username %}">
-            + Here is a list of your own composers and poets. +
-        </a>
-    </p>
-<p><a href="{% url 'secondapp:song_form2' user.username %}">
-            + ADD YOUR OWN SONG +
-        </a></p>
-{% else %}
-    <p>This is organization: {{ url_username }}</p>
-{% endif %}
-<p>Here is a list of all songs:</p>
+<h2>Song Archive</h2>
+
+<form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keyword" style="flex: 1;">
+    <button type="submit">Search</button>
+    {% if q %}<a href="?">Clear</a>{% endif %}
+</form>
+
+<div style="margin-bottom: 1em;">
+    <a href="{% url 'secondapp:song_form2' url_username %}">+ Add New Song</a>
+</div>
+
+{% if songs %}
 <table>
-    <tr>
-        <th>ID</th>
-        <th>title</th>
-        <th>composer</th>
-        <th>copies</th>
-    </tr>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Composer</th>
+            <th>Keywords</th>
+            <th>Copies</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
     {% for song in songs %}
         <tr>
-            <td>{{ song.internal_id }}</td>
-            <td><a href="{% url 'secondapp:song_page' url_username song.pk %}">
-                    {{ song.title }}
-                </a></td>
-            <td>{{ song.composer }}</td>
-            <td>{{ song.number_of_copies }}</td>
+            <td>{{ song.internal_id|default:"-" }}</td>
+            <td><a href="{% url 'secondapp:song_page' url_username song.pk %}">{{ song.title }}</a></td>
+            <td>{{ song.composer.last_name }}</td>
+            <td>
+                {% for kw in song.keywords.all %}
+                    <span>{{ kw.word }}{% if kw.time_signature %} ({{ kw.time_signature }}){% endif %}{% if not forloop.last %}, {% endif %}</span>
+                {% endfor %}
+            </td>
+            <td>{{ song.number_of_copies|default:"-" }}</td>
+            <td><a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit</a></td>
         </tr>
     {% endfor %}
+    </tbody>
 </table>
+{% elif q %}
+    <p>No songs found matching "{{ q }}".</p>
+{% else %}
+    <p>No songs in the archive yet. <a href="{% url 'secondapp:song_form2' url_username %}">Add the first one.</a></p>
+{% endif %}
 
-    {% endblock %}
+{% endblock %}

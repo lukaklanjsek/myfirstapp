@@ -37,12 +37,15 @@ from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
-from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Keyword
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
-from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet
+from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
+from .forms import AddSongToEventForm, KeywordForm, KeywordFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 from .utils import import_songs, import_persons, import_events
@@ -438,10 +441,10 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
             # 5. add instruments
             self._add_instruments(person, form.cleaned_data["instruments"])
 
-        return redirect(
-            "secondapp:org_member_list",
-            username=self.kwargs["username"]
-        )
+        next_url = self.request.GET.get('next', '')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return redirect(next_url)
+        return redirect("secondapp:org_member_list", username=self.kwargs["username"])
 
     def _create_person(self, form):
         """
@@ -904,12 +907,23 @@ class SongListView(SongOwnerMixin, ListView):
     permission_check_method = AccessControl.can_view_song_list
 
     def get_queryset(self):
-        # AccessControl handles personal vs org filtering
-        return AccessControl.can_view_song_list(self.request.user, self.owner_user)
+        qs = AccessControl.can_view_song_list(self.request.user, self.owner_user)
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            if q.isdigit():
+                qs = qs.filter(internal_id=int(q))
+            else:
+                qs = qs.filter(
+                    Q(title__icontains=q) |
+                    Q(composer__last_name__icontains=q) |
+                    Q(keywords__word__icontains=q)
+                ).distinct()
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["url_username"] = self.owner_user.username
+        context["q"] = self.request.GET.get('q', '')
         return context
 
 
@@ -919,6 +933,11 @@ class SongDetailView(SongOwnerMixin, DetailView):
     template_name = "secondapp/song_page.html"
     context_object_name = "song"
     permission_check_method = AccessControl.can_view_song
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.owner_user.username
+        return context
 
 
 @method_decorator(login_required, name='dispatch')
@@ -932,11 +951,40 @@ class SongCreateView(SongOwnerMixin, CreateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
+    def get_context_data(self, keyword_formset=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.owner_user.username
+        if keyword_formset is not None:
+            context['keyword_formset'] = keyword_formset
+        elif self.request.POST:
+            context['keyword_formset'] = KeywordFormSet(self.request.POST, prefix='keywords')
+        else:
+            context['keyword_formset'] = KeywordFormSet(prefix='keywords')
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('action') == 'add_kw_row':
+            self.object = None
+            form = self.get_form()
+            post_data = request.POST.copy()
+            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
+            post_data['keywords-TOTAL_FORMS'] = total + 1
+            kf = KeywordFormSet(post_data, prefix='keywords')
+            return self.render_to_response(self.get_context_data(form=form, keyword_formset=kf))
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         form.instance.user = self.owner_user
-        return super().form_valid(form)
+        self.object = form.save()
+        kf = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+        if kf.is_valid():
+            kf.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
+        next_url = self.request.POST.get('next') or self.request.GET.get('next', '')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return next_url
         return reverse_lazy("secondapp:song_page", kwargs={
             "username": self.owner_user.username,
             "pk": self.object.pk
@@ -952,15 +1000,40 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
     def get_queryset(self):
         return Song.objects.filter(user=self.owner_user)
 
-
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.owner_user
         return kwargs
 
+    def get_context_data(self, keyword_formset=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.owner_user.username
+        if keyword_formset is not None:
+            context['keyword_formset'] = keyword_formset
+        elif self.request.POST:
+            context['keyword_formset'] = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+        else:
+            context['keyword_formset'] = KeywordFormSet(instance=self.object, prefix='keywords')
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('action') == 'add_kw_row':
+            self.object = self.get_object()
+            form = self.get_form()
+            post_data = request.POST.copy()
+            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
+            post_data['keywords-TOTAL_FORMS'] = total + 1
+            kf = KeywordFormSet(post_data, instance=self.object, prefix='keywords')
+            return self.render_to_response(self.get_context_data(form=form, keyword_formset=kf))
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         form.instance.user = self.owner_user
-        return super().form_valid(form)
+        self.object = form.save()
+        kf = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+        if kf.is_valid():
+            kf.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse_lazy("secondapp:song_page", kwargs={
@@ -1021,15 +1094,20 @@ class EventCreateView(CreateView):
         return kwargs
 
     def form_valid(self, form):
-        # Debug: print what's being assigned
         user_to_assign = self.customuser if self.customuser else self.request.user
-        # print(f"DEBUG: Assigning event to user: {user_to_assign.username}")
-        # print(f"DEBUG: self.customuser = {self.customuser}")
-        # print(f"DEBUG: self.request.user = {self.request.user}")
-
         form.instance.user = user_to_assign
-        # form.instance.user =  self.request.user # self.customuser if self.customuser else
-        return super().form_valid(form)
+        response = super().form_valid(form)
+
+        # Initialize attendance records for all active performers at the event date
+        event = self.object
+        event_date = event.started_at or timezone.now()
+        absent_type = AttendanceType.objects.get(name="Absent")
+        members = Person.objects.active_performers(user_to_assign, event_date)
+        Attendance.objects.bulk_create(
+            [Attendance(event=event, person=m, attendance_type=absent_type) for m in members],
+            ignore_conflicts=True,
+        )
+        return response
 
 
     # def form_valid(self, form):
@@ -1051,22 +1129,22 @@ class EventUpdateView(UpdateView):
     template_name = 'secondapp/event_update.html'
 
     def dispatch(self, request, *args, **kwargs):
-        """Handle permission checking before processing the request."""
         url_username = self.kwargs.get("username")
+        self.customuser = get_object_or_404(CustomUser, username=url_username) if url_username else request.user
 
-        if url_username:
-            self.customuser = get_object_or_404(CustomUser, username=url_username)
+        if request.user != self.customuser:
+            self.is_admin = AccessControl.can_add_event(
+                request.user, self.customuser
+            ).filter(person__roles__id=Role.ADMIN).exists()
 
-            if request.user != self.customuser:
-                # CHANGED: Cache permission check result to avoid redundant queries
-                self.has_edit_permission = AccessControl.can_edit_event(
-                    request.user, self.customuser
-                ).exists()
+            has_access = self.is_admin or AccessControl.can_edit_event(request.user, self.customuser).exists()
+            if not has_access:
+                return HttpResponseForbidden("You don't have permission to access this page.")
 
-                if not self.has_edit_permission:  # CHANGED: Use cached result
-                    return HttpResponseForbidden("You don't have permission to edit this event.")
+            if request.method == 'POST' and not self.is_admin:
+                return HttpResponseForbidden("Only admins can save event changes.")
         else:
-            self.customuser = request.user
+            self.is_admin = True
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1080,223 +1158,150 @@ class EventUpdateView(UpdateView):
         )
 
     def get_context_data(self, **kwargs):
-        """Prepare formsets and context data for the template."""
         context = super().get_context_data(**kwargs)
         event = self.object
-        # Get event date (use current date for new events)
-        event_date = event.started_at if event.started_at else timezone.now().date()
-        # Get members active at the time of the event
-        members = Person.objects.filter(
-            membership_period__user=self.customuser,
-            membership_period__role_id=Role.MEMBER,
-            membership_period__started_at__lte=event_date,
-        ).filter(
-            Q(membership_period__ended_at__gte=event_date) |
-            Q(membership_period__ended_at__isnull=True)
-        ).distinct().select_related('user').prefetch_related('roles').distinct()
+        event_date = event.started_at or timezone.now()
 
-        context['members'] = members
+        members = Person.objects.active_performers(
+            self.customuser, event_date
+        ).select_related('user').prefetch_related('roles')
 
-        absent_type = AttendanceType.objects.get(name="Absent")
-
-        for member in members:
-            Attendance.objects.get_or_create(
-                event=event,
-                person=member,
-                defaults={'attendance_type': absent_type}
+        if not hasattr(self, '_song_formset'):
+            from django.db.models import Min, Case, When, Value, IntegerField
+            attendance_qs = event.attendance_set.select_related(
+                'person', 'attendance_type'
+            ).annotate(
+                voice_order=Min('person__singer__voice__id'),
+                instrument_order=Min('person__instrumentalist__instrument__id'),
+            ).order_by(
+                Case(
+                    When(voice_order__isnull=False, then=Value(0)),
+                    When(instrument_order__isnull=False, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                ),
+                'voice_order',
+                'instrument_order',
+                'person__last_name',
+                'person__first_name',
             )
+            if self.request.POST:
+                self._song_formset = EventSongFormSet(
+                    self.request.POST,
+                    instance=event,
+                )
+                self._attendance_formset = AttendanceFormSet(
+                    self.request.POST,
+                    instance=event,
+                    queryset=attendance_qs,
+                    form_kwargs={'person_queryset': members},
+                )
+            else:
+                self._song_formset = EventSongFormSet(
+                    instance=event,
+                )
+                self._attendance_formset = AttendanceFormSet(
+                    instance=event,
+                    queryset=attendance_qs,
+                    form_kwargs={'person_queryset': members},
+                )
 
+        search_q = self.request.GET.get('q', '')
+        show_add_form = self.request.GET.get('show_add') == '1' and self.is_admin
+        show_add_song = self.request.GET.get('add_song') == '1' and self.is_admin
+        song_search_q = self.request.GET.get('song_q', '')
 
-        if self.request.POST:
-            # Song formset
-            context['song_formset'] = EventSongFormSet(
-                self.request.POST,
-                instance=event,
-                form_kwargs={'user': self.customuser}
-            )
-
-            # Attendance formset
-            attendance_formset = AttendanceFormSet(
-                self.request.POST,
-                instance=event,
-                form_kwargs={'user': self.customuser, 'event': event}
-            )
-        else:
-            context['song_formset'] = EventSongFormSet(
-                instance=event,
-                form_kwargs={'user': self.customuser}
-            )
-            # Create initial data for members without attendance
-            existing_attendance = event.attendance_set.values_list('person_id', flat=True)
-            initial_data = []
-
-            for member in members:
-                if member.id not in existing_attendance:
-                    initial_data.append({
-                        'person': member.id,
-                        'attendance_type': AttendanceType.objects.get(name="Absent").id
-                    })
-
-            attendance_formset = AttendanceFormSet(
-                instance=event,
-                initial=initial_data,
-                form_kwargs={'user': self.customuser, 'event': event}
-            )
-
-            # # Get existing attendance records
-            # existing_attendance = {
-            #     att.person_id: att
-            #     for att in event.attendance_set.select_related('person').all()
-            # }
-            #
-            # # Create initial data for each member
-            # initial_data = []
-            # for member in members:
-            #     if member.id in existing_attendance:
-            #         # Use existing attendance data
-            #         att = existing_attendance[member.id]
-            #         initial_data.append({
-            #             'person': member,
-            #             'attendance_type': att.attendance_type,
-            #             'id': att.id
-            #         })
-            #     else:
-            #         # New attendance record
-            #         initial_data.append({
-            #             'person': member,
-            #             'attendance_type': None
-            #         })
-            #
-            # # Attendance formset with proper queryset
-            # attendance_formset = AttendanceFormSet(
-            #     instance=event,
-            #     # queryset=event.attendance_set.all(),
-            #     initial=initial_data,
-            #     form_kwargs={'user': self.customuser, 'event': event}
-            # )
-
-        is_admin = AccessControl.can_add_event(
-            self.request.user,
-            self.customuser
-        ).filter(person__roles__id=Role.ADMIN).exists()
-        #
-        # if not is_admin:
-        #     for form in attendance_formset:
-        #         for field in form.fields.values():
-        #             field.disabled = True
-
-
-        context['attendance_formset'] = attendance_formset
-        context['attendance_rows'] = list(zip(members, attendance_formset.forms))
+        context['song_formset'] = self._song_formset
+        context['attendance_formset'] = self._attendance_formset
+        context['attendance_types'] = AttendanceType.objects.all()
         context['url_username'] = self.kwargs.get('username')
-        context['current_member_ids'] = [m.id for m in members]
-        context['is_event_locked'] = event.attendance_locked
-        context['is_admin'] = is_admin
-
-        # Check if admin is in override mode
-        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and is_admin
-
+        context['is_admin'] = self.is_admin
+        context['admin_override'] = self.request.GET.get('admin_override') == 'true' and self.is_admin
+        context['show_add_form'] = show_add_form
+        context['search_q'] = search_q
+        context['show_add_song'] = show_add_song
+        context['song_search_q'] = song_search_q
+        context['add_form'] = AddAttendanceForm(
+            org_user=self.customuser,
+            event=event,
+            search_q=search_q,
+        ) if show_add_form else None
+        context['add_song_form'] = AddSongToEventForm(
+            org_user=self.customuser,
+            event=event,
+            search_q=song_search_q,
+        ) if show_add_song else None
         return context
 
 
 
+    def _save_songs(self, event, song_formset):
+        EventSong.objects.filter(event=event).delete()
+        valid_songs = [
+            {
+                'song': f.cleaned_data['song'],
+                'order': f.cleaned_data.get('order'),
+                'encore': f.cleaned_data.get('encore', False),
+            }
+            for f in song_formset.forms
+            if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('song')
+        ]
+        valid_songs.sort(key=lambda x: x['order'] if x['order'] is not None else 999)
+        for idx, song_data in enumerate(valid_songs):
+            EventSong.objects.create(
+                event=event,
+                song=song_data['song'],
+                order=idx + 1,
+                encore=song_data['encore'],
+            )
+
     def form_valid(self, form):
-        """
-        Save the event and related formsets in a transaction.
-        """
-        context = self.get_context_data()
-        song_formset = context['song_formset']
-        attendance_formset = context['attendance_formset']
-        is_admin = context["is_admin"]
+        self.get_context_data()  # ensures formsets are built and cached on self
+        admin_override = self.request.POST.get('admin_override') == 'true' and self.is_admin
 
-        if not is_admin:
-            return self.form_invalid(form)
-
-        admin_override = self.request.POST.get('admin_override') == 'true' and is_admin
-
-
-        # Basic formset validation (non-unique errors only)
-        if not song_formset.is_valid():
+        if not self._song_formset.is_valid():
             messages.error(self.request, "Please fix errors in the songs section.")
             return self.form_invalid(form)
 
-        if not attendance_formset.is_valid():
+        if not self._attendance_formset.is_valid():
             messages.error(self.request, "Please fix errors in the attendance section.")
             return self.form_invalid(form)
 
         with transaction.atomic():
-            # Save the main event
             self.object = form.save()
+            self._save_songs(self.object, self._song_formset)
+            self._attendance_formset.instance = self.object
+            self._attendance_formset.save()
 
-            # Delete all existing event songs for this event
-            EventSong.objects.filter(event=self.object).delete()
+        action = self.request.POST.get('action', 'save')
+        event_update_url = reverse('secondapp:event_update', kwargs={
+            'username': self.kwargs['username'],
+            'pk': self.object.pk,
+        })
 
-            # Collect valid songs from the formset
-            valid_songs = []
-            for form_instance in song_formset.forms:
-                if form_instance.cleaned_data and not form_instance.cleaned_data.get('DELETE'):
-                    song = form_instance.cleaned_data.get('song')
-                    if song:  # Only if a song was selected
-                        valid_songs.append({
-                            'song': song,
-                            'order': form_instance.cleaned_data.get('order'),
-                            'encore': form_instance.cleaned_data.get('encore', False),
-                        })
+        if action == 'show_add_form':
+            return redirect(event_update_url + '?show_add=1')
 
-            # Sort by order and recreate all songs
-            valid_songs.sort(key=lambda x: x['order'] if x['order'] is not None else 999)
+        if action == 'save_and_add_song':
+            return redirect(event_update_url + '?add_song=1')
 
-            # Save songs with fresh, clean order values
-            for idx, song_data in enumerate(valid_songs):
-                EventSong.objects.create(
-                    event=self.object,
-                    song=song_data['song'],
-                    order=idx + 1,  # Fresh order: 1, 2, 3, etc.
-                    encore=song_data['encore']
-                )
-
-            # Save attendance normally
-            attendance_formset.instance = self.object
-            attendance_formset.save()
-
+        if action == 'add_member':
+            add_url = reverse('secondapp:org_member_add', kwargs={
+                'username': self.kwargs['username'],
+            })
+            return redirect(f'{add_url}?next={event_update_url}')
 
         if admin_override:
-            messages.success(self.request, f"Event updated successfully! (Admin override used)")
+            messages.success(self.request, "Event updated successfully! (Admin override used)")
         else:
-            messages.success(self.request, f"Event updated successfully!")
+            messages.success(self.request, "Event updated successfully!")
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
-        """Re-render the page with error messages if validation fails."""
-        context = self.get_context_data(form=form)
-        song_formset = context['song_formset']
-        attendance_formset = context['attendance_formset']
-
-        # Show specific error messages
         if form.errors:
             messages.error(self.request, f"Event form errors: {form.errors}")
-
-        if song_formset.errors:
-            for i, form_errors in enumerate(song_formset.errors):
-                if form_errors:
-                    messages.error(self.request, f"Song #{i + 1} errors: {form_errors}")
-
-        if song_formset.non_form_errors():
-            messages.error(self.request, f"Song formset errors: {song_formset.non_form_errors()}")
-
-        if attendance_formset.errors:
-            for i, form_errors in enumerate(attendance_formset.errors):
-                if form_errors:
-                    messages.error(self.request, f"Attendance #{i + 1} errors: {form_errors}")
-
-        if attendance_formset.non_form_errors():
-            messages.error(self.request, f"Attendance formset errors: {attendance_formset.non_form_errors()}")
-
-        messages.error(
-            self.request,
-            "There was an error updating the event. Please check the form below."
-        )
-        return self.render_to_response(context)
+        messages.error(self.request, "There was an error updating the event. Please check the form below.")
+        return super().form_invalid(form)
 
     def get_success_url(self):
         """Redirect to event detail page after successful update."""  # ADDED: Docstring
@@ -1328,8 +1333,160 @@ class EventDetailView(DetailView):
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
+        return Event.objects.filter(user=customuser).prefetch_related(
+            'attendance_set__person',
+            'attendance_set__attendance_type',
+            'eventsong_set__song__composer',
+        )
 
-        return Event.objects.filter(user=customuser)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        context['attendance_types'] = AttendanceType.objects.all()
+        context['my_person'] = AccessControl.get_member_person(self.request.user, self.object.user)
+        from django.db.models import Min, Case, When, Value, IntegerField
+        context['attendances'] = self.object.attendance_set.select_related(
+            'person', 'attendance_type'
+        ).annotate(
+            voice_order=Min('person__singer__voice__id'),
+            instrument_order=Min('person__instrumentalist__instrument__id'),
+        ).order_by(
+            Case(
+                When(voice_order__isnull=False, then=Value(0)),
+                When(instrument_order__isnull=False, then=Value(1)),
+                default=Value(2),
+                output_field=IntegerField(),
+            ),
+            'voice_order',
+            'instrument_order',
+            'person__last_name',
+            'person__first_name',
+        )
+        context['is_admin'] = AccessControl.can_add_event(
+            self.request.user, self.object.user
+        ).filter(person__roles__id=Role.ADMIN).exists()
+        return context
+
+@require_POST
+@login_required
+def self_attendance_update(request, username, event_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    event = get_object_or_404(Event, pk=event_pk, user=org_user)
+
+    my_person = AccessControl.get_member_person(request.user, org_user)
+    if not my_person:
+        return HttpResponseForbidden("You are not a member of this organization.")
+
+    attendance = get_object_or_404(Attendance, event=event, person=my_person)
+    attendance_type = get_object_or_404(AttendanceType, pk=request.POST.get('attendance_type'))
+    attendance.attendance_type = attendance_type
+    attendance.save()
+
+    return redirect('secondapp:event_detail', username=username, pk=event_pk)
+
+
+@require_POST
+@login_required
+def event_add_attendance(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    event = get_object_or_404(Event, pk=pk, user=org_user)
+
+    is_admin = AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can add participants.")
+
+    form = AddAttendanceForm(request.POST, org_user=org_user, event=event)
+    if form.is_valid():
+        Attendance.objects.get_or_create(
+            event=event,
+            person=form.cleaned_data['person'],
+            defaults={'attendance_type': form.cleaned_data['attendance_type']},
+        )
+
+    return redirect('secondapp:event_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def event_add_song(request, username, pk):
+    from django.db.models import Max
+    org_user = get_object_or_404(CustomUser, username=username)
+    event = get_object_or_404(Event, pk=pk, user=org_user)
+
+    is_admin = AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can add songs to events.")
+
+    form = AddSongToEventForm(request.POST, org_user=org_user, event=event)
+    if form.is_valid():
+        next_order = (event.eventsong_set.aggregate(Max('order'))['order__max'] or 0) + 1
+        EventSong.objects.create(
+            event=event,
+            song=form.cleaned_data['song'],
+            order=next_order,
+            encore=form.cleaned_data.get('encore', False),
+        )
+
+    return redirect('secondapp:event_update', username=username, pk=pk)
+
+
+@method_decorator(login_required, name='dispatch')
+class SongKeywordView(SongOwnerMixin, View):
+    """Manage keywords for a specific song. Supports ?next= redirect after save."""
+    template_name = 'secondapp/song_keywords.html'
+    permission_check_method = AccessControl.can_manage_song
+
+    def _get_song(self, pk):
+        song = get_object_or_404(Song, pk=pk, user=self.owner_user)
+        if not AccessControl.can_manage_song(self.request.user, song):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return song
+
+    def _next_url(self, request, username, pk):
+        next_url = request.GET.get('next') or request.POST.get('next', '')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            return next_url
+        return reverse('secondapp:song_page', kwargs={'username': username, 'pk': pk})
+
+    def get(self, request, username, pk):
+        song = self._get_song(pk)
+        formset = KeywordFormSet(instance=song, prefix='keywords')
+        return render(request, self.template_name, {
+            'song': song,
+            'formset': formset,
+            'url_username': username,
+            'next': request.GET.get('next', ''),
+        })
+
+    def post(self, request, username, pk):
+        song = self._get_song(pk)
+        if request.POST.get('action') == 'add_kw_row':
+            post_data = request.POST.copy()
+            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
+            post_data['keywords-TOTAL_FORMS'] = total + 1
+            formset = KeywordFormSet(post_data, instance=song, prefix='keywords')
+            return render(request, self.template_name, {
+                'song': song,
+                'formset': formset,
+                'url_username': username,
+                'next': request.POST.get('next', ''),
+            })
+        formset = KeywordFormSet(request.POST, instance=song, prefix='keywords')
+        if formset.is_valid():
+            formset.save()
+            return redirect(self._next_url(request, username, pk))
+        return render(request, self.template_name, {
+            'song': song,
+            'formset': formset,
+            'url_username': username,
+            'next': request.POST.get('next', ''),
+        })
+
 
 @method_decorator(login_required, name="dispatch")
 class AttendanceDashboardView(View):

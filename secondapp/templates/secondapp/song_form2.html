@@ -1,19 +1,56 @@
 {% extends "secondapp/base.html" %}
-{% block title %}{% if object %}Edit {{object.pk}}{% else %}Add New{% endif %}{% endblock %}
+{% block title %}{% if object %}Edit Song{% else %}Add Song{% endif %}{% endblock %}
 {% block content %}
 
 <h1>{% if object %}Edit{% else %}Add{% endif %} Song</h1>
-<form method="POST">{% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
+
+<form method="post">
+    {% csrf_token %}
+    {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+
+    {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <ul class="errorlist">
+                    {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <h3>Keywords</h3>
+    {{ keyword_formset.management_form }}
+    <table>
+        <thead>
+            <tr>
+                <th>Keyword</th>
+                <th>Time Signature</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for kw_form in keyword_formset %}
+            <tr>
+                {% for hidden in kw_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>{{ kw_form.word }}</td>
+                <td>{{ kw_form.time_signature }}</td>
+                <td>{{ kw_form.DELETE }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" name="action" value="add_kw_row">+ Add Another Keyword</button>
+
+    <br><br>
+    <button type="submit" name="action" value="">Save</button>
 </form>
+
 {% if object %}
-    <a href="{% url 'secondapp:song_page' url_username object.pk %}">
-        <button type="button">Cancel Edit</button>
-    </a>
+    <a href="{% url 'secondapp:song_page' url_username object.pk %}">Cancel Edit</a>
 {% else %}
-    <a href="{% url 'secondapp:song_dashboard' url_username %}">
-        <button type="button">Cancel & Return to List</button>
-    </a>
+    <a href="{% url 'secondapp:song_dashboard' url_username %}">Cancel &amp; Return to List</a>
 {% endif %}
+
 {% endblock %}

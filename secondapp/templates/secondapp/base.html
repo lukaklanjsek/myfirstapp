@@ -16,6 +16,7 @@
 
     <script src="{% static 'django_select2/django_select2.js' %}"></script>
 
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="grid-container">
@@ -102,6 +103,8 @@
          </main>
 
     </div>
+
+    {% block extra_js %}{% endblock %}
 
     <script>
         function toggleMenu(){

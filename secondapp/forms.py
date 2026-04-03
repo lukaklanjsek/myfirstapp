@@ -6,7 +6,7 @@ import datetime
 #It is advised to always setup a separate cache server for Select2.
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Keyword
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
@@ -152,6 +152,16 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         #     )
 
 
+class KeywordForm(forms.ModelForm):
+    class Meta:
+        model = Keyword
+        fields = ['word', 'time_signature']
+        widgets = {
+            'word': forms.TextInput(attrs={'placeholder': 'placeholder'}),
+            'time_signature': forms.TextInput(attrs={'placeholder': '43'}),
+        }
+
+
 class SongForm(forms.ModelForm):
     class Meta:
         model = Song
@@ -169,20 +179,15 @@ class SongForm(forms.ModelForm):
             "lyrics",
         ]
         widgets = {
-            "year_of_creation": forms.NumberInput(attrs={
-                "placeholder": "2000"
-            }),
             "lyrics": forms.Textarea(attrs={'rows': 12}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if user:  # filter choices
-            # for more skills later just add one line
+        if user:
             self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER)
             self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
-            # self.fields['translator'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.TRANSLATOR)
 
 
 
@@ -208,8 +213,8 @@ class EventForm(forms.ModelForm):
                   'num_visitors',
                   ]
         widgets = {
-            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'started_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'location': forms.Textarea(attrs={'rows': 3}),
         }
 
@@ -217,103 +222,113 @@ class EventForm(forms.ModelForm):
 class EventSongForm(forms.ModelForm):
     class Meta:
         model = EventSong
-        fields = ['song', 'order', 'encore']
+        fields = ['id', 'song', 'order', 'encore']
         widgets = {
+            'id': forms.HiddenInput(),
+            'song': forms.HiddenInput(),
+            'order': forms.NumberInput(attrs={'min': 1, 'style': 'width: 4em'}),
             'encore': forms.CheckboxInput(),
-            'order': forms.HiddenInput(),
         }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        self.fields['song'].required = False  # make song not required in empty
-
-        if user:   # Filter songs belonging to this user directly
-            self.fields['song'].queryset = Song.objects.filter(
-                user=user  # Song has a user field according to the error
-            ).order_by('title')
 
 
 class EventSongFormSet(BaseInlineFormSet):
     def clean(self):
-        """
-        Skip unique validation - we'll handle order assignment during save
-        """
-        # Don't call super().clean() to skip Django's unique validation
         if any(self.errors):
-            # Only keep non-unique errors
             for form in self.forms:
-                if '__all__' in form.errors:
-                    form.errors.pop('__all__', None)
+                form.errors.pop('__all__', None)
 
-        # Basic validation only
-        for form in self.forms:
-            if form.cleaned_data and not form.cleaned_data.get('DELETE'):
-                # Just check that if there's data, it's valid
-                pass
+
+class AddSongToEventForm(forms.Form):
+    song = forms.ModelChoiceField(
+        queryset=Song.objects.none(),
+        widget=forms.Select(attrs={'size': '8'}),
+        empty_label=None,
+        label='Song',
+    )
+    encore = forms.BooleanField(required=False, label='Encore')
+
+    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and event is not None:
+            already_added = event.eventsong_set.values_list('song_id', flat=True)
+            qs = Song.objects.filter(user=org_user).exclude(id__in=already_added).order_by('title')
+            if search_q:
+                if search_q.isdigit():
+                    qs = qs.filter(internal_id=int(search_q))
+                else:
+                    qs = qs.filter(
+                        Q(title__icontains=search_q) |
+                        Q(composer__last_name__icontains=search_q) |
+                        Q(keywords__word__icontains=search_q)
+                    ).distinct()
+            self.fields['song'].queryset = qs
 
 
 class AttendanceForm(forms.ModelForm):
     class Meta:
         model = Attendance
-        fields = ["id", 'person', 'attendance_type']
+        fields = ['id', 'person', 'attendance_type']
         widgets = {
-            "id": forms.HiddenInput(),
-            "attendance_type": forms.RadioSelect(),
-            # "person": forms.HiddenInput()  # Hide the person field since it's shown in table
+            'id': forms.HiddenInput(),
+            'person': forms.HiddenInput(),
+            'attendance_type': forms.RadioSelect(),
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        event = kwargs.pop('event', None)
+        person_queryset = kwargs.pop('person_queryset', None)
+        kwargs.pop('user', None)
+        kwargs.pop('event', None)
         super().__init__(*args, **kwargs)
+        if person_queryset is not None:
+            if self.instance and self.instance.person_id:
+                self.fields['person'].queryset = Person.objects.filter(
+                    Q(pk__in=person_queryset) | Q(pk=self.instance.person_id)
+                )
+            else:
+                self.fields['person'].queryset = person_queryset
 
-        # Get the event date
-        event_date = None
-        if event:  # Use the passed event first
-            event_date = event.started_at if event.started_at else timezone.now().date()
-        elif self.instance and self.instance.pk and hasattr(self.instance, 'event'):
-            event_date = self.instance.event.started_at if self.instance.event.started_at else timezone.now().date()
-        else:
-            # Fallback for new forms
-            event_date = timezone.now().date()
 
-        if user and event_date:
-            # Filter persons who were members at the time of the event
-            base_filter = Q(
-                membership_period__user=user,
-                membership_period__role_id=Role.MEMBER,
-                membership_period__started_at__lte=event_date,
-            ) & (
-                Q(membership_period__ended_at__gte=event_date) |
-                Q(membership_period__ended_at__isnull=True)
-            )
 
-            # Ensure the current person is always in the queryset (for existing records)
-            if self.instance and self.instance.pk and self.instance.person:
-                base_filter |= Q(pk=self.instance.person.pk)
+class AddAttendanceForm(forms.Form):
+    """Admin-only form to add any org person to an event's attendance."""
+    person = forms.ModelChoiceField(
+        queryset=Person.objects.none(),
+        widget=forms.Select(attrs={'size': '8'}),
+        empty_label=None,
+        label='Person',
+    )
+    attendance_type = forms.ModelChoiceField(
+        queryset=AttendanceType.objects.all(),
+        widget=forms.RadioSelect(),
+        label='Attendance Type',
+    )
 
-            self.fields['person'].queryset = Person.objects.filter(base_filter).distinct()
-
-        elif user:
-            # Fallback: current members
-            base_filter = Q(
-                membership_period__user=user,
-                membership_period__person__roles__id=Role.MEMBER
-            )
-
-            # Ensure the current person is always in the queryset (for existing records)
-            if self.instance and self.instance.pk and self.instance.person:
-                base_filter |= Q(pk=self.instance.person.pk)
-
-            self.fields['person'].queryset = Person.objects.filter(base_filter).distinct()
-
-        # attempt to make "person" hidden for existant but not for new
-        if self.instance and self.instance.pk:
-            self.fields['person'].widget = forms.HiddenInput()
-        else:
-            self.fields['person'].widget = forms.Select()
-
+    def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and event:
+            from django.db.models import Exists, OuterRef, ExpressionWrapper, BooleanField
+            from .models import Singer, Instrumentalist
+            already_attending = event.attendance_set.values_list('person_id', flat=True)
+            qs = Person.objects.filter(
+                membership_period__user=org_user,
+            ).exclude(
+                id__in=already_attending
+            ).distinct()
+            if search_q:
+                qs = qs.filter(
+                    Q(first_name__icontains=search_q) |
+                    Q(last_name__icontains=search_q) |
+                    Q(singer__voice__name__icontains=search_q) |
+                    Q(instrumentalist__instrument__name__icontains=search_q)
+                ).distinct()
+            qs = qs.annotate(
+                is_performer=ExpressionWrapper(
+                    Exists(Singer.objects.filter(person=OuterRef('pk'))) |
+                    Exists(Instrumentalist.objects.filter(person=OuterRef('pk'))),
+                    output_field=BooleanField()
+                )
+            ).order_by('-is_performer', 'last_name', 'first_name')
+            self.fields['person'].queryset = qs
 
 
 # Formset factories  ------------------------------------------------------
@@ -322,7 +337,7 @@ EventSongFormSet = inlineformset_factory(
     EventSong,
     form=EventSongForm,
     formset=EventSongFormSet,
-    extra=3,
+    extra=0,
     can_delete=True,
 )
 
@@ -330,10 +345,16 @@ AttendanceFormSet = inlineformset_factory(
     Event,
     Attendance,
     form=AttendanceForm,
-    extra=1,  # We'll manually create initial data for all members
+    extra=0,
     can_delete=True,
-    validate_min=False,  # Allows extra empty forms to be ignored
-    min_num=0,  # Minimum required forms
+)
+
+KeywordFormSet = inlineformset_factory(
+    Song,
+    Keyword,
+    form=KeywordForm,
+    extra=1,
+    can_delete=True,
 )
 # initial = []
 # if 'members' in context:

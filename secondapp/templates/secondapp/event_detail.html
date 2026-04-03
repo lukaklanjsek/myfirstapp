@@ -1,34 +1,44 @@
 {% extends "secondapp/base.html" %}
-{% block title %}Details2{% endblock %}
+{% block title %}{{ event.name }}{% endblock %}
+
 {% block content %}
 
-<p> TEST PRINT: event is owned by {{ event.user }}</p>
+<h2>{{ event.name }}</h2>
+<p>Location: {{ event.location }}</p>
+<p>Starts: {{ event.started_at }}</p>
+<p>Ends: {{ event.ended_at }}</p>
 
-<p> TEST name of event {{ event.name }} </p>
-<p>location: {{ event.location }} </p>
-<p>starts: {{ event.started_at }} </p>
-<p>ends: {{ event.ended_at }}</p>
-<p>
-    <a href="{% url 'secondapp:event_update' url_username event.id %}">
-EDIT
-    </a>
-</p>
+{% if is_admin %}
+    <p><a href="{% url 'secondapp:event_update' url_username event.pk %}">Edit event</a></p>
+{% endif %}
+
 <h3>Songs</h3>
 {% if event.eventsong_set.all %}
     <table>
         <thead>
             <tr>
                 <th>Order</th>
-                <th>Song Title</th>
-
+                <th>Song</th>
+                <th>Encore</th>
             </tr>
         </thead>
         <tbody>
             {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
             <tr>
                 <td>{{ eventsong.order }}</td>
-                <td>{{ eventsong.song.internal_id }} - {{ eventsong.song.title }} - {{ eventsong.song.composer.last_name }}</td>
-
+                <td>
+                    <a href="{% url 'secondapp:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>
+                    &mdash; {{ eventsong.song.composer.last_name }}
+                    {% with kws=eventsong.song.keywords.all %}
+                    {% if kws %}
+                        <br><small>
+                        {% for kw in kws|slice:":5" %}{{ kw.word }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        {% if kws.count > 5 %}&hellip;{% endif %}
+                        </small>
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td>{% if eventsong.encore %}Yes{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -37,23 +47,51 @@ EDIT
     <p>No songs added yet.</p>
 {% endif %}
 
-
 <h3>Attendance</h3>
-{% if event.attendance_set.all %}
+{% if attendances %}
     <table>
         <thead>
             <tr>
                 <th>Person</th>
-                <th>Attendance Type</th>
+
+                <th>Attendance</th>
             </tr>
         </thead>
         <tbody>
-            {% for attendance in event.attendance_set.all %}
+        {% for attendance in attendances %}
             <tr>
-                <td>{{ attendance.person }}</td>
-                <td>{{ attendance.attendance_type }}</td>
+                <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+                {% comment %}
+                <td>
+
+                    {% for singer in attendance.person.singer_set.all %}
+                        {{ singer.voice.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% for inst in attendance.person.instrumentalist_set.all %}
+                        {{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+
+                </td>
+                {% endcomment %}
+                {% if attendance.person == my_person %}
+                    <td>
+                        <form method="post" action="{% url 'secondapp:self_attendance_update' url_username event.pk %}">
+                            {% csrf_token %}
+                            {% for at in attendance_types %}
+                                <label>
+                                    <input type="radio" name="attendance_type" value="{{ at.pk }}"
+                                        {% if attendance.attendance_type == at %}checked{% endif %}>
+                                    {{ at.name }}
+                                </label>
+                            {% endfor %}
+                            <button type="submit">Save</button>
+                        </form>
+                    </td>
+                {% else %}
+                    <td>{{ attendance.attendance_type }}</td>
+                {% endif %}
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 {% else %}

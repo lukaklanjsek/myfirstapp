@@ -1,19 +1,46 @@
 {% extends "secondapp/base.html" %}
-{% block title %}Details2{% endblock %}
+{% block title %}{{ song.title }}{% endblock %}
 {% block content %}
-<p><a href="{% url 'secondapp:song_form2' url_username song.pk %}">EDIT SONG</a></p>
-<p> TEST PRINT: song is owned by {{ song.user }}</p>
-<p>Song ID: {{ song.internal_id }}</p>
-<p>Title: {{ song.title }}</p>
-<p>Number of copies: {{ song.number_of_copies }}</p>
-<p>Number of voices: {{ song.number_of_voices }}</p>
-<p>Composer: {{ song.composer }}</p>
-<p>Poet: {{ song.poet }}</p>
-<p>Type of song: {{ song.group }}</p>
-<p>Number of pages: {{ song.number_of_pages }}</p>
-<p>Year of creation: {{ song.year }}</p>
-<p>Additional notes: {{ song.additional_notes }}</p>
 
-<p>Lyrics: {{ song.lyrics|linebreaks }}</p>
+<h2>{{ song.title }}</h2>
+
+<p>
+    <a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit Song</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'secondapp:song_keywords' url_username song.pk %}">Manage Keywords</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'secondapp:song_dashboard' url_username %}">Back to List</a>
+</p>
+
+<table>
+    <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
+    <tr><th>Composer</th><td>{{ song.composer }}</td></tr>
+    <tr><th>Poet</th><td>{{ song.poet }}</td></tr>
+    <tr><th>Type</th><td>{{ song.group }}</td></tr>
+    <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
+    <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>
+    <tr><th>Pages</th><td>{{ song.number_of_pages|default:"-" }}</td></tr>
+    <tr><th>Copies</th><td>{{ song.number_of_copies|default:"-" }}</td></tr>
+    <tr>
+        <th>Keywords</th>
+        <td>
+            {% for kw in song.keywords.all %}
+                {{ kw }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+                -
+            {% endfor %}
+        </td>
+    </tr>
+</table>
+
+{% if song.additional_notes %}
+<h3>Additional Notes</h3>
+<p>{{ song.additional_notes }}</p>
+{% endif %}
+
+{% if song.lyrics %}
+<h3>Lyrics</h3>
+<div>{{ song.lyrics|linebreaks }}</div>
+{% endif %}
 
 {% endblock %}

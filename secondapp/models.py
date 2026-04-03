@@ -1,6 +1,6 @@
 
 from django.db import models
-from django.db.models import PROTECT #, CASCADE
+from django.db.models import PROTECT, Q
 # from django.db import transaction
 # from django.urls import reverse
 # import datetime
@@ -181,6 +181,18 @@ class PersonQuerySet(models.QuerySet):
         """Generic method - any skill any organization"""
         return self.in_org_user(user).with_skill(skill_id)
 
+    def active_performers(self, org_user, at_date):
+        """Persons with an active MEMBER period at the given date.
+        Used to determine who gets auto-populated into event attendance."""
+        return self.filter(
+            membership_period__user=org_user,
+            membership_period__role_id=Role.MEMBER,
+            membership_period__started_at__lte=at_date,
+        ).filter(
+            Q(membership_period__ended_at__gte=at_date) |
+            Q(membership_period__ended_at__isnull=True)
+        ).distinct()
+
 
 class Skill(models.Model):
     """
@@ -349,6 +361,20 @@ class Project(models.Model):
     """Collection of Events under a common project."""
     title = models.CharField(max_length=250)
     details = models.TextField(blank=True, null=True)
+
+
+class Keyword(models.Model):
+    word = models.CharField(max_length=100)
+    time_signature = models.CharField(max_length=20, blank=True, null=True)
+    song = models.ForeignKey('Song', on_delete=models.CASCADE, related_name='keywords')
+
+    class Meta:
+        ordering = ['word']
+
+    def __str__(self):
+        if self.time_signature:
+            return f"{self.word} ({self.time_signature})"
+        return self.word
 
 
 class Song(models.Model):

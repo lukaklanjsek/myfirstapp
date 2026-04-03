@@ -194,6 +194,19 @@ class AccessControl:
             person__owner=personal_profile
         ).select_related("user", "person")
 
+    @classmethod
+    def get_member_person(cls, auth_user, org_user):
+        """
+        Return auth_user's Person record within org_user's organization, or None.
+        Reuses _user_memberships to follow the same ownership chain used elsewhere.
+        """
+        if not auth_user.is_authenticated:
+            return None
+        membership = cls._user_memberships(auth_user).filter(
+            user=org_user
+        ).select_related('person').first()
+        return membership.person if membership else None
+
 
     # @classmethod
     # def get_user_role_in_org(cls, auth_user, url_username):
@@ -536,7 +549,7 @@ class AccessControl:
             return Membership.objects.none()
 
         # personal memberships
-        if url_username == auth_user.username:
+        if url_username == auth_user:
             return Membership.objects.filter(user=auth_user)
 
         # org memberships - check if auth_user has proper role
