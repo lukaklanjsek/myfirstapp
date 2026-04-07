@@ -6,7 +6,7 @@ import datetime
 #It is advised to always setup a separate cache server for Select2.
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Keyword
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
@@ -152,13 +152,13 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
         #     )
 
 
-class KeywordForm(forms.ModelForm):
+class QuoteForm(forms.ModelForm):
     class Meta:
-        model = Keyword
-        fields = ['word', 'time_signature']
+        model = Quote
+        fields = ['word', 'bar_number']
         widgets = {
-            'word': forms.TextInput(attrs={'placeholder': 'placeholder'}),
-            'time_signature': forms.TextInput(attrs={'placeholder': '43'}),
+            'word': forms.TextInput(attrs={'placeholder': 'example'}),
+            'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
         }
 
 
@@ -177,6 +177,7 @@ class SongForm(forms.ModelForm):
             "number_of_voices",
             "additional_notes",
             "lyrics",
+            "keywords",
         ]
         widgets = {
             "lyrics": forms.Textarea(attrs={'rows': 12}),
@@ -349,10 +350,10 @@ AttendanceFormSet = inlineformset_factory(
     can_delete=True,
 )
 
-KeywordFormSet = inlineformset_factory(
+QuoteFormSet = inlineformset_factory(
     Song,
-    Keyword,
-    form=KeywordForm,
+    Quote,
+    form=QuoteForm,
     extra=1,
     can_delete=True,
 )

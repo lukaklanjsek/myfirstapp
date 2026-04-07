@@ -363,17 +363,17 @@ class Project(models.Model):
     details = models.TextField(blank=True, null=True)
 
 
-class Keyword(models.Model):
+class Quote(models.Model):
     word = models.CharField(max_length=100)
-    time_signature = models.CharField(max_length=20, blank=True, null=True)
-    song = models.ForeignKey('Song', on_delete=models.CASCADE, related_name='keywords')
+    bar_number = models.CharField(max_length=20, blank=True, null=True)
+    song = models.ForeignKey('Song', on_delete=models.CASCADE, related_name='quotes')
 
     class Meta:
         ordering = ['word']
 
     def __str__(self):
-        if self.time_signature:
-            return f"{self.word} ({self.time_signature})"
+        if self.bar_number:
+            return f"{self.word} ({self.bar_number})"
         return self.word
 
 
@@ -398,6 +398,7 @@ class Song(models.Model):
     year = models.IntegerField("year of creation", blank=True, null=True)
     group = models.CharField("type of song", max_length=250)
     number_of_voices = models.PositiveIntegerField(blank=True, null=True)
+    keywords = models.CharField(max_length=255, blank=True, null=True)
 
     additional_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -42,10 +42,10 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
-from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Keyword
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
-from .forms import AddSongToEventForm, KeywordForm, KeywordFormSet
+from .forms import AddSongToEventForm, QuoteForm, QuoteFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 from .utils import import_songs, import_persons, import_events
@@ -916,7 +916,7 @@ class SongListView(SongOwnerMixin, ListView):
                 qs = qs.filter(
                     Q(title__icontains=q) |
                     Q(composer__last_name__icontains=q) |
-                    Q(keywords__word__icontains=q)
+                    Q(keyword__icontains=q)
                 ).distinct()
         return qs
 
@@ -951,15 +951,15 @@ class SongCreateView(SongOwnerMixin, CreateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, keyword_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
-        if keyword_formset is not None:
-            context['keyword_formset'] = keyword_formset
+        if quote_formset is not None:
+            context['quote_formset'] = quote_formset
         elif self.request.POST:
-            context['keyword_formset'] = KeywordFormSet(self.request.POST, prefix='keywords')
+            context['quote_formset'] = QuoteFormSet(self.request.POST, prefix='quotes')
         else:
-            context['keyword_formset'] = KeywordFormSet(prefix='keywords')
+            context['quote_formset'] = QuoteFormSet(prefix='quotes')
         return context
 
     def post(self, request, *args, **kwargs):
@@ -967,16 +967,16 @@ class SongCreateView(SongOwnerMixin, CreateView):
             self.object = None
             form = self.get_form()
             post_data = request.POST.copy()
-            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
-            post_data['keywords-TOTAL_FORMS'] = total + 1
-            kf = KeywordFormSet(post_data, prefix='keywords')
-            return self.render_to_response(self.get_context_data(form=form, keyword_formset=kf))
+            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
+            post_data['quotes-TOTAL_FORMS'] = total + 1
+            kf = QuoteFormSet(post_data, prefix='quotes')
+            return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.user = self.owner_user
         self.object = form.save()
-        kf = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         if kf.is_valid():
             kf.save()
         return HttpResponseRedirect(self.get_success_url())
@@ -1005,15 +1005,15 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, keyword_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
-        if keyword_formset is not None:
-            context['keyword_formset'] = keyword_formset
+        if quote_formset is not None:
+            context['quote_formset'] = quote_formset
         elif self.request.POST:
-            context['keyword_formset'] = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+            context['quote_formset'] = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         else:
-            context['keyword_formset'] = KeywordFormSet(instance=self.object, prefix='keywords')
+            context['quote_formset'] = QuoteFormSet(instance=self.object, prefix='quotes')
         return context
 
     def post(self, request, *args, **kwargs):
@@ -1021,16 +1021,16 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
             self.object = self.get_object()
             form = self.get_form()
             post_data = request.POST.copy()
-            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
-            post_data['keywords-TOTAL_FORMS'] = total + 1
-            kf = KeywordFormSet(post_data, instance=self.object, prefix='keywords')
-            return self.render_to_response(self.get_context_data(form=form, keyword_formset=kf))
+            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
+            post_data['quotes-TOTAL_FORMS'] = total + 1
+            kf = QuoteFormSet(post_data, instance=self.object, prefix='quotes')
+            return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.user = self.owner_user
         self.object = form.save()
-        kf = KeywordFormSet(self.request.POST, instance=self.object, prefix='keywords')
+        kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         if kf.is_valid():
             kf.save()
         return HttpResponseRedirect(self.get_success_url())
@@ -1435,9 +1435,9 @@ def event_add_song(request, username, pk):
 
 
 @method_decorator(login_required, name='dispatch')
-class SongKeywordView(SongOwnerMixin, View):
-    """Manage keywords for a specific song. Supports ?next= redirect after save."""
-    template_name = 'secondapp/song_keywords.html'
+class SongQuoteView(SongOwnerMixin, View):
+    """Manage quotes for a specific song. Supports ?next= redirect after save."""
+    template_name = 'secondapp/song_quotes.html'
     permission_check_method = AccessControl.can_manage_song
 
     def _get_song(self, pk):
@@ -1455,7 +1455,7 @@ class SongKeywordView(SongOwnerMixin, View):
 
     def get(self, request, username, pk):
         song = self._get_song(pk)
-        formset = KeywordFormSet(instance=song, prefix='keywords')
+        formset = QuoteFormSet(instance=song, prefix='quotes')
         return render(request, self.template_name, {
             'song': song,
             'formset': formset,
@@ -1467,16 +1467,16 @@ class SongKeywordView(SongOwnerMixin, View):
         song = self._get_song(pk)
         if request.POST.get('action') == 'add_kw_row':
             post_data = request.POST.copy()
-            total = int(post_data.get('keywords-TOTAL_FORMS', 0))
-            post_data['keywords-TOTAL_FORMS'] = total + 1
-            formset = KeywordFormSet(post_data, instance=song, prefix='keywords')
+            total = int(post_data.get('quotes-TOTAL_FORMS', 0))
+            post_data['quotes-TOTAL_FORMS'] = total + 1
+            formset = QuoteFormSet(post_data, instance=song, prefix='quotes')
             return render(request, self.template_name, {
                 'song': song,
                 'formset': formset,
                 'url_username': username,
                 'next': request.POST.get('next', ''),
             })
-        formset = KeywordFormSet(request.POST, instance=song, prefix='keywords')
+        formset = QuoteFormSet(request.POST, instance=song, prefix='quotes')
         if formset.is_valid():
             formset.save()
             return redirect(self._next_url(request, username, pk))

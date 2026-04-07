@@ -1,5 +1,5 @@
 # utils.py
-from .models import (Song, Membership, CustomUser,
+from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill,
                      Singer, Voice, Event, Project, EventType)
@@ -10,6 +10,7 @@ from .permissions import AccessControl
 from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.utils import timezone
+from django.db.models import Q
 
 # class SongQueryHelper:
 #     @staticmethod
@@ -423,6 +424,44 @@ def import_events(org_user, request, file_path, delimiter=";"):
     imported_count = 0
     skipped_count = 0
     error_details = []
+    default_attendance_type = AttendanceType.objects.get(name="Present")
+
+    def get_active_members(user, date):
+        return Person.objects.filter(
+            membership_period__user=user,
+            membership_period__role_id=Role.MEMBER,
+            membership_period__started_at__lte=date,
+        ).filter(
+            Q(membership_period__ended_at__gte=date) |
+            Q(membership_period__ended_at__isnull=True)
+        ).distinct()
+
+    def populate_event_attendance(event, active_persons, attendance_type):
+        existing = Attendance.objects.filter(event=event)
+        existing_map = {a.person_id: a for a in existing}
+
+        to_create = []
+        to_update = []
+
+        for person in active_persons:
+            if person.id in existing_map:
+                att = existing_map[person.id]
+                if att.attendance_type_id != attendance_type.id:
+                    att.attendance_type = attendance_type
+                    to_update.append(att)
+            else:
+                to_create.append(
+                    Attendance(
+                        event=event,
+                        person=person,
+                        attendance_type=attendance_type
+                    )
+                )
+        if to_create:
+            Attendance.objects.bulk_create(to_create)
+
+        if to_update:
+            Attendance.objects.bulk_update(to_update, ["attendance_type"])
 
     # Check permissions
     if request.user != org_user:
@@ -445,71 +484,77 @@ def import_events(org_user, request, file_path, delimiter=";"):
         for row in reader:
             f_row = {k: v for k, v in row.items() if k in valid_headers}
             try:
-                # internal_id = (f_row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
-                name = (f_row.get(EVENT_NAME_KEY) or '').strip() or None
-                location_city = (f_row.get(EVENT_LOCATION_CITY_KEY) or '').strip() or None
-                # location_rid = (f_row.get(EVENT_LOCATION_RID_KEY) or '').strip() or None
-                location_custom = (f_row.get(EVENT_LOCATION_CUSTOM_KEY) or '').strip() or None
-                start_date = (f_row.get(EVENT_START_DATE_KEY) or '').strip()  # or None
-                start_hour = (f_row.get(EVENT_START_HOUR_KEY) or '').strip()  # or None
-                ended_at = (f_row.get(EVENT_ENDED_AT_KEY) or '').strip() or None
-                event_typo = (f_row.get(EVENT_TYPE_KEY) or '').strip() or None
-                details = (f_row.get(EVENT_DETAILS_KEY) or '').strip() or None
-                num_visitors = (f_row.get(EVENT_NUM_VISITORS_KEY) or '').strip() or None
-                project_title = (f_row.get(EVENT_PROJECT_KEY) or '').strip() or None
-                notes = (f_row.get(EVENT_ADDITIONAL_TEXTFIELD_KEY) or '').strip or None
-                income = (f_row.get(EVENT_INCOME_KEY) or '').strip() or None
-                outcome = (f_row.get(EVENT_OUTCOME_KEY) or '').strip() or None
-                producers = (f_row.get(EVENT_PRODUCERS_GROUP_KEY) or '').strip() or None
+                with transaction.atomic():
 
-                location = f"{location_city}, {location_custom}"
+                    # internal_id = (f_row.get(EVENT_INTERNAL_ID_KEY) or '').strip() or None
+                    name = (f_row.get(EVENT_NAME_KEY) or '').strip() or None
+                    location_city = (f_row.get(EVENT_LOCATION_CITY_KEY) or '').strip() or None
+                    # location_rid = (f_row.get(EVENT_LOCATION_RID_KEY) or '').strip() or None
+                    location_custom = (f_row.get(EVENT_LOCATION_CUSTOM_KEY) or '').strip() or None
+                    start_date = (f_row.get(EVENT_START_DATE_KEY) or '').strip()  # or None
+                    start_hour = (f_row.get(EVENT_START_HOUR_KEY) or '').strip()  # or None
+                    ended_at = (f_row.get(EVENT_ENDED_AT_KEY) or '').strip() or None
+                    event_typo = (f_row.get(EVENT_TYPE_KEY) or '').strip() or None
+                    details = (f_row.get(EVENT_DETAILS_KEY) or '').strip() or None
+                    num_visitors = (f_row.get(EVENT_NUM_VISITORS_KEY) or '').strip() or None
+                    project_title = (f_row.get(EVENT_PROJECT_KEY) or '').strip() or None
+                    notes = (f_row.get(EVENT_ADDITIONAL_TEXTFIELD_KEY) or '').strip() or None
+                    income = (f_row.get(EVENT_INCOME_KEY) or '').strip() or None
+                    outcome = (f_row.get(EVENT_OUTCOME_KEY) or '').strip() or None
+                    producers = (f_row.get(EVENT_PRODUCERS_GROUP_KEY) or '').strip() or None
 
-                started_at = datetime.combine(
-                    datetime.fromisoformat(start_date).date(),
-                    datetime.strptime(start_hour, "%H:%M").time()
-                )
-                started_at = timezone.make_aware(started_at)
-                if ended_at:
-                    try:
-                        ended_at = timezone.make_aware(datetime.fromisoformat(ended_at))
-                    except (ValueError, TypeError):
+                    location = f"{location_city}, {location_custom}"
+
+                    started_at = datetime.combine(
+                        datetime.fromisoformat(start_date).date(),
+                        datetime.strptime(start_hour, "%H:%M").time()
+                    )
+                    started_at = timezone.make_aware(started_at)
+                    event_date = started_at.date()
+                    if ended_at:
+                        try:
+                            ended_at = timezone.make_aware(datetime.fromisoformat(ended_at))
+                        except (ValueError, TypeError):
+                            ended_at = None
+                    else:
                         ended_at = None
-                else:
-                    ended_at = None
 
-                if event_typo == "Krajši nastop do 20 minut":
-                    event_type = EventType.objects.get(name="Performance")
-                else:
-                    event_type = EventType.objects.get(name="Concert")
+                    if event_typo == "Krajši nastop do 20 minut":
+                        event_type = EventType.objects.get(name="Performance")
+                    else:
+                        event_type = EventType.objects.get(name="Concert")
 
-                additional_notes = []
-                if income != 0 or not None:
-                    additional_notes.append(income)
-                if outcome != 0 or not None:
-                    additional_notes.append(outcome)
+                    additional_notes = "\n".join([
+                        str(x) for x in [income, outcome, notes]
+                        if x not in (None, "", "0")
+                    ])
 
-                additional_notes.append(notes)
+                    active_persons = get_active_members(org_user, event_date)
 
 
-                Event.objects.create(
-                    user=org_user,
-                    # internal_id=internal_id,
-                    name=name,
-                    location=location,
-                    started_at=started_at,
-                    ended_at=ended_at,
-                    event_type=event_type,
-                    details=details,
-                    num_visitors=num_visitors,
-                    additional_notes=additional_notes,
-                    producers=producers,
-                )
-                if project_title:
-                    Project.objects.get_or_create(
-                        title=project_title
+                    event = Event.objects.create(
+                        user=org_user,
+                        # internal_id=internal_id,
+                        name=name,
+                        location=location,
+                        started_at=started_at,
+                        ended_at=ended_at,
+                        event_type=event_type,
+                        details=details,
+                        num_visitors=num_visitors,
+                        additional_notes=additional_notes,
+                        producers=producers,
                     )
 
-                imported_count += 1
+                    if project_title:
+                        Project.objects.get_or_create(
+                            title=project_title
+                        )
+
+                    populate_event_attendance(event, active_persons, default_attendance_type)
+
+
+                    imported_count += 1
 
             except Exception as e:
                 skipped_count += 1
