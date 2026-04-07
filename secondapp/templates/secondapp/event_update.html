@@ -1,6 +1,37 @@
 {% extends "secondapp/base.html" %}
 {% block title %}Update{% endblock %}
 
+{% block extra_css %}
+<style>
+    .reorder-buttons {
+        display: inline-flex;
+        gap: 0.2rem;
+    }
+
+    .reorder-buttons button {
+        padding: 0.2rem 0.25rem;
+        font-size: 0.8rem;
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 1rem;
+        height: 1rem;
+        line-height: 1;
+    }
+
+    .reorder-buttons button:hover {
+        background-color: #e0e0e0;
+        border-color: #999;
+    }
+
+    .reorder-buttons button:active {
+        transform: scale(0.95);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if messages %}
@@ -29,7 +60,7 @@
         </div>
     {% endfor %}
 
-    <h3>Songs</h3>
+    <h3 id="songs">Songs</h3>
     {% if is_admin %}
         <button type="submit" name="action" value="save_and_add_song">Save &amp; Add Song</button>
     {% endif %}
@@ -38,7 +69,8 @@
     <table>
         <thead>
             <tr>
-                <th>Order</th>
+                <th style="width: 3rem;">Order</th>
+                <th>#</th>
                 <th>Song</th>
                 <th>Encore</th>
                 <th>Remove</th>
@@ -48,18 +80,23 @@
         <tbody>
             {% for form in song_formset %}
                 <tr>
-                    <td>{{ form.order }}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <div class="reorder-buttons">
+                            {% if forloop.counter > 1 %}
+                                <button type="submit" name="reorder" value="song_{{ form.instance.pk }}_up_one" title="Move up">↑</button>
+                            {% endif %}
+                            {% if forloop.counter < song_formset.forms|length %}
+                                <button type="submit" name="reorder" value="song_{{ form.instance.pk }}_down_one" title="Move down">↓</button>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td style="text-align: center; font-weight: bold;">{{ forloop.counter }}</td>
                     <td>
                         <a href="{% url 'secondapp:song_page' url_username form.instance.song.pk %}">{{ form.instance.song.title }}</a>
                         {% if form.instance.song.composer %} &mdash; {{ form.instance.song.composer.last_name }}{% endif %}
-                        {% with kws=form.instance.song.keywords.all %}
-                        {% if kws %}
-                            <br><small>
-                            {% for kw in kws|slice:":5" %}{{ kw.word }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                            {% if kws.count > 5 %}&hellip;{% endif %}
-                            </small>
+                        {% if form.instance.song.keywords %}
+                            <br><small>Keywords: {{ form.instance.song.keywords }}</small>
                         {% endif %}
-                        {% endwith %}
                         {{ form.song }}
                         {{ form.id }}
                     </td>
@@ -67,7 +104,7 @@
                     <td style="text-align: center;">{{ form.DELETE }}</td>
                     {% if is_admin %}
                     <td>
-                        <a href="{% url 'secondapp:song_keywords' url_username form.instance.song.pk %}?next={% url 'secondapp:event_update' url_username object.pk %}">Keywords</a>
+                        <a href="{% url 'secondapp:song_update' url_username form.instance.song.pk %}?next={% url 'secondapp:event_update' url_username object.pk %}">Edit</a>
                     </td>
                     {% endif %}
                 </tr>
@@ -87,6 +124,7 @@
                 {% for at in attendance_types %}
                     <th>{{ at.name }}</th>
                 {% endfor %}
+                {% if is_admin %}<th></th>{% endif %}
             </tr>
         </thead>
         <tbody id="attendance-formset">
@@ -100,6 +138,11 @@
                 {% for radio in form.attendance_type %}
                     <td>{{ radio.tag }}</td>
                 {% endfor %}
+                {% if is_admin and form.instance.pk %}
+                <td>
+                    <a href="{% url 'secondapp:attendance_delete' url_username object.pk form.instance.pk %}">Delete</a>
+                </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>
@@ -120,7 +163,7 @@
 
 <form method="get">
     <input type="hidden" name="add_song" value="1">
-    <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, keyword" autofocus>
+    <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" autofocus>
     <button type="submit">Search</button>
     {% if song_search_q %}<a href="?add_song=1">Clear</a>{% endif %}
 </form>
@@ -146,10 +189,10 @@
 <a href="{% url 'secondapp:event_update' url_username object.pk %}">&#x2715; Close</a>
 
 <form method="get">
-    <input type="hidden" name="show_add" value="1">
+    <input type="hidden" name="add_participant" value="1">
     <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, voice, or instrument" autofocus>
     <button type="submit">Search</button>
-    {% if search_q %}<a href="?show_add=1">Clear</a>{% endif %}
+    {% if search_q %}<a href="?add_participant=1">Clear</a>{% endif %}
 </form>
 
 {% if add_form.fields.person.queryset.exists %}
@@ -165,4 +208,17 @@
     <p>All org members are already in this event's attendance.</p>
 {% endif %}
 {% endif %}
+
+<script>
+    document.querySelectorAll('.reorder-buttons button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            sessionStorage.setItem('scrollToSongs', 'true');
+        });
+    });
+
+    if (sessionStorage.getItem('scrollToSongs')) {
+        document.getElementById('songs').scrollIntoView({ behavior: 'smooth' });
+        sessionStorage.removeItem('scrollToSongs');
+    }
+</script>
 {% endblock %}

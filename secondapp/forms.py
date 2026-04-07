@@ -156,8 +156,12 @@ class QuoteForm(forms.ModelForm):
     class Meta:
         model = Quote
         fields = ['word', 'bar_number']
+        labels = {
+            'word': 'Quote',
+            'bar_number': 'Bar Number',
+        }
         widgets = {
-            'word': forms.TextInput(attrs={'placeholder': 'example'}),
+            'word': forms.TextInput(attrs={'placeholder': 'Quote text'}),
             'bar_number': forms.TextInput(attrs={'placeholder': '43'}),
         }
 
@@ -223,11 +227,10 @@ class EventForm(forms.ModelForm):
 class EventSongForm(forms.ModelForm):
     class Meta:
         model = EventSong
-        fields = ['id', 'song', 'order', 'encore']
+        fields = ['id', 'song', 'encore']
         widgets = {
             'id': forms.HiddenInput(),
             'song': forms.HiddenInput(),
-            'order': forms.NumberInput(attrs={'min': 1, 'style': 'width: 4em'}),
             'encore': forms.CheckboxInput(),
         }
 
@@ -260,7 +263,7 @@ class AddSongToEventForm(forms.Form):
                     qs = qs.filter(
                         Q(title__icontains=search_q) |
                         Q(composer__last_name__icontains=search_q) |
-                        Q(keywords__word__icontains=search_q)
+                        Q(keywords__icontains=search_q)
                     ).distinct()
             self.fields['song'].queryset = qs
 

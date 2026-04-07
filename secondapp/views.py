@@ -1,5 +1,6 @@
 # views.py
 import csv
+import math
 from dataclasses import field
 from fileinput import filename
 import sqlite3
@@ -1148,6 +1149,19 @@ class EventUpdateView(UpdateView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        """Handle reorder actions before form validation."""
+        if request.POST.get('reorder'):
+            self.object = self.get_object()
+            self._reorder_songs_db(self.object)
+            # Always redirect after reorder, don't process form
+            event_update_url = reverse('secondapp:event_update', kwargs={
+                'username': self.kwargs['username'],
+                'pk': self.object.pk,
+            })
+            return redirect(event_update_url)
+        return super().post(request, *args, **kwargs)
+
     def get_queryset(self):
         """Return only events belonging to the organization/user from URL."""
         return Event.objects.filter(
@@ -1185,10 +1199,12 @@ class EventUpdateView(UpdateView):
                 'person__last_name',
                 'person__first_name',
             )
+            song_qs = event.eventsong_set.all().order_by('order')
             if self.request.POST:
                 self._song_formset = EventSongFormSet(
                     self.request.POST,
                     instance=event,
+                    queryset=song_qs,
                 )
                 self._attendance_formset = AttendanceFormSet(
                     self.request.POST,
@@ -1199,6 +1215,7 @@ class EventUpdateView(UpdateView):
             else:
                 self._song_formset = EventSongFormSet(
                     instance=event,
+                    queryset=song_qs,
                 )
                 self._attendance_formset = AttendanceFormSet(
                     instance=event,
@@ -1207,7 +1224,7 @@ class EventUpdateView(UpdateView):
                 )
 
         search_q = self.request.GET.get('q', '')
-        show_add_form = self.request.GET.get('show_add') == '1' and self.is_admin
+        show_add_form = self.request.GET.get('add_participant') == '1' and self.is_admin
         show_add_song = self.request.GET.get('add_song') == '1' and self.is_admin
         song_search_q = self.request.GET.get('song_q', '')
 
@@ -1240,13 +1257,12 @@ class EventUpdateView(UpdateView):
         valid_songs = [
             {
                 'song': f.cleaned_data['song'],
-                'order': f.cleaned_data.get('order'),
                 'encore': f.cleaned_data.get('encore', False),
+                'instance': f.instance,
             }
             for f in song_formset.forms
             if f.cleaned_data and not f.cleaned_data.get('DELETE') and f.cleaned_data.get('song')
         ]
-        valid_songs.sort(key=lambda x: x['order'] if x['order'] is not None else 999)
         for idx, song_data in enumerate(valid_songs):
             EventSong.objects.create(
                 event=event,
@@ -1254,6 +1270,61 @@ class EventUpdateView(UpdateView):
                 order=idx + 1,
                 encore=song_data['encore'],
             )
+
+    def _reorder_songs_db(self, event):
+        """Reorder songs in the database based on reorder button click."""
+        reorder_value = self.request.POST.get('reorder', '').strip()
+        if not reorder_value or not reorder_value.startswith('song_'):
+            return
+
+        try:
+            parts = reorder_value.split('_')
+            song_pk = int(parts[1])
+            direction = '_'.join(parts[2:])  # handles "up_one", "up_all", "down_one", "down_all"
+        except (ValueError, IndexError):
+            return
+
+        songs = list(event.eventsong_set.all().order_by('order'))
+        if not songs:
+            return
+
+        song_idx = None
+        for idx, song in enumerate(songs):
+            if song.pk == song_pk:
+                song_idx = idx
+                break
+
+        if song_idx is None:
+            return
+
+        # Perform the reordering
+        moved = False
+        if direction == 'up_one' and song_idx > 0:
+            songs[song_idx], songs[song_idx - 1] = songs[song_idx - 1], songs[song_idx]
+            moved = True
+        elif direction == 'up_all' and song_idx > 0:
+            songs.insert(0, songs.pop(song_idx))
+            moved = True
+        elif direction == 'down_one' and song_idx < len(songs) - 1:
+            songs[song_idx], songs[song_idx + 1] = songs[song_idx + 1], songs[song_idx]
+            moved = True
+        elif direction == 'down_all' and song_idx < len(songs) - 1:
+            songs.append(songs.pop(song_idx))
+            moved = True
+
+        if not moved:
+            return
+
+        # Update order in database using temporary negative values to avoid constraint violations
+        with transaction.atomic():
+            # First, set all to temporary negative values
+            for idx, song in enumerate(songs):
+                song.order = -(idx + 1)
+                song.save(update_fields=['order'])
+            # Then, set to final positive values
+            for idx, song in enumerate(songs):
+                song.order = idx + 1
+                song.save(update_fields=['order'])
 
     def form_valid(self, form):
         self.get_context_data()  # ensures formsets are built and cached on self
@@ -1280,7 +1351,7 @@ class EventUpdateView(UpdateView):
         })
 
         if action == 'show_add_form':
-            return redirect(event_update_url + '?show_add=1')
+            return redirect(event_update_url + '?add_participant=1')
 
         if action == 'save_and_add_song':
             return redirect(event_update_url + '?add_song=1')
@@ -1408,6 +1479,38 @@ def event_add_attendance(request, username, pk):
     return redirect('secondapp:event_update', username=username, pk=pk)
 
 
+@method_decorator(login_required, name='dispatch')
+class AttendanceDeleteView(DeleteView):
+    model = Attendance
+    template_name = "secondapp/attendance_confirm_delete.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        url_username = self.kwargs['username']
+        self.org_user = get_object_or_404(CustomUser, username=url_username)
+        is_admin = AccessControl.can_add_event(
+            request.user, self.org_user
+        ).filter(person__roles__id=Role.ADMIN).exists()
+        if not is_admin:
+            return HttpResponseForbidden("Only admins can delete participants.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        event = get_object_or_404(Event, pk=self.kwargs['event_pk'], user=self.org_user)
+        return Attendance.objects.filter(event=event)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs['username']
+        context['event'] = self.object.event
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('secondapp:event_update', kwargs={
+            'username': self.kwargs['username'],
+            'pk': self.kwargs['event_pk'],
+        })
+
+
 @require_POST
 @login_required
 def event_add_song(request, username, pk):
@@ -1513,40 +1616,47 @@ class AttendanceDashboardView(View):
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
 
-        ## Fetch events with optimization
-        events_query = Event.objects.filter(
+        now = timezone.now()
+
+        ## Build base query with optimization
+        base_query = Event.objects.filter(
             user=self.org_user
         ).select_related('event_type').prefetch_related(
             'attendance_set__person',
             'attendance_set__attendance_type'
-        ).order_by('-started_at')  # Most recent first
+        )
 
         # Apply date filters if provided
         if start_date and end_date:
-            events_query = events_query.filter(
+            base_query = base_query.filter(
                 started_at__date__gte=start_date,
                 started_at__date__lte=end_date
             )
 
-        # Get the last N events and reverse them
-        events = list(reversed(list(events_query[:event_limit])))
+        # Split into past and future events
+        past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
+        future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
 
-        # Determine which events should be grayed out
-        # Gray out past events except the most recent past event
-        now = timezone.now()
-        most_recent_past_event = None
+        # Calculate split: 50% past, 49% future (remainder goes to past)
+        past_count = math.ceil(event_limit / 2)
+        future_count = event_limit - past_count
 
-        for event in reversed(events):  # Check from most recent
-            if event.started_at < now:
-                most_recent_past_event = event
-                break
+        # Fetch events
+        past_events = list(past_qs[:past_count])
+        future_events = list(future_qs[:future_count])
 
-        # Mark events as grayed out
+        # Final list: oldest past → recent past → soonest future → …
+        events = list(reversed(past_events)) + future_events
+
+        # Most recent past event (before reversal, it's at index 0 of past_events)
+        most_recent_past_event = past_events[0] if past_events else None
+
+        # Mark events as grayed out (all past except most recent, and all future)
         for event in events:
-            if event.started_at < now and event != most_recent_past_event:
-                event.is_grayed_out = True
-            else:
+            if event == most_recent_past_event:
                 event.is_grayed_out = False
+            else:
+                event.is_grayed_out = True
 
         # Get all current members, ordered alphabetically for now
         members = Person.objects.filter(
@@ -1583,27 +1693,39 @@ class AttendanceDashboardView(View):
             start_date = request.GET.get('start_date')
             end_date = request.GET.get('end_date')
 
-            events_query = Event.objects.filter(user=self.org_user).order_by('-started_at')
+            now = timezone.now()
+
+            # Build base query (same as GET)
+            base_query = Event.objects.filter(user=self.org_user)
             if start_date and end_date:
-                events_query = events_query.filter(
+                base_query = base_query.filter(
                     started_at__date__gte=start_date,
                     started_at__date__lte=end_date
                 )
-            events = list(reversed(list(events_query[:event_limit])))
 
-            # Determine which events should be grayed out (same logic as GET)
-            now = timezone.now()
-            most_recent_past_event = None
+            # Split into past and future events
+            past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
+            future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
 
-            for event in reversed(events):
-                if event.started_at < now:
-                    most_recent_past_event = event
-                    break
+            # Calculate split: 50% past, 49% future (remainder goes to past)
+            past_count = math.ceil(event_limit / 2)
+            future_count = event_limit - past_count
+
+            # Fetch events
+            past_events = list(past_qs[:past_count])
+            future_events = list(future_qs[:future_count])
+
+            # Final list: oldest past → recent past → soonest future → …
+            events = list(reversed(past_events)) + future_events
+
+            # Most recent past event
+            most_recent_past_event = past_events[0] if past_events else None
 
             # Create set of grayed out event IDs for quick lookup
+            # All events except the most recent past event are grayed out
             grayed_out_event_ids = {
                 event.id for event in events
-                if event.started_at < now and event != most_recent_past_event
+                if event != most_recent_past_event
             }
 
             members = Person.objects.filter(

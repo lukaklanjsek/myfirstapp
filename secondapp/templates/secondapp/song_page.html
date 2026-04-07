@@ -7,8 +7,6 @@
 <p>
     <a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit Song</a>
     &nbsp;|&nbsp;
-    <a href="{% url 'secondapp:song_keywords' url_username song.pk %}">Manage Keywords</a>
-    &nbsp;|&nbsp;
     <a href="{% url 'secondapp:song_dashboard' url_username %}">Back to List</a>
 </p>
 
@@ -23,15 +21,18 @@
     <tr><th>Copies</th><td>{{ song.number_of_copies|default:"-" }}</td></tr>
     <tr>
         <th>Keywords</th>
-        <td>
-            {% for kw in song.keywords.all %}
-                {{ kw }}{% if not forloop.last %}, {% endif %}
-            {% empty %}
-                -
-            {% endfor %}
-        </td>
+        <td>{{ song.keywords|default:"-" }}</td>
     </tr>
 </table>
+
+{% if song.quotes.all %}
+<h3>Quotes</h3>
+<ul>
+    {% for quote in song.quotes.all %}
+        <li>{{ quote.word }}{% if quote.bar_number %} (Bar {{ quote.bar_number }}){% endif %}</li>
+    {% endfor %}
+</ul>
+{% endif %}
 
 {% if song.additional_notes %}
 <h3>Additional Notes</h3>

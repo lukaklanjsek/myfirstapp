@@ -32,11 +32,7 @@
             <td>{{ song.internal_id|default:"-" }}</td>
             <td><a href="{% url 'secondapp:song_page' url_username song.pk %}">{{ song.title }}</a></td>
             <td>{{ song.composer.last_name }}</td>
-            <td>
-                {% for kw in song.keywords.all %}
-                    <span>{{ kw.word }}{% if kw.time_signature %} ({{ kw.time_signature }}){% endif %}{% if not forloop.last %}, {% endif %}</span>
-                {% endfor %}
-            </td>
+            <td>{{ song.keywords|default:"-" }}</td>
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit</a></td>
         </tr>

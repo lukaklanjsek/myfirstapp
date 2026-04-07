@@ -26,6 +26,7 @@ urlpatterns = [
     path("<str:username>/events/<int:pk>/edit/", views.EventUpdateView.as_view(), name="event_update"),
     path("<str:username>/events/<int:event_pk>/attendance/update/", views.self_attendance_update, name="self_attendance_update"),
     path("<str:username>/events/<int:pk>/attendance/add/", views.event_add_attendance, name="event_add_attendance"),
+    path("<str:username>/events/<int:event_pk>/attendance/<int:pk>/delete/", views.AttendanceDeleteView.as_view(), name="attendance_delete"),
     path("<str:username>/events/<int:pk>/songs/add/", views.event_add_song, name="event_add_song"),
     # path('<str:username>/event/<int:pk>/toggle-lock/', views.ToggleEventLockView.as_view(), name='toggle_event_lock'),
 
