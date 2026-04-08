@@ -6,7 +6,7 @@ import datetime
 #It is advised to always setup a separate cache server for Select2.
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote
+from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
@@ -195,6 +195,31 @@ class SongForm(forms.ModelForm):
             self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
 
 
+class ProjectForm(forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = [
+            'title',
+            'description',
+            'start_date',
+            'end_date',
+            'songs',
+            'guests',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user:
+            self.fields['songs'].queryset = Song.objects.filter(user=user).order_by('title')
+            self.fields['guests'].queryset = Person.objects.filter(membership_period__user=user).distinct().order_by('last_name', 'first_name')
+
+        self.fields['songs'].required = False
+        self.fields['guests'].required = False
+
 
 class SkillForm(forms.ModelForm):
     class Meta:
@@ -212,7 +237,7 @@ class EventForm(forms.ModelForm):
                   'ended_at',
                   'event_type',
                   'details',
-
+                  'project',
                   'producers',
                   'additional_notes',
                   'num_visitors',
@@ -242,20 +267,26 @@ class EventSongFormSet(BaseInlineFormSet):
                 form.errors.pop('__all__', None)
 
 
+class SongChoiceField(forms.ModelChoiceField):
+    def __init__(self, *args, already_added_ids=None, **kwargs):
+        self.already_added_ids = already_added_ids or set()
+        super().__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj):
+        label = str(obj)
+        if obj.pk in self.already_added_ids:
+            return f"* {label}"
+        return label
+
+
 class AddSongToEventForm(forms.Form):
-    song = forms.ModelChoiceField(
-        queryset=Song.objects.none(),
-        widget=forms.Select(attrs={'size': '8'}),
-        empty_label=None,
-        label='Song',
-    )
     encore = forms.BooleanField(required=False, label='Encore')
 
     def __init__(self, *args, org_user=None, event=None, search_q='', **kwargs):
         super().__init__(*args, **kwargs)
         if org_user and event is not None:
-            already_added = event.eventsong_set.values_list('song_id', flat=True)
-            qs = Song.objects.filter(user=org_user).exclude(id__in=already_added).order_by('title')
+            already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
+            qs = Song.objects.filter(user=org_user).order_by('title')
             if search_q:
                 if search_q.isdigit():
                     qs = qs.filter(internal_id=int(search_q))
@@ -265,7 +296,13 @@ class AddSongToEventForm(forms.Form):
                         Q(composer__last_name__icontains=search_q) |
                         Q(keywords__icontains=search_q)
                     ).distinct()
-            self.fields['song'].queryset = qs
+            self.fields['song'] = SongChoiceField(
+                queryset=qs,
+                already_added_ids=already_added_ids,
+                widget=forms.Select(attrs={'size': '8'}),
+                empty_label=None,
+                label='Song',
+            )
 
 
 class AttendanceForm(forms.ModelForm):

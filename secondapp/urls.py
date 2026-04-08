@@ -51,6 +51,11 @@ urlpatterns = [
     path('<str:username>/attendance/quick-add/', views.quick_add_rehearsal, name='quick_add_rehearsal'),
     path("skill/", views.SkillListAndCreateView.as_view(), name="skill"),
 
+    path('<str:username>/projects/', views.ProjectListView.as_view(), name='project_list'),
+    path('<str:username>/projects/new/', views.ProjectCreateView.as_view(), name='project_create'),
+    path('<str:username>/projects/<int:pk>/', views.ProjectDetailView.as_view(), name='project_detail'),
+    path('<str:username>/projects/<int:pk>/edit/', views.ProjectUpdateView.as_view(), name='project_update'),
+    path('<str:username>/projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project_delete'),
 
     #    path("", include("django.contrib.auth.urls")),
 

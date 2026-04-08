@@ -27,16 +27,10 @@
             <tr>
                 <td>{{ eventsong.order }}</td>
                 <td>
-                    <a href="{% url 'secondapp:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>
-                    &mdash; {{ eventsong.song.composer.last_name }}
-                    {% with kws=eventsong.song.keywords.all %}
-                    {% if kws %}
-                        <br><small>
-                        {% for kw in kws|slice:":5" %}{{ kw.word }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                        {% if kws.count > 5 %}&hellip;{% endif %}
-                        </small>
+                    <a href="{% url 'secondapp:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>- {{ eventsong.song.composer.last_name }}
+                    {% if eventsong.song.keywords %}
+                        <br><small>{{ eventsong.song.keywords }}</small>
                     {% endif %}
-                    {% endwith %}
                 </td>
                 <td>{% if eventsong.encore %}Yes{% endif %}</td>
             </tr>

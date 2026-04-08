@@ -1,0 +1,36 @@
+{% extends "secondapp/base.html" %}
+{% block title %}Delete Participant{% endblock %}
+{% block content %}
+
+<div class="delete-confirmation-container">
+    <div class="warning-header">
+        <h1>Delete Participant Confirmation</h1>
+    </div>
+    <div class="warning-message">
+        <p>Are you sure you want to remove this participant from the event?</p>
+        <div class="item-details">
+            <p>Person: {{ object.person.first_name }} {{ object.person.last_name }}</p>
+            <p>Event: {{ event.name }}</p>
+        </div>
+        <div class="warning-note">
+            <p>This action cannot be undone.</p>
+        </div>
+    </div>
+    <div class="confirmation-form">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-actions">
+                <div class="danger-action">
+                    <button type="submit" class="delete-btn">Yes, delete</button>
+                </div>
+                <div class="safe-action">
+                    <a href="{% url 'secondapp:event_update' url_username event.pk %}">
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

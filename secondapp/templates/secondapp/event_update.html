@@ -95,7 +95,7 @@
                         <a href="{% url 'secondapp:song_page' url_username form.instance.song.pk %}">{{ form.instance.song.title }}</a>
                         {% if form.instance.song.composer %} &mdash; {{ form.instance.song.composer.last_name }}{% endif %}
                         {% if form.instance.song.keywords %}
-                            <br><small>Keywords: {{ form.instance.song.keywords }}</small>
+                            <br><small>{{ form.instance.song.keywords }}</small>
                         {% endif %}
                         {{ form.song }}
                         {{ form.id }}
@@ -161,6 +161,12 @@
 &nbsp;|&nbsp;
 <a href="{% url 'secondapp:song_form2' url_username %}?next={% url 'secondapp:event_update' url_username object.pk %}">+ Add Fresh Song to Archive</a>
 
+{% if song_formset.forms %}
+<p><strong>Already in setlist:</strong>
+    {% for f in song_formset %}{{ f.instance.song.title }}{% if not forloop.last %}, {% endif %}{% endfor %}
+</p>
+{% endif %}
+
 <form method="get">
     <input type="hidden" name="add_song" value="1">
     <input type="text" name="song_q" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" autofocus>
@@ -178,7 +184,7 @@
 {% elif song_search_q %}
     <p>No matching songs found.</p>
 {% else %}
-    <p>All songs from the archive are already in this event, or no songs exist yet.</p>
+    <p>No songs in the archive yet.</p>
 {% endif %}
 
 <p><a href="{% url 'secondapp:song_dashboard' url_username %}">Browse full song archive</a></p>

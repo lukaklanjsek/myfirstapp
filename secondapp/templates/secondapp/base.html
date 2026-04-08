@@ -46,6 +46,7 @@
                                                     <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">Songs</a></li>
                                                     <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
                                                     <li><a href="{% url 'secondapp:event_list' org.user.username %}">Events</a></li>
+                                                    <li><a href="{% url 'secondapp:project_list' org.user.username %}">Projects</a></li>
                                                 {% endif %}
 
                                                 {% if ADMIN_ROLE in membership.person.roles.all %}

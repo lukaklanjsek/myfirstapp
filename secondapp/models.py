@@ -357,24 +357,7 @@ class PersonRole(models.Model):
         ]
 
 
-class Project(models.Model):
-    """Collection of Events under a common project."""
-    title = models.CharField(max_length=250)
-    details = models.TextField(blank=True, null=True)
 
-
-class Quote(models.Model):
-    word = models.CharField(max_length=100)
-    bar_number = models.CharField(max_length=20, blank=True, null=True)
-    song = models.ForeignKey('Song', on_delete=models.CASCADE, related_name='quotes')
-
-    class Meta:
-        ordering = ['word']
-
-    def __str__(self):
-        if self.bar_number:
-            return f"{self.word} ({self.bar_number})"
-        return self.word
 
 
 class Song(models.Model):
@@ -415,6 +398,42 @@ class Song(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.composer.last_name}"
+
+
+class Quote(models.Model):
+    word = models.CharField(max_length=100)
+    bar_number = models.CharField(max_length=20, blank=True, null=True)
+    song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='quotes')
+
+    class Meta:
+        ordering = ['word']
+
+    def __str__(self):
+        if self.bar_number:
+            return f"{self.word} ({self.bar_number})"
+        return self.word
+
+
+class Project(models.Model):
+    """Collection of Events under a common project."""
+    title = models.CharField(max_length=250)
+    details = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+
+    guests = models.ManyToManyField(Person, blank=True, related_name="projects")
+    songs = models.ManyToManyField(Song, blank=True, related_name="projects")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="projects"
+    )
+
+    def __str__(self):
+        return self.title
 
 
 class Event(models.Model):

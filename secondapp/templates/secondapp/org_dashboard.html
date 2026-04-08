@@ -9,5 +9,14 @@ Welcome, {{ user.username }}
 <p>Email: {{ organization.email }}</p>
 <p>Address: {{ organization.address }}</p>
 
+<hr>
+
+<h3>Quick Links</h3>
+<ul>
+    <li><a href="{% url 'secondapp:project_list' url_username %}">Projects</a></li>
+    <li><a href="{% url 'secondapp:event_list' url_username %}">Events</a></li>
+    <li><a href="{% url 'secondapp:song_dashboard' url_username %}">Songs</a></li>
+    <li><a href="{% url 'secondapp:org_member_list' url_username %}">Members</a></li>
+</ul>
 
 {% endblock %}

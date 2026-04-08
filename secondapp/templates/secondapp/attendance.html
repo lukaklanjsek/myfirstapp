@@ -65,8 +65,10 @@
                                 style="height: 50px; padding: 5px; font-weight: normal;">
                                 <div style="transform: rotate(-90deg); width: 10px; white-space: nowrap;">
                                     <a href="{% url 'secondapp:event_update' url_username event.id %}"
-                                       {% if event.event_type.id != 1 %}style="font-weight: bold; "{% else %}style=""{% endif %}
-                                    title="Type ID: {{ event.event_type.id }}">
+                                        style="
+                                        {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
+                                        color: inherit; text-decoration: underline; font-size: inherit;"
+                                        title="Type ID: {{ event.event_type.id }}">
                                         {{ event.started_at|date:"d M" }}
                                     </a>
                                 </div>

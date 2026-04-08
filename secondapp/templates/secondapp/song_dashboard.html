@@ -5,7 +5,7 @@
 <h2>Song Archive</h2>
 
 <form method="get" style="display:flex; gap: 0.5em; align-items: center; margin-bottom: 1em;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keyword" style="flex: 1;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by ID, title, composer, keywords" style="flex: 1;">
     <button type="submit">Search</button>
     {% if q %}<a href="?">Clear</a>{% endif %}
 </form>
@@ -21,7 +21,7 @@
             <th>ID</th>
             <th>Title</th>
             <th>Composer</th>
-            <th>Keywords</th>
+<!--            <th>Keywords</th>-->
             <th>Copies</th>
             <th></th>
         </tr>
@@ -30,9 +30,14 @@
     {% for song in songs %}
         <tr>
             <td>{{ song.internal_id|default:"-" }}</td>
-            <td><a href="{% url 'secondapp:song_page' url_username song.pk %}">{{ song.title }}</a></td>
+            <td>
+                <a href="{% url 'secondapp:song_page' url_username song.pk %}">{{ song.title }}</a>
+                {% if song.keywords %}
+                    <small>{{ song.keywords|default:"|" }}</small>
+                {% endif %}
+            </td>
             <td>{{ song.composer.last_name }}</td>
-            <td>{{ song.keywords|default:"-" }}</td>
+<!--            <td>{{ song.keywords|default:"-" }}</td>-->
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit</a></td>
         </tr>

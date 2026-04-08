@@ -43,8 +43,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
-from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote
-from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm # SingerForm, InstrumentalistForm
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote, Project
+from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm, ProjectForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
 from .forms import AddSongToEventForm, QuoteForm, QuoteFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
@@ -917,7 +917,7 @@ class SongListView(SongOwnerMixin, ListView):
                 qs = qs.filter(
                     Q(title__icontains=q) |
                     Q(composer__last_name__icontains=q) |
-                    Q(keyword__icontains=q)
+                    Q(keywords__icontains=q)
                 ).distinct()
         return qs
 
@@ -1968,6 +1968,154 @@ class ImportDashboardView(View):
         return redirect('secondapp:import_dashboard', username=username, method=method)
 
 
+# ============================================================================
+# Project Views
+# ============================================================================
+
+class ProjectListView(LoginRequiredMixin, ListView):
+    model = Project
+    template_name = 'secondapp/project_list.html'
+    context_object_name = 'projects'
+    paginate_by = 20
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Project.objects.filter(user=org_user).order_by('-id')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
+
+
+class ProjectCreateView(LoginRequiredMixin, CreateView):
+    model = Project
+    form_class = ProjectForm
+    template_name = 'secondapp/project_form.html'
+    success_url = None
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Project.objects.filter(user=org_user)
+
+    def form_valid(self, form):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        form.instance.user = org_user
+        return super().form_valid(form)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        kwargs['user'] = org_user
+        return kwargs
+
+    def get_success_url(self):
+        return reverse('secondapp:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
+
+
+class ProjectUpdateView(LoginRequiredMixin, UpdateView):
+    model = Project
+    form_class = ProjectForm
+    template_name = 'secondapp/project_form.html'
+    success_url = None
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Project.objects.filter(user=org_user)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        kwargs['user'] = org_user
+        return kwargs
+
+    def get_success_url(self):
+        return reverse('secondapp:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
+
+
+class ProjectDetailView(LoginRequiredMixin, DetailView):
+    model = Project
+    template_name = 'secondapp/project_detail.html'
+    context_object_name = 'project'
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Project.objects.filter(user=org_user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        project = self.object
+
+        # Get events ordered by start date
+        context['events'] = project.events.all().order_by('started_at')
+
+        # Get songs
+        context['songs'] = project.songs.all().order_by('title')
+
+        # Get guests
+        context['guests'] = project.guests.all().order_by('last_name', 'first_name')
+
+        # Get members: those active at any point during project's date range
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+
+        if project.start_date:
+            reference_date = project.start_date
+        else:
+            reference_date = date.today()
+
+        # Query: persons who have a membership period that overlaps with project date range
+        # If project has no end_date, use today as the upper bound for the query
+        end_date = project.end_date if project.end_date else date.today()
+
+        members = Person.objects.filter(
+            membership_period__user=org_user,
+            membership_period__role_id=Role.MEMBER,
+            membership_period__started_at__lte=end_date,
+        ).exclude(
+            membership_period__ended_at__lt=reference_date
+        ).distinct().order_by('last_name', 'first_name')
+
+        context['members'] = members
+
+        return context
+
+
+class ProjectDeleteView(LoginRequiredMixin, DeleteView):
+    model = Project
+    template_name = 'secondapp/project_confirm_delete.html'
+    success_url = None
+
+    def get_queryset(self):
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        return Project.objects.filter(user=org_user)
+
+    def get_success_url(self):
+        return reverse('secondapp:project_list', kwargs={'username': self.kwargs.get('username')})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['url_username'] = self.kwargs.get('username')
+        return context
 
 
 
