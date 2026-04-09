@@ -548,7 +548,11 @@ def import_events(org_user, request, file_path, delimiter=";"):
 
                     if project_title:
                         Project.objects.get_or_create(
-                            title=project_title
+                            title=project_title,
+                            user=org_user,
+                            description=details,
+                            start_date=started_at,
+                            end_date=ended_at,
                         )
 
                     populate_event_attendance(event, active_persons, default_attendance_type)
@@ -562,7 +566,132 @@ def import_events(org_user, request, file_path, delimiter=";"):
                 print(f"Error processing row {reader.line_num}: {str(e)}")
                 continue
 
+    messages.success(request, f"Import complete: {imported_count} imported, {skipped_count} skipped")
+
+    return {
+        'success': True,
+        'count': imported_count,
+        'skipped': skipped_count,
+        'errors': len(error_details),
+        'error_details': error_details
+    }
+
+
+
+
+
+ATTENDANCE_MAP = {
+    "+":1,
+    "-":2,
+    "o":3,
+}
+
+def import_attendance(org_user, request, file_path, delimiter=";"):
+    """
+    Import attendance from CSV file.
+    Expected: headers as date(iso format), first column as names; names as in "first name (singular)" "last name(s)";
+    Legend: "+" = present, "-" = absent, "o" = missing;
+    """
+    imported_count = 0
+    skipped_count = 0
+    error_details = []
+
+    start_hour = "18:30"
+    end_hour = "22:00"
+    event_name = "rehearsal"
+    event_type = EventType.objects.get(name="Rehearsal")
+
+    # Map attendance codes to AttendanceType objects
+    attendance_type_map = {
+        1: AttendanceType.objects.get(id=AttendanceType.PRESENT),
+        2: AttendanceType.objects.get(id=AttendanceType.ABSENT),
+        3: AttendanceType.objects.get(id=AttendanceType.MISSING),
+    }
+
+    with open(file_path, 'r', encoding='utf-8') as file:
+        reader = csv.DictReader(file, delimiter=delimiter)
+        headers = reader.fieldnames
+        print(headers)
+        raw_dates = headers[1:]
+        parsed_dates = {d: datetime.fromisoformat(d).date() for d in raw_dates}
+        events = {}
+
+        for event_date, dt in parsed_dates.items():
+            started_at = datetime.combine(
+                dt,
+                datetime.strptime(start_hour, "%H:%M").time()
+            )
+            started_at = timezone.make_aware(started_at)
+            ended_at = datetime.combine(
+                dt,
+                datetime.strptime(end_hour, "%H:%M").time()
+            )
+            ended_at = timezone.make_aware(ended_at)
+
+            event, _ = Event.objects.get_or_create(  # TODO fetch event first
+                user=org_user,
+                started_at=started_at,
+                ended_at=ended_at,
+                name=event_name,
+                event_type=event_type,
+            )
+
+            events[event_date] = event
+
+        for row in reader:
+            try:
+                with transaction.atomic():
+                    name = (row["DATE"]).split()
+                    first_name = name[0]
+                    last_name = " ".join(name[1:])
+
+                    person = Person.objects.filter(
+                        first_name=first_name,
+                        last_name=last_name,
+                        memberships__user=org_user
+                    ).first()
+
+                    if not person:
+                        error_details.append(f"Row {reader.line_num}: Person {first_name} {last_name} not found in organization")
+                        skipped_count += 1  # TODO add name of skipped persons
+                        continue
+
+                    for raw_date in raw_dates:
+                        value = row[raw_date]
+
+                        if not value:
+                            continue
+
+                        status_code = ATTENDANCE_MAP.get(value)
+                        if not status_code:
+                            continue
+
+                        attendance_type = attendance_type_map.get(status_code)
+                        if not attendance_type:
+                            continue
+
+                        Attendance.objects.get_or_create(
+                            person=person,
+                            event=events[raw_date],
+                            defaults={"attendance_type": attendance_type}
+                        )
+
+                    imported_count += 1
+
+            except Exception as e:
+                skipped_count += 1
+                error_details.append(f"Row {reader.line_num}: {str(e)}")
+                continue
+
+        messages.success(
+            request,
+            f"Import complete: {imported_count} imported, {skipped_count} skipped"
+        )
+
         return {
             'success': True,
-            'count': imported_count
+            'count': imported_count,
+            'skipped': skipped_count,
+            'errors': len(error_details),
+            'error_details': error_details
         }

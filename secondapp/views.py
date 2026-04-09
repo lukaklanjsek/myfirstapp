@@ -49,7 +49,7 @@ from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, Attendan
 from .forms import AddSongToEventForm, QuoteForm, QuoteFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
-from .utils import import_songs, import_persons, import_events
+from .utils import import_songs, import_persons, import_events, import_attendance
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
@@ -1880,7 +1880,7 @@ class AttendanceDashboardView(View):
 class ImportDashboardView(View):
     template_name = 'secondapp/import_dashboard.html'
 
-    VALID_METHODS = ["songs", "members", "events"]
+    VALID_METHODS = ["songs", "members", "events", "attendance"]
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -1942,6 +1942,8 @@ class ImportDashboardView(View):
                     result = import_persons(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'events':
                     result = import_events(self.org_user, request, tmp_file_path, delimiter)
+                elif self.import_method == 'attendance':
+                    result = import_attendance(self.org_user, request, tmp_file_path, delimiter)
                 else:
                     messages.error(request, f"Invalid import method: {self.import_method}")
                     return redirect('secondapp:import_dashboard', username=username, method=method)
