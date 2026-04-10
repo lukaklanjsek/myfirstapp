@@ -1970,15 +1970,12 @@ class ImportDashboardView(View):
         return redirect('secondapp:import_dashboard', username=username, method=method)
 
 
-# ============================================================================
-# Project Views
-# ============================================================================
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'secondapp/project_list.html'
     context_object_name = 'projects'
-    paginate_by = 20
+    # paginate_by = 20
 
     def get_queryset(self):
         url_username = self.kwargs.get('username')
@@ -2092,8 +2089,9 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
             membership_period__user=org_user,
             membership_period__role_id=Role.MEMBER,
             membership_period__started_at__lte=end_date,
-        ).exclude(
-            membership_period__ended_at__lt=reference_date
+        ).filter(
+            Q(membership_period__ended_at__gte=reference_date) |
+            Q(membership_period__ended_at__isnull=True)
         ).distinct().order_by('last_name', 'first_name')
 
         context['members'] = members

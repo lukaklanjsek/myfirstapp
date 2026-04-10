@@ -10,7 +10,7 @@ from .permissions import AccessControl
 from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Min, Max
 
 # class SongQueryHelper:
 #     @staticmethod
@@ -481,6 +481,7 @@ def import_events(org_user, request, file_path, delimiter=";"):
                 messages.error(request, "Your headers are wrong")
                 return None
 
+        touched_projects = {}
         for row in reader:
             f_row = {k: v for k, v in row.items() if k in valid_headers}
             try:
@@ -531,6 +532,19 @@ def import_events(org_user, request, file_path, delimiter=";"):
 
                     active_persons = get_active_members(org_user, event_date)
 
+                    # Get or create project first (if applicable) before connecting to event
+                    project = None
+                    if project_title:
+                        project, _ = Project.objects.get_or_create(
+                            title=project_title,
+                            user=org_user,
+                            defaults={
+                                'description': details,
+                                'start_date': started_at,
+                                'end_date': ended_at,
+                            }
+                        )
+                        touched_projects[project.pk] = project
 
                     event = Event.objects.create(
                         user=org_user,
@@ -544,16 +558,8 @@ def import_events(org_user, request, file_path, delimiter=";"):
                         num_visitors=num_visitors,
                         additional_notes=additional_notes,
                         producers=producers,
+                        project=project,
                     )
-
-                    if project_title:
-                        Project.objects.get_or_create(
-                            title=project_title,
-                            user=org_user,
-                            description=details,
-                            start_date=started_at,
-                            end_date=ended_at,
-                        )
 
                     populate_event_attendance(event, active_persons, default_attendance_type)
 
@@ -565,6 +571,14 @@ def import_events(org_user, request, file_path, delimiter=";"):
                 error_details.append(f"Row {reader.line_num}: {str(e)}")
                 print(f"Error processing row {reader.line_num}: {str(e)}")
                 continue
+
+    # Recalculate project timeframes to span all imported events
+    for proj in touched_projects.values():
+        agg = proj.events.aggregate(min_start=Min('started_at'), max_end=Max('ended_at'))
+        if agg['min_start']:
+            proj.start_date = agg['min_start'].date()
+            proj.end_date = agg['max_end'].date()
+            proj.save(update_fields=['start_date', 'end_date'])
 
     messages.success(request, f"Import complete: {imported_count} imported, {skipped_count} skipped")
 
@@ -589,7 +603,7 @@ ATTENDANCE_MAP = {
 def import_attendance(org_user, request, file_path, delimiter=";"):
     """
     Import attendance from CSV file.
-    Expected: headers as date(iso format), first column as names; names as in "first name (singular)" "last name(s)";
+    Expected: headers as date (ISO format), first column as names; names as "first_name last_name(s)";
     Legend: "+" = present, "-" = absent, "o" = missing;
     """
     imported_count = 0
@@ -601,50 +615,103 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
     event_name = "rehearsal"
     event_type = EventType.objects.get(name="Rehearsal")
 
-    # Map attendance codes to AttendanceType objects
-    attendance_type_map = {
-        1: AttendanceType.objects.get(id=AttendanceType.PRESENT),
-        2: AttendanceType.objects.get(id=AttendanceType.ABSENT),
-        3: AttendanceType.objects.get(id=AttendanceType.MISSING),
-    }
+    # Check permissions
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
+        if not has_permission:
+            messages.error(request, "You don't have permission to import.")
+            return {'success': False, 'count': 0, 'error': 'Permission denied'}
 
     with open(file_path, 'r', encoding='utf-8') as file:
         reader = csv.DictReader(file, delimiter=delimiter)
         headers = reader.fieldnames
         print(headers)
+
+        # First column is names, rest are dates
+        name_column = headers[0]
         raw_dates = headers[1:]
-        parsed_dates = {d: datetime.fromisoformat(d).date() for d in raw_dates}
+
+        # Parse and validate dates
+        parsed_dates = {}
+        for d in raw_dates:
+            try:
+                parsed_dates[d] = datetime.fromisoformat(d).date()
+            except ValueError:
+                error_details.append(f"Invalid date format: {d}")
+                continue
+
+        # Direct attendance type mapping
+        try:
+            ATTENDANCE_MAP_DIRECT = {
+                "+": AttendanceType.objects.get(id=AttendanceType.PRESENT),
+                "-": AttendanceType.objects.get(id=AttendanceType.ABSENT),
+                "o": AttendanceType.objects.get(id=AttendanceType.MISSING),
+            }
+        except AttendanceType.DoesNotExist as e:
+            messages.error(request, f"Missing AttendanceType configuration: {str(e)}")
+            return {'success': False, 'count': 0, 'error': str(e)}
+
+        # Create or fetch events for each date
         events = {}
+        for raw_date, dt in parsed_dates.items():
+            try:
+                # Try to fetch existing event on this date
+                event = Event.objects.filter(
+                    user=org_user,
+                    started_at__date=dt,
+                ).first()
 
-        for event_date, dt in parsed_dates.items():
-            started_at = datetime.combine(
-                dt,
-                datetime.strptime(start_hour, "%H:%M").time()
-            )
-            started_at = timezone.make_aware(started_at)
-            ended_at = datetime.combine(
-                dt,
-                datetime.strptime(end_hour, "%H:%M").time()
-            )
-            ended_at = timezone.make_aware(ended_at)
+                if not event:
+                    # Create new event if none exists
+                    started_at = datetime.combine(
+                        dt,
+                        datetime.strptime(start_hour, "%H:%M").time()
+                    )
+                    started_at = timezone.make_aware(started_at)
+                    ended_at = datetime.combine(
+                        dt,
+                        datetime.strptime(end_hour, "%H:%M").time()
+                    )
+                    ended_at = timezone.make_aware(ended_at)
 
-            event, _ = Event.objects.get_or_create(  # TODO fetch event first
-                user=org_user,
-                started_at=started_at,
-                ended_at=ended_at,
-                name=event_name,
-                event_type=event_type,
-            )
+                    event = Event.objects.create(
+                        user=org_user,
+                        started_at=started_at,
+                        ended_at=ended_at,
+                        name=event_name,
+                        event_type=event_type,
+                    )
+                else:
+                    # Update existing event with current details (optional)
+                    if event.name != event_name or event.event_type_id != event_type.id:
+                        event.name = event_name
+                        event.event_type = event_type
+                        event.save(update_fields=['name', 'event_type'])
 
-            events[event_date] = event
+                events[raw_date] = event
+            except Exception as e:
+                error_details.append(f"Error creating/fetching event for {raw_date}: {str(e)}")
+                continue
 
+        # Collect attendance records to process
+        attendances_by_event = {}  # {event_id: {person_id: attendance_type}}
+
+        # Process rows and collect attendance data
         for row in reader:
             try:
                 with transaction.atomic():
-                    name = (row["DATE"]).split()
-                    first_name = name[0]
-                    last_name = " ".join(name[1:])
+                    # Parse name from first column
+                    name_str = (row.get(name_column, "") or "").strip()
+                    if not name_str:
+                        error_details.append(f"Row {reader.line_num}: Empty name field")
+                        skipped_count += 1
+                        continue
 
+                    name_parts = name_str.split()
+                    first_name = name_parts[0]
+                    last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+
+                    # Find person in organization
                     person = Person.objects.filter(
                         first_name=first_name,
                         last_name=last_name,
@@ -652,29 +719,33 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
                     ).first()
 
                     if not person:
-                        error_details.append(f"Row {reader.line_num}: Person {first_name} {last_name} not found in organization")
-                        skipped_count += 1  # TODO add name of skipped persons
+                        error_details.append(
+                            f"Row {reader.line_num}: Person '{first_name} {last_name}' not found in organization"
+                        )
+                        skipped_count += 1
                         continue
 
-                    for raw_date in raw_dates:
-                        value = row[raw_date]
+                    # Collect attendance entries for this person
+                    for raw_date in parsed_dates.keys():
+                        if raw_date not in events:
+                            # Skip dates that failed to create/fetch events
+                            continue
 
+                        value = (row.get(raw_date, "") or "").strip()
                         if not value:
                             continue
 
-                        status_code = ATTENDANCE_MAP.get(value)
-                        if not status_code:
-                            continue
-
-                        attendance_type = attendance_type_map.get(status_code)
+                        # Map attendance code to type
+                        attendance_type = ATTENDANCE_MAP_DIRECT.get(value)
                         if not attendance_type:
                             continue
 
-                        Attendance.objects.get_or_create(
-                            person=person,
-                            event=events[raw_date],
-                            defaults={"attendance_type": attendance_type}
-                        )
+                        event = events[raw_date]
+                        if event.id not in attendances_by_event:
+                            attendances_by_event[event.id] = {}
+
+                        # Store person_id -> attendance_type mapping
+                        attendances_by_event[event.id][person.id] = attendance_type
 
                     imported_count += 1
 
@@ -682,6 +753,42 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
                 skipped_count += 1
                 error_details.append(f"Row {reader.line_num}: {str(e)}")
                 continue
+
+        # Bulk process attendance records (create/update)
+        for event_id, person_attendance_map in attendances_by_event.items():
+            try:
+                event = Event.objects.get(id=event_id)
+                existing = Attendance.objects.filter(event=event)
+                existing_map = {a.person_id: a for a in existing}
+
+                to_create = []
+                to_update = []
+
+                for person_id, attendance_type in person_attendance_map.items():
+                    if person_id in existing_map:
+                        # Update if attendance type changed
+                        att = existing_map[person_id]
+                        if att.attendance_type_id != attendance_type.id:
+                            att.attendance_type = attendance_type
+                            to_update.append(att)
+                    else:
+                        # Create new attendance record
+                        to_create.append(
+                            Attendance(
+                                event_id=event_id,
+                                person_id=person_id,
+                                attendance_type=attendance_type
+                            )
+                        )
+
+                if to_create:
+                    Attendance.objects.bulk_create(to_create)
+
+                if to_update:
+                    Attendance.objects.bulk_update(to_update, ["attendance_type"])
+
+            except Exception as e:
+                error_details.append(f"Error processing attendance for event {event_id}: {str(e)}")
 
         messages.success(
             request,
@@ -695,3 +802,96 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
             'errors': len(error_details),
             'error_details': error_details
         }
+
+
+# def import_event_songs(org_user, request, file_path, delimiter=";"):
+#     """
+#     For importing songs into already existing events.
+#     """
+#     imported_count = 0
+#     skipped_count = 0
+#     error_details = []
+#     start_hour = "18:30"
+#     end_hour = "22:00"
+#     event_name = "rehearsal"
+#     event_type = EventType.objects.get(name="Rehearsal")
+#
+#     # Check permissions
+#     if request.user != org_user:
+#         has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
+#         if not has_permission:
+#             messages.error(request, "You don't have permission to import.")
+#             return {'success': False, 'count': 0, 'error': 'Permission denied'}
+#
+#     with open(file_path, 'r', encoding='utf-8') as file:
+#         reader = csv.DictReader(file, delimiter=delimiter)
+#         headers = reader.fieldnames
+#         print(headers)
+#
+#         # First column is names, rest are dates
+#         song_column = headers[0]
+#         raw_dates = headers[1:]
+#
+#         # Parse and validate dates
+#         parsed_dates = {}
+#
+#         for d in raw_dates:
+#             try:
+#                 parsed_dates[d] = datetime.fromisoformat(d).date()
+#             except ValueError:
+#                 error_details.append(f"Invalid date format: {d}")
+#                 continue
+#         # Create or fetch events for each date
+#         events = {}
+#         for raw_date, dt in parsed_dates.items():
+#             try:
+#                 # Try to fetch existing event on this date
+#                 event = Event.objects.filter(
+#                     user=org_user,
+#                     started_at__date=dt,
+#                 ).first()
+#
+#                 if not event:
+#                     # Create new event if none exists
+#                     started_at = datetime.combine(
+#                         dt,
+#                         datetime.strptime(start_hour, "%H:%M").time()
+#                     )
+#                     started_at = timezone.make_aware(started_at)
+#                     ended_at = datetime.combine(
+#                         dt,
+#                         datetime.strptime(end_hour, "%H:%M").time()
+#                     )
+#                     ended_at = timezone.make_aware(ended_at)
+#
+#                     event = Event.objects.create(
+#                         user=org_user,
+#                         started_at=started_at,
+#                         ended_at=ended_at,
+#                         name=event_name,
+#                         event_type=event_type,
+#                     )
+#                 else:
+#                     # Update existing event with current details
+#                     if event.name != event_name or event.event_type_id != event_type.id:
+#                         event.name = event_name
+#                         event.event_type = event_type
+#                         event.save(update_fields=['name', 'event_type'])
+#
+#                 events[raw_date] = event
+#             except Exception as e:
+#                 error_details.append(f"Error creating/fetching event for {raw_date}: {str(e)}")
+#                 continue
+#
+#         messages.success(
+#             request,
+#             f"Import complete: {imported_count} imported, {skipped_count} skipped"
+#         )
+#
+#         return {
+#             'success': True,
+#             'count': imported_count,
+#             'skipped': skipped_count,
+#             'errors': len(error_details),
+#             'error_details': error_details
+#         }

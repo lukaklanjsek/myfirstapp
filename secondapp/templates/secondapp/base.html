@@ -53,10 +53,10 @@
                                                     <li><a href="{% url 'secondapp:attendance' org.user.username %}">ATTENDANCE</a></li>
                                                     <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
                                                     <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
-                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='songs' %}">Import Songs</a></li>
-                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='members' %}">Import Members</a></li>
-                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='events' %}">Import Events</a></li>
-                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='attendance' %}">Import Attendance</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='members' %}">1. Import Members</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='events' %}">2. Import Events</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='songs' %}">3. Import Songs</a></li>
+                                                    <li><a href="{% url 'secondapp:import_dashboard' username=org.user.username method='attendance' %}">4. Import Attendance</a></li>
                                                 {% endif %}
                                             </ul>
                                         </li>

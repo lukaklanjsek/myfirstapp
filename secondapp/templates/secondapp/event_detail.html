@@ -8,6 +8,13 @@
 <p>Starts: {{ event.started_at }}</p>
 <p>Ends: {{ event.ended_at }}</p>
 
+{% if event.project %}
+<p>Project: <a href="{% url 'secondapp:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></p>
+{% if event.project.description %}
+    <p>{{ event.project.description }}</p>
+{% endif %}
+{% endif %}
+
 {% if is_admin %}
     <p><a href="{% url 'secondapp:event_update' url_username event.pk %}">Edit event</a></p>
 {% endif %}

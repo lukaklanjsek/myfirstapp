@@ -396,6 +396,14 @@ class Song(models.Model):
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
     lyrics = models.TextField("song text", blank=True, null=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "internal_id"],
+                name="unique_id_per_org"
+            )
+        ]
+
     def __str__(self):
         return f"{self.title} - {self.composer.last_name}"
 
