@@ -18,9 +18,21 @@
 <table>
     <thead>
         <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Composer</th>
+            <th>
+                <a href="?q={{ q }}&sort=id{% if current_sort == 'id' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    ID {% if current_sort == 'id' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?q={{ q }}&sort=title{% if current_sort == 'title' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Title {% if current_sort == 'title' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?q={{ q }}&sort=composer{% if current_sort == 'composer' and not reverse %}&reverse=true{% endif %}" style="text-decoration: none; color: inherit;">
+                    Composer {% if current_sort == 'composer' %}{% if not reverse %}↑{% else %}↓{% endif %}{% endif %}
+                </a>
+            </th>
 <!--            <th>Keywords</th>-->
             <th>Copies</th>
             <th></th>

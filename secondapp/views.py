@@ -49,7 +49,7 @@ from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, Attendan
 from .forms import AddSongToEventForm, QuoteForm, QuoteFormSet
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
-from .utils import import_songs, import_persons, import_events, import_attendance
+from .utils import import_songs, import_persons, import_events, import_attendance, import_event_songs
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
@@ -919,12 +919,29 @@ class SongListView(SongOwnerMixin, ListView):
                     Q(composer__last_name__icontains=q) |
                     Q(keywords__icontains=q)
                 ).distinct()
-        return qs
+
+        # Handle sorting
+        sort = self.request.GET.get('sort', 'id')
+        reverse = self.request.GET.get('reverse', 'false') == 'true'
+
+        sort_field_map = {
+            'id': 'internal_id',
+            'title': 'title',
+            'composer': 'composer__last_name',
+        }
+
+        sort_field = sort_field_map.get(sort, 'internal_id')
+        if reverse:
+            sort_field = f'-{sort_field}'
+
+        return qs.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["url_username"] = self.owner_user.username
         context["q"] = self.request.GET.get('q', '')
+        context["current_sort"] = self.request.GET.get('sort', 'id')
+        context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
         return context
 
 
@@ -1880,7 +1897,7 @@ class AttendanceDashboardView(View):
 class ImportDashboardView(View):
     template_name = 'secondapp/import_dashboard.html'
 
-    VALID_METHODS = ["songs", "members", "events", "attendance"]
+    VALID_METHODS = ["songs", "members", "events", "attendance", "event_songs"]
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
@@ -1944,6 +1961,8 @@ class ImportDashboardView(View):
                     result = import_events(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'attendance':
                     result = import_attendance(self.org_user, request, tmp_file_path, delimiter)
+                elif self.import_method == 'event_songs':
+                    result = import_event_songs(self.org_user, request, tmp_file_path, delimiter)
                 else:
                     messages.error(request, f"Invalid import method: {self.import_method}")
                     return redirect('secondapp:import_dashboard', username=username, method=method)

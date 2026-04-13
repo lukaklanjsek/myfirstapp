@@ -2,7 +2,7 @@
 from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
                      MembershipPeriod, Role, Skill,
-                     Singer, Voice, Event, Project, EventType)
+                     Singer, Voice, Event, Project, EventType, EventSong)
 import csv, datetime
 from datetime import datetime, date
 from django.contrib import messages
@@ -804,94 +804,137 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
         }
 
 
-# def import_event_songs(org_user, request, file_path, delimiter=";"):
-#     """
-#     For importing songs into already existing events.
-#     """
-#     imported_count = 0
-#     skipped_count = 0
-#     error_details = []
-#     start_hour = "18:30"
-#     end_hour = "22:00"
-#     event_name = "rehearsal"
-#     event_type = EventType.objects.get(name="Rehearsal")
-#
-#     # Check permissions
-#     if request.user != org_user:
-#         has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
-#         if not has_permission:
-#             messages.error(request, "You don't have permission to import.")
-#             return {'success': False, 'count': 0, 'error': 'Permission denied'}
-#
-#     with open(file_path, 'r', encoding='utf-8') as file:
-#         reader = csv.DictReader(file, delimiter=delimiter)
-#         headers = reader.fieldnames
-#         print(headers)
-#
-#         # First column is names, rest are dates
-#         song_column = headers[0]
-#         raw_dates = headers[1:]
-#
-#         # Parse and validate dates
-#         parsed_dates = {}
-#
-#         for d in raw_dates:
-#             try:
-#                 parsed_dates[d] = datetime.fromisoformat(d).date()
-#             except ValueError:
-#                 error_details.append(f"Invalid date format: {d}")
-#                 continue
-#         # Create or fetch events for each date
-#         events = {}
-#         for raw_date, dt in parsed_dates.items():
-#             try:
-#                 # Try to fetch existing event on this date
-#                 event = Event.objects.filter(
-#                     user=org_user,
-#                     started_at__date=dt,
-#                 ).first()
-#
-#                 if not event:
-#                     # Create new event if none exists
-#                     started_at = datetime.combine(
-#                         dt,
-#                         datetime.strptime(start_hour, "%H:%M").time()
-#                     )
-#                     started_at = timezone.make_aware(started_at)
-#                     ended_at = datetime.combine(
-#                         dt,
-#                         datetime.strptime(end_hour, "%H:%M").time()
-#                     )
-#                     ended_at = timezone.make_aware(ended_at)
-#
-#                     event = Event.objects.create(
-#                         user=org_user,
-#                         started_at=started_at,
-#                         ended_at=ended_at,
-#                         name=event_name,
-#                         event_type=event_type,
-#                     )
-#                 else:
-#                     # Update existing event with current details
-#                     if event.name != event_name or event.event_type_id != event_type.id:
-#                         event.name = event_name
-#                         event.event_type = event_type
-#                         event.save(update_fields=['name', 'event_type'])
-#
-#                 events[raw_date] = event
-#             except Exception as e:
-#                 error_details.append(f"Error creating/fetching event for {raw_date}: {str(e)}")
-#                 continue
-#
-#         messages.success(
-#             request,
-#             f"Import complete: {imported_count} imported, {skipped_count} skipped"
-#         )
-#
-#         return {
-#             'success': True,
-#             'count': imported_count,
-#             'skipped': skipped_count,
-#             'errors': len(error_details),
-#             'error_details': error_details
-#         }
+def import_event_songs(org_user, request, file_path, delimiter=";"):
+    """
+    For importing songs into already existing events.
+    Expected: first column is "SONG", headers after that are dates (ISO format)
+    Song value can be either internal_id (numeric) or song title (string).
+    On any error, entire operation is rolled back to keep database clean.
+    """
+    imported_count = 0
+    error_details = []
+
+    # Check permissions
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
+        if not has_permission:
+            messages.error(request, "You don't have permission to import.")
+            return {'success': False, 'count': 0, 'error': 'Permission denied'}
+
+    try:
+        with transaction.atomic():
+            with open(file_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file, delimiter=delimiter)
+                headers = reader.fieldnames
+                print(headers)
+
+                # First column is SONG designator
+                song_column = headers[0]
+                raw_dates = headers[1:]
+
+                # Parse and validate dates
+                parsed_dates = {}
+                for d in raw_dates:
+                    try:
+                        parsed_dates[d] = datetime.fromisoformat(d).date()
+                    except ValueError:
+                        error_details.append(f"Invalid date format in headers: {d}")
+
+                if error_details:
+                    raise ValueError(f"Header validation failed: {'; '.join(error_details)}")
+
+                # Fetch events for each date (only fetch, don't create)
+                events = {}
+                for raw_date, dt in parsed_dates.items():
+                    event = Event.objects.filter(
+                        user=org_user,
+                        started_at__date=dt,
+                    ).first()
+
+                    if not event:
+                        raise ValueError(f"No event found for date: {raw_date}")
+
+                    events[raw_date] = event
+
+                # Collect and validate all song-event pairs before creating
+                songs_to_create = []  # List of (event_id, song_id, order)
+
+                # Process rows
+                for row in reader:
+                    song_value = (row.get(song_column, "") or "").strip()
+                    if not song_value:
+                        # Row has no song identifier, skip it
+                        continue
+
+                    # Resolve song_value to a Song object first
+                    song = None
+                    if song_value.isdigit():
+                        song = Song.objects.filter(
+                            user=org_user,
+                            internal_id=song_value
+                        ).first()
+                    else:
+                        song = Song.objects.filter(
+                            user=org_user,
+                            title=song_value
+                        ).first()
+
+                    if not song:
+                        raise ValueError(
+                            f"Row {reader.line_num}: Song value '{song_value}' "
+                            f"does not match any internal_id or title"
+                        )
+
+                    # Process each date column for this row
+                    for col_index, raw_date in enumerate(raw_dates):
+                        if raw_date not in events:
+                            # This shouldn't happen due to earlier validation, but be safe
+                            continue
+
+                        value = (row.get(raw_date, "") or "").strip()
+                        if not value:
+                            continue
+
+                        event = events[raw_date]
+                        # Use column index as order
+                        songs_to_create.append((event.id, song.id, col_index))
+
+                # If we got here, all validation passed - create the records
+                if songs_to_create:
+                    event_songs = [
+                        EventSong(event_id=event_id, song_id=song_id, order=order)
+                        for event_id, song_id, order in songs_to_create
+                    ]
+                    EventSong.objects.bulk_create(event_songs, ignore_conflicts=True)
+                    imported_count = len(event_songs)
+
+    except ValueError as e:
+        error_details.append(str(e))
+        messages.error(request, f"Import failed: {str(e)}")
+        return {
+            'success': False,
+            'count': 0,
+            'errors': len(error_details),
+            'error_details': error_details
+        }
+    except Exception as e:
+        error_details.append(f"Unexpected error: {str(e)}")
+        messages.error(request, f"Import failed with error: {str(e)}")
+        return {
+            'success': False,
+            'count': 0,
+            'errors': len(error_details),
+            'error_details': error_details
+        }
+
+    if error_details:
+        messages.warning(request, f"Import complete: {imported_count} imported with {len(error_details)} warnings")
+    else:
+        messages.success(request, f"Import complete: {imported_count} songs imported")
+
+    return {
+        'success': True,
+        'count': imported_count,
+        'errors': len(error_details),
+        'error_details': error_details
+    }
