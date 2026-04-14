@@ -625,7 +625,6 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
     with open(file_path, 'r', encoding='utf-8') as file:
         reader = csv.DictReader(file, delimiter=delimiter)
         headers = reader.fieldnames
-        print(headers)
 
         # First column is names, rest are dates
         name_column = headers[0]
@@ -807,8 +806,10 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
 def import_event_songs(org_user, request, file_path, delimiter=";"):
     """
     For importing songs into already existing events.
-    Expected: first column is "SONG", headers after that are dates (ISO format)
-    Song value can be either internal_id (numeric) or song title (string).
+    Expected: first row contains dates (ISO format), no song column header.
+    Each subsequent row contains song values (internal_id or title).
+    Each column represents an event/date.
+    Song order is determined by row position (top to bottom).
     On any error, entire operation is rolled back to keep database clean.
     """
     imported_count = 0
@@ -826,15 +827,13 @@ def import_event_songs(org_user, request, file_path, delimiter=";"):
             with open(file_path, 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file, delimiter=delimiter)
                 headers = reader.fieldnames
-                print(headers)
 
-                # First column is SONG designator
-                song_column = headers[0]
-                raw_dates = headers[1:]
+                # All headers are dates
+                date_columns = headers
 
                 # Parse and validate dates
                 parsed_dates = {}
-                for d in raw_dates:
+                for d in date_columns:
                     try:
                         parsed_dates[d] = datetime.fromisoformat(d).date()
                     except ValueError:
@@ -859,45 +858,44 @@ def import_event_songs(org_user, request, file_path, delimiter=";"):
                 # Collect and validate all song-event pairs before creating
                 songs_to_create = []  # List of (event_id, song_id, order)
 
+                # Track order counter per event
+                order_per_event = {}
+
                 # Process rows
-                for row in reader:
-                    song_value = (row.get(song_column, "") or "").strip()
-                    if not song_value:
-                        # Row has no song identifier, skip it
-                        continue
-
-                    # Resolve song_value to a Song object first
-                    song = None
-                    if song_value.isdigit():
-                        song = Song.objects.filter(
-                            user=org_user,
-                            internal_id=song_value
-                        ).first()
-                    else:
-                        song = Song.objects.filter(
-                            user=org_user,
-                            title=song_value
-                        ).first()
-
-                    if not song:
-                        raise ValueError(
-                            f"Row {reader.line_num}: Song value '{song_value}' "
-                            f"does not match any internal_id or title"
-                        )
-
-                    # Process each date column for this row
-                    for col_index, raw_date in enumerate(raw_dates):
-                        if raw_date not in events:
-                            # This shouldn't happen due to earlier validation, but be safe
+                for row_num, row in enumerate(reader, start=1):
+                    # Process each date column
+                    for raw_date in date_columns:
+                        song_value = (row.get(raw_date, "") or "").strip()
+                        if not song_value:
                             continue
 
-                        value = (row.get(raw_date, "") or "").strip()
-                        if not value:
-                            continue
+                        # Resolve song_value to a Song object
+                        song = None
+                        if song_value.isdigit():
+                            song = Song.objects.filter(
+                                user=org_user,
+                                internal_id=song_value
+                            ).first()
+                        else:
+                            song = Song.objects.filter(
+                                user=org_user,
+                                title=song_value
+                            ).first()
+
+                        if not song:
+                            raise ValueError(
+                                f"Row {row_num}: Song value '{song_value}' "
+                                f"does not match any internal_id or title"
+                            )
 
                         event = events[raw_date]
-                        # Use column index as order
-                        songs_to_create.append((event.id, song.id, col_index))
+
+                        # Track order per event
+                        if event.id not in order_per_event:
+                            order_per_event[event.id] = 0
+
+                        songs_to_create.append((event.id, song.id, order_per_event[event.id]))
+                        order_per_event[event.id] += 1
 
                 # If we got here, all validation passed - create the records
                 if songs_to_create:

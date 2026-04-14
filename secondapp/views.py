@@ -1404,13 +1404,13 @@ class EventListView(ListView):
     template_name = "secondapp/event_list.html"
     context_object_name = "events"
     model = Event
-    ordering = ['started_at']
+    # ordering = ['-started_at']
 
 
     def get_queryset(self):
         url_username = self.kwargs.get("username")
         customuser = get_object_or_404(CustomUser, username=url_username)
-        return Event.objects.filter(user=customuser)
+        return Event.objects.filter(user=customuser).order_by('-started_at')
 
 
 @method_decorator(login_required, name='dispatch')
@@ -1627,21 +1627,23 @@ class AttendanceDashboardView(View):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get(self, request, username):
-        # Get date range from query params or default to last 8 events
-        event_limit = int(request.GET.get('event_limit', 8))
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
+    def _fetch_events(self, event_limit, start_date, end_date, include_prefetch=True):
+        """
+        Fetch and organize events for display.
+        Returns (events list, most_recent_past_event, grayed_out_event_ids)
+        """
         now = timezone.now()
 
-        ## Build base query with optimization
+        # Build base query with optimization
         base_query = Event.objects.filter(
             user=self.org_user
-        ).select_related('event_type').prefetch_related(
-            'attendance_set__person',
-            'attendance_set__attendance_type'
-        )
+        ).select_related('event_type')
+
+        if include_prefetch:
+            base_query = base_query.prefetch_related(
+                'attendance_set__person',
+                'attendance_set__attendance_type'
+            )
 
         # Apply date filters if provided
         if start_date and end_date:
@@ -1674,6 +1676,25 @@ class AttendanceDashboardView(View):
                 event.is_grayed_out = False
             else:
                 event.is_grayed_out = True
+
+        # Create set of grayed out event IDs for quick lookup in POST
+        grayed_out_event_ids = {
+            event.id for event in events
+            if event != most_recent_past_event
+        }
+
+        return events, most_recent_past_event, grayed_out_event_ids
+
+    def get(self, request, username):
+        # Get date range from query params or default to last 8 events
+        event_limit = int(request.GET.get('event_limit', 8))
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        # Fetch and organize events
+        events, most_recent_past_event, grayed_out_event_ids = self._fetch_events(
+            event_limit, start_date, end_date, include_prefetch=True
+        )
 
         # Get all current members, ordered alphabetically for now
         members = Person.objects.filter(
@@ -1710,40 +1731,10 @@ class AttendanceDashboardView(View):
             start_date = request.GET.get('start_date')
             end_date = request.GET.get('end_date')
 
-            now = timezone.now()
-
-            # Build base query (same as GET)
-            base_query = Event.objects.filter(user=self.org_user)
-            if start_date and end_date:
-                base_query = base_query.filter(
-                    started_at__date__gte=start_date,
-                    started_at__date__lte=end_date
-                )
-
-            # Split into past and future events
-            past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
-            future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
-
-            # Calculate split: 50% past, 49% future (remainder goes to past)
-            past_count = math.ceil(event_limit / 2)
-            future_count = event_limit - past_count
-
-            # Fetch events
-            past_events = list(past_qs[:past_count])
-            future_events = list(future_qs[:future_count])
-
-            # Final list: oldest past → recent past → soonest future → …
-            events = list(reversed(past_events)) + future_events
-
-            # Most recent past event
-            most_recent_past_event = past_events[0] if past_events else None
-
-            # Create set of grayed out event IDs for quick lookup
-            # All events except the most recent past event are grayed out
-            grayed_out_event_ids = {
-                event.id for event in events
-                if event != most_recent_past_event
-            }
+            # Fetch and organize events (no prefetch needed for POST)
+            events, most_recent_past_event, grayed_out_event_ids = self._fetch_events(
+                event_limit, start_date, end_date, include_prefetch=False
+            )
 
             members = Person.objects.filter(
                 memberships__user=self.org_user,
@@ -1771,11 +1762,6 @@ class AttendanceDashboardView(View):
 
             # Update all attendance records
             for event in events:
-                # Skip if event is locked
-                if event.attendance_locked:
-                    skipped_count += event.attendance_set.count()
-                    continue
-
                 # Skip if event is grayed out (past event, not the most recent)
                 if event.id in grayed_out_event_ids:
                     skipped_count += members.count()
@@ -1821,7 +1807,6 @@ class AttendanceDashboardView(View):
 
     def _build_attendance_matrix(self, members, events, present_type, absent_type):
         """Build efficient attendance lookup matrix."""
-        absent_type = AttendanceType.objects.get(name='Absent')
         # Create lookup dict: {event_id: {person_id: attendance_type_id}}
         attendance_lookup = {}
         for event in events:
@@ -1840,13 +1825,17 @@ class AttendanceDashboardView(View):
                 'member': member,
                 'attendance_cells': [],
                 'total_present': 0,
-                'total_events': len(events),
+                'total_events': 0,
             }
 
             # Build list of attendance cells in same order as events
             for event in events:
                 att_data = attendance_lookup.get(event.id, {}).get(member.id, {})
                 attendance_type_id = att_data.get('type_id')
+
+                # Only count this event in the denominator if a record EXISTS
+                if att_data:  # non-empty dict means a record exists in DB
+                    row['total_events'] += 1
 
                 # Check if this event is grayed out
                 is_grayed_out = getattr(event, 'is_grayed_out', False)
@@ -1873,15 +1862,27 @@ class AttendanceDashboardView(View):
 
     def _calculate_event_totals(self, events, members, present_type):
         """Calculate attendance totals per event."""
+        from django.db.models import Count, Q
+
         total_members = members.count()
 
-        # Return list instead of dict, matching events order
+        # Build a dict of event_id -> present count using a single query
+        event_ids = [e.id for e in events]
+        present_counts = {}
+
+        if event_ids:
+            results = Attendance.objects.filter(
+                event_id__in=event_ids,
+                attendance_type=present_type
+            ).values('event_id').annotate(count=Count('id'))
+
+            for result in results:
+                present_counts[result['event_id']] = result['count']
+
+        # Return list in same order as events
         totals = []
         for event in events:
-            present_count = event.attendance_set.filter(
-                attendance_type=present_type
-            ).count()
-
+            present_count = present_counts.get(event.id, 0)
             totals.append({
                 'event_id': event.id,
                 'present': present_count,
@@ -2225,11 +2226,6 @@ def quick_add_rehearsal(request, username):
 
 def update_attendance_from_event_detail(request, attendance_id):
     attendance = get_object_or_404(Attendance, id=attendance_id)
-
-    # Check if event is locked
-    if attendance.event.attendance_locked:
-        messages.error(request, "This event's attendance is locked")
-        return redirect('event_detail', event_id=attendance.event.id)
 
     # Update attendance
     attendance.status = request.POST.get('status')

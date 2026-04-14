@@ -4,8 +4,9 @@
 {% block extra_css %}
 <style>
     .reorder-buttons {
-        display: inline-flex;
-        gap: 0.2rem;
+        display: flex;
+        justify-content: space-between;
+        width: 3rem;
     }
 
     .reorder-buttons button {
@@ -80,13 +81,17 @@
         <tbody>
             {% for form in song_formset %}
                 <tr>
-                    <td style="text-align: center; white-space: nowrap;">
+                    <td style="white-space: nowrap;">
                         <div class="reorder-buttons">
                             {% if forloop.counter > 1 %}
                                 <button type="submit" name="reorder" value="song_{{ form.instance.pk }}_up_one" title="Move up">↑</button>
+                            {% else %}
+                                <span></span>
                             {% endif %}
                             {% if forloop.counter < song_formset.forms|length %}
                                 <button type="submit" name="reorder" value="song_{{ form.instance.pk }}_down_one" title="Move down">↓</button>
+                            {% else %}
+                                <span></span>
                             {% endif %}
                         </div>
                     </td>
@@ -124,7 +129,7 @@
                 {% for at in attendance_types %}
                     <th>{{ at.name }}</th>
                 {% endfor %}
-                {% if is_admin %}<th></th>{% endif %}
+                {% if is_admin %}<th>Remove</th>{% endif %}
             </tr>
         </thead>
         <tbody id="attendance-formset">
@@ -139,9 +144,7 @@
                     <td>{{ radio.tag }}</td>
                 {% endfor %}
                 {% if is_admin and form.instance.pk %}
-                <td>
-                    <a href="{% url 'secondapp:attendance_delete' url_username object.pk form.instance.pk %}">Delete</a>
-                </td>
+                <td style="text-align: center;">{{ form.DELETE }}</td>
                 {% endif %}
             </tr>
         {% endfor %}
@@ -226,5 +229,16 @@
         document.getElementById('songs').scrollIntoView({ behavior: 'smooth' });
         sessionStorage.removeItem('scrollToSongs');
     }
+
+    // Add confirmation alert for all DELETE checkboxes (songs and attendance)
+    document.querySelectorAll('input[type="checkbox"][name*="DELETE"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if (!confirm('Are you sure you want to remove this?')) {
+                    this.checked = false;
+                }
+            }
+        });
+    });
 </script>
 {% endblock %}

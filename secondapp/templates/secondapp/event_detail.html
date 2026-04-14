@@ -24,7 +24,6 @@
     <table>
         <thead>
             <tr>
-                <th>Order</th>
                 <th>Song</th>
                 <th>Encore</th>
             </tr>
@@ -32,7 +31,6 @@
         <tbody>
             {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
             <tr>
-                <td>{{ eventsong.order }}</td>
                 <td>
                     <a href="{% url 'secondapp:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>- {{ eventsong.song.composer.last_name }}
                     {% if eventsong.song.keywords %}
