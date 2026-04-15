@@ -208,6 +208,8 @@ class ProjectForm(forms.ModelForm):
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
+            "start_date": forms.SelectDateWidget(),
+
         }
 
     def __init__(self, *args, user=None, **kwargs):

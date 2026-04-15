@@ -515,6 +515,7 @@ def import_events(org_user, request, file_path, delimiter=";"):
                     if ended_at:
                         try:
                             ended_at = timezone.make_aware(datetime.fromisoformat(ended_at))
+                            ended_at = ended_at.replace(hour=23, minute=59, second=0, microsecond=0)
                         except (ValueError, TypeError):
                             ended_at = None
                     else:

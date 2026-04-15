@@ -1995,7 +1995,6 @@ class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'secondapp/project_list.html'
     context_object_name = 'projects'
-    # paginate_by = 20
 
     def get_queryset(self):
         url_username = self.kwargs.get('username')
