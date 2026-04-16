@@ -32,18 +32,6 @@
         {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
     </div>
 
-    <div class="form-group">
-        <label for="{{ form.songs.id_for_label }}">{{ form.songs.label }}</label>
-        {{ form.songs }}
-        {% if form.songs.errors %}<span class="error">{{ form.songs.errors }}</span>{% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="{{ form.guests.id_for_label }}">{{ form.guests.label }}</label>
-        {{ form.guests }}
-        {% if form.guests.errors %}<span class="error">{{ form.guests.errors }}</span>{% endif %}
-    </div>
-
     <button type="submit">Save</button>
     <a href="{% url 'secondapp:project_list' url_username %}">Cancel</a>
 </form>

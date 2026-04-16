@@ -7,7 +7,7 @@ import datetime
 # from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
-from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument
+from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument, EventType
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 from django.utils import timezone
@@ -203,24 +203,15 @@ class ProjectForm(forms.ModelForm):
             'description',
             'start_date',
             'end_date',
-            'songs',
-            'guests',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
-            "start_date": forms.SelectDateWidget(),
-
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if user:
-            self.fields['songs'].queryset = Song.objects.filter(user=user).order_by('title')
-            self.fields['guests'].queryset = Person.objects.filter(membership_period__user=user).distinct().order_by('last_name', 'first_name')
-
-        self.fields['songs'].required = False
-        self.fields['guests'].required = False
 
 
 class SkillForm(forms.ModelForm):
@@ -249,6 +240,17 @@ class EventForm(forms.ModelForm):
             'ended_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'location': forms.Textarea(attrs={'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Order projects by start date (most recent first)
+        self.fields['project'].queryset = Project.objects.all().order_by('-start_date')
+
+        # Pre-select "rehearsal" event type and remove empty option
+        rehearsal_event_type = EventType.objects.get(pk=EventType.REHEARSAL)
+        self.fields['event_type'].initial = rehearsal_event_type
+        self.fields['event_type'].empty_label = None
 
 
 class EventSongForm(forms.ModelForm):
@@ -304,6 +306,93 @@ class AddSongToEventForm(forms.Form):
                 widget=forms.Select(attrs={'size': '8'}),
                 empty_label=None,
                 label='Song',
+            )
+
+
+class EventChoiceField(forms.ModelChoiceField):
+    def __init__(self, *args, already_added_ids=None, other_project_ids=None, **kwargs):
+        self.already_added_ids = already_added_ids or set()
+        self.other_project_ids = other_project_ids or {}
+        super().__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj):
+        # Format: "Event Name (2024-12-25 19:00 - 21:00)"
+        label = f"{obj.name} ({obj.started_at.strftime('%Y-%m-%d %H:%M')} - {obj.ended_at.strftime('%H:%M')})"
+        if obj.pk in self.already_added_ids:
+            return f"* {label}"
+        if obj.pk in self.other_project_ids:
+            other_project = self.other_project_ids[obj.pk]
+            return f"⚠ {label} (in: {other_project})"
+        return label
+
+
+class AddEventToProjectForm(forms.Form):
+    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and project is not None:
+            already_added_ids = set(project.events.values_list('id', flat=True))
+            qs = Event.objects.filter(user=org_user).order_by('-started_at')
+            if search_q:
+                qs = qs.filter(name__icontains=search_q)
+
+            # Build a mapping of events in other projects
+            other_project_ids = {}
+            for event in qs.exclude(project__isnull=True):
+                other_project_ids[event.pk] = event.project.title
+
+            self.fields['event'] = EventChoiceField(
+                queryset=qs,
+                already_added_ids=already_added_ids,
+                other_project_ids=other_project_ids,
+                widget=forms.Select(attrs={'size': '8'}),
+                empty_label=None,
+                label='Event',
+            )
+
+
+class AddSongToProjectForm(forms.Form):
+    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and project is not None:
+            already_added_ids = set(project.songs.values_list('id', flat=True))
+            qs = Song.objects.filter(user=org_user).order_by('title')
+            if search_q:
+                if search_q.isdigit():
+                    qs = qs.filter(internal_id=int(search_q))
+                else:
+                    qs = qs.filter(
+                        Q(title__icontains=search_q) |
+                        Q(composer__last_name__icontains=search_q) |
+                        Q(keywords__icontains=search_q)
+                    ).distinct()
+            self.fields['song'] = SongChoiceField(
+                queryset=qs,
+                already_added_ids=already_added_ids,
+                widget=forms.Select(attrs={'size': '8'}),
+                empty_label=None,
+                label='Song',
+            )
+
+
+class AddGuestToProjectForm(forms.Form):
+    def __init__(self, *args, org_user=None, project=None, search_q='', **kwargs):
+        super().__init__(*args, **kwargs)
+        if org_user and project is not None:
+            already_added_ids = set(project.guests.values_list('id', flat=True))
+            qs = Person.objects.filter(
+                membership_period__user=org_user,
+            ).distinct()
+            if search_q:
+                qs = qs.filter(
+                    Q(first_name__icontains=search_q) |
+                    Q(last_name__icontains=search_q)
+                ).distinct()
+            qs = qs.order_by('last_name', 'first_name')
+            self.fields['guest'] = forms.ModelChoiceField(
+                queryset=qs,
+                widget=forms.Select(attrs={'size': '8'}),
+                empty_label=None,
+                label='Guest',
             )
 
 

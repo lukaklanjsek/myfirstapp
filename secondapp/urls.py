@@ -56,6 +56,12 @@ urlpatterns = [
     path('<str:username>/projects/<int:pk>/', views.ProjectDetailView.as_view(), name='project_detail'),
     path('<str:username>/projects/<int:pk>/edit/', views.ProjectUpdateView.as_view(), name='project_update'),
     path('<str:username>/projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project_delete'),
+    path('<str:username>/projects/<int:pk>/events/add/', views.project_add_event, name='project_add_event'),
+    path('<str:username>/projects/<int:pk>/events/<int:event_pk>/remove/', views.project_remove_event, name='project_remove_event'),
+    path('<str:username>/projects/<int:pk>/songs/add/', views.project_add_song, name='project_add_song'),
+    path('<str:username>/projects/<int:pk>/songs/<int:song_pk>/remove/', views.project_remove_song, name='project_remove_song'),
+    path('<str:username>/projects/<int:pk>/guests/add/', views.project_add_guest, name='project_add_guest'),
+    path('<str:username>/projects/<int:pk>/guests/<int:guest_pk>/remove/', views.project_remove_guest, name='project_remove_guest'),
 
     #    path("", include("django.contrib.auth.urls")),
 

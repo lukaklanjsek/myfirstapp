@@ -46,7 +46,8 @@ from .models import CustomUser, Organization, Person, Membership, Role, Song, Sk
 from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote, Project
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm, ProjectForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
-from .forms import AddSongToEventForm, QuoteForm, QuoteFormSet
+from .forms import AddSongToEventForm, AddEventToProjectForm, QuoteForm, QuoteFormSet
+from .forms import AddSongToProjectForm, AddGuestToProjectForm
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
 from .utils import import_songs, import_persons, import_events, import_attendance, import_event_songs
@@ -1242,7 +1243,7 @@ class EventUpdateView(UpdateView):
 
         search_q = self.request.GET.get('q', '')
         show_add_form = self.request.GET.get('add_participant') == '1' and self.is_admin
-        show_add_song = self.request.GET.get('add_song') == '1' and self.is_admin
+        show_add_song = self.is_admin
         song_search_q = self.request.GET.get('song_q', '')
 
         context['song_formset'] = self._song_formset
@@ -1554,6 +1555,92 @@ def event_add_song(request, username, pk):
     return redirect('secondapp:event_update', username=username, pk=pk)
 
 
+@require_POST
+@login_required
+def project_add_event(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+
+    is_admin = AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can add events to projects.")
+
+    form = AddEventToProjectForm(request.POST, org_user=org_user, project=project)
+    if form.is_valid():
+        event = form.cleaned_data['event']
+        event.project = project
+        event.save()
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def project_remove_event(request, username, pk, event_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+    event = get_object_or_404(Event, pk=event_pk, project=project)
+
+    is_admin = AccessControl.can_add_event(
+        request.user, org_user
+    ).filter(person__roles__id=Role.ADMIN).exists()
+    if not is_admin:
+        return HttpResponseForbidden("Only admins can remove events from projects.")
+
+    event.project = None
+    event.save()
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def project_add_song(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+
+    form = AddSongToProjectForm(request.POST, org_user=org_user, project=project)
+    if form.is_valid():
+        project.songs.add(form.cleaned_data['song'])
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def project_remove_song(request, username, pk, song_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+    project.songs.remove(song_pk)
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def project_add_guest(request, username, pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+
+    form = AddGuestToProjectForm(request.POST, org_user=org_user, project=project)
+    if form.is_valid():
+        project.guests.add(form.cleaned_data['guest'])
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
+@require_POST
+@login_required
+def project_remove_guest(request, username, pk, guest_pk):
+    org_user = get_object_or_404(CustomUser, username=username)
+    project = get_object_or_404(Project, pk=pk, user=org_user)
+    project.guests.remove(guest_pk)
+
+    return redirect('secondapp:project_update', username=username, pk=pk)
+
+
 @method_decorator(login_required, name='dispatch')
 class SongQuoteView(SongOwnerMixin, View):
     """Manage quotes for a specific song. Supports ?next= redirect after save."""
@@ -1631,6 +1718,10 @@ class AttendanceDashboardView(View):
         """
         Fetch and organize events for display.
         Returns (events list, most_recent_past_event, grayed_out_event_ids)
+
+        Filter logic (mutually exclusive):
+        - If start_date AND end_date: use date range, return all events in range
+        - Otherwise: use event_limit (default 8, split 50/50 past/future)
         """
         now = timezone.now()
 
@@ -1656,13 +1747,17 @@ class AttendanceDashboardView(View):
         past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
         future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
 
-        # Calculate split: 50% past, 49% future (remainder goes to past)
-        past_count = math.ceil(event_limit / 2)
-        future_count = event_limit - past_count
-
-        # Fetch events
-        past_events = list(past_qs[:past_count])
-        future_events = list(future_qs[:future_count])
+        # Fetch events: date range takes all, otherwise apply event_limit
+        if start_date and end_date:
+            # Date range mode: fetch all events in range
+            past_events = list(past_qs)
+            future_events = list(future_qs)
+        else:
+            # Event limit mode: split 50% past, 50% future
+            past_count = math.ceil(event_limit / 2)
+            future_count = event_limit - past_count
+            past_events = list(past_qs[:past_count])
+            future_events = list(future_qs[:future_count])
 
         # Final list: oldest past → recent past → soonest future → …
         events = list(reversed(past_events)) + future_events
@@ -1687,7 +1782,7 @@ class AttendanceDashboardView(View):
 
     def get(self, request, username):
         # Get date range from query params or default to last 8 events
-        event_limit = int(request.GET.get('event_limit', 8))
+        event_limit = int(request.GET.get('event_limit') or 8)
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
 
@@ -1727,7 +1822,7 @@ class AttendanceDashboardView(View):
         """Handle bulk attendance updates."""
         with transaction.atomic():
             # Get all events and members being displayed
-            event_limit = int(request.GET.get('event_limit', 8))
+            event_limit = int(request.GET.get('event_limit') or 8)
             start_date = request.GET.get('start_date')
             end_date = request.GET.get('end_date')
 
@@ -2024,15 +2119,15 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
         form.instance.user = org_user
         return super().form_valid(form)
 
+    def get_success_url(self):
+        return reverse('secondapp:project_update', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
         kwargs['user'] = org_user
         return kwargs
-
-    def get_success_url(self):
-        return reverse('secondapp:project_detail', kwargs={'username': self.kwargs.get('username'), 'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -2043,7 +2138,7 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     model = Project
     form_class = ProjectForm
-    template_name = 'secondapp/project_form.html'
+    template_name = 'secondapp/project_update.html'
     success_url = None
 
     def get_queryset(self):
@@ -2063,7 +2158,33 @@ class ProjectUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['url_username'] = self.kwargs.get('username')
+        url_username = self.kwargs.get('username')
+        org_user = get_object_or_404(CustomUser, username=url_username)
+        project = self.object
+
+        event_search_q = self.request.GET.get('event_q', '')
+        song_search_q = self.request.GET.get('song_q', '')
+        guest_search_q = self.request.GET.get('guest_q', '')
+
+        context['url_username'] = url_username
+        context['event_search_q'] = event_search_q
+        context['add_event_form'] = AddEventToProjectForm(
+            org_user=org_user,
+            project=project,
+            search_q=event_search_q,
+        )
+        context['song_search_q'] = song_search_q
+        context['guest_search_q'] = guest_search_q
+        context['add_song_form'] = AddSongToProjectForm(
+            org_user=org_user,
+            project=project,
+            search_q=song_search_q,
+        )
+        context['add_guest_form'] = AddGuestToProjectForm(
+            org_user=org_user,
+            project=project,
+            search_q=guest_search_q,
+        )
         return context
 
 

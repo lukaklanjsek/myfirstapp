@@ -62,9 +62,6 @@
     {% endfor %}
 
     <h3 id="songs">Songs</h3>
-    {% if is_admin %}
-        <button type="submit" name="action" value="save_and_add_song">Save &amp; Add Song</button>
-    {% endif %}
     {{ song_formset.management_form }}
     {% if song_formset.forms %}
     <table>
