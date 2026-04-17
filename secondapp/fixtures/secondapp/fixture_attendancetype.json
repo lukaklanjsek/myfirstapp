@@ -1,12 +1,12 @@
 [
   {"model": "secondapp.attendancetype", "pk": 1, "fields":
-  {"name": "Present", "additional_notes": "on time and fully there", "created_at": "2026-02-16T11:39:31.869Z"}},
+  {"name": "Present", "additional_notes": "present at the event", "created_at": "2026-02-16T11:39:31.869Z"}},
   {"model": "secondapp.attendancetype", "pk": 2, "fields":
-  {"name": "Absent", "additional_notes": "did apologize", "created_at": "2026-02-16T11:40:19.865Z"}},
+  {"name": "Work/School", "additional_notes": "missing due to professional activities", "created_at": "2026-02-16T11:40:19.865Z"}},
   {"model": "secondapp.attendancetype", "pk": 3, "fields":
-  {"name": "Missing", "additional_notes": "nobody knows why", "created_at": "2026-02-16T11:39:58.706Z"}},
+  {"name": "Illness", "additional_notes": "unplanned medical issues", "created_at": "2026-02-16T11:39:58.706Z"}},
   {"model": "secondapp.attendancetype", "pk": 4, "fields":
-  {"name": "Partial", "additional_notes": "missed beginning or end", "created_at": "2026-02-16T11:40:19.865Z"}},
+  {"name": "Private/Vacation", "additional_notes": "planned absence", "created_at": "2026-02-16T11:40:19.865Z"}},
   {"model": "secondapp.attendancetype", "pk": 5, "fields":
-  {"name": "Late", "additional_notes": "missed beginning", "created_at": "2026-02-16T11:40:19.865Z"}}
+  {"name": "Unknown", "additional_notes": "nobody knows why", "created_at": "2026-02-16T11:40:19.865Z"}}
 ]

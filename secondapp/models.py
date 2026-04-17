@@ -53,6 +53,7 @@ class EventType(models.Model):
     REHEARSAL = 1
     PERFORMANCE = 2
     CONCERT = 3
+    RECORDING = 4
 
     name = models.CharField("event designation", max_length=90, unique=True)
     additional_notes = models.CharField("short description of type", max_length=250, blank=True, null=True)
@@ -92,12 +93,19 @@ class Instrument(models.Model):
 
 class AttendanceType(models.Model):
     PRESENT = 1
-    ABSENT = 2
-    MISSING = 3
-    PARTIAL = 4
+    WORK_SCHOOL = 2
+    ILLNESS = 3
+    PRIVATE_VACATION = 4
+    UNKNOWN = 5
+
 
     name = models.CharField("attendance designation", max_length=90, unique=True)
-    additional_notes = models.CharField("short description of presence", max_length=250, blank=True, null=True)
+    additional_notes = models.CharField(
+        "short description of presence",
+        max_length=250,
+        blank=True,
+        null=True
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

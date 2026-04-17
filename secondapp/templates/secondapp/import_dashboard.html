@@ -3,6 +3,9 @@
 {% block title %}Import {{ import_method|title }}{% endblock %}
 {% block content %}
 <div class="container mt-4">
+    <a href="{% url 'secondapp:import_hub' username=url_username %}" class="btn btn-outline-secondary mb-3">
+        &larr; Back to Import Hub
+    </a>
     <h2>Import {{ import_method|title }}</h2>
 
     <form method="post" enctype="multipart/form-data">

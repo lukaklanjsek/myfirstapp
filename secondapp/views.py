@@ -50,7 +50,7 @@ from .forms import AddSongToEventForm, AddEventToProjectForm, QuoteForm, QuoteFo
 from .forms import AddSongToProjectForm, AddGuestToProjectForm
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
-from .utils import import_songs, import_persons, import_events, import_attendance, import_event_songs
+from .utils import import_songs, import_persons, import_events, import_attendance, import_event_songs, combine_event_projects
 # from .forms import RehearsalForm, Member, ComposerForm, PoetForm, ArrangerForm, MusicianForm, SongForm, TagForm, PersonForm, EnsembleForm, ActivityForm, ImportFileForm
 # from .models import Rehearsal, Member, Composer, Poet, Arranger, Musician, Song, Ensemble, Activity, Conductor, ImportFile
 # from .mixins import TagListAndCreateMixin, PersonRoleMixin, BreadcrumbMixin, LoginRequiredMixin
@@ -2084,6 +2084,58 @@ class ImportDashboardView(View):
 
         return redirect('secondapp:import_dashboard', username=username, method=method)
 
+
+@method_decorator(login_required, name="dispatch")
+class ImportHubView(View):
+    template_name = 'secondapp/import_hub.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
+        username = self.kwargs.get("username")
+        self.org_user = get_object_or_404(CustomUser, username=username)
+
+        if request.user != self.org_user:
+            has_permission = AccessControl.can_edit_event(
+                request.user, self.org_user
+            ).exists()
+
+            if not has_permission:
+                return HttpResponseForbidden("You don't have permission to view this page.")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, username):
+        context = {
+            'org_user': self.org_user,
+            'url_username': username,
+        }
+        return render(request, self.template_name, context)
+
+
+@method_decorator(login_required, name="dispatch")
+class CombineProjectsView(View):
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle permission checking before processing the request."""
+        username = self.kwargs.get("username")
+        self.org_user = get_object_or_404(CustomUser, username=username)
+
+        if request.user != self.org_user:
+            has_permission = AccessControl.can_edit_event(
+                request.user, self.org_user
+            ).exists()
+
+            if not has_permission:
+                return HttpResponseForbidden("You don't have permission to perform this action.")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, username):
+        combine_event_projects(self.org_user, request)
+        return redirect('secondapp:import_hub', username=username)
+
+    def get(self, request, username):
+        return redirect('secondapp:import_hub', username=username)
 
 
 class ProjectListView(LoginRequiredMixin, ListView):

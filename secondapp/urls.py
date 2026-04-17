@@ -19,6 +19,8 @@ urlpatterns = [
     path("organization_form/", views.OrganizationCreateView.as_view(), name="org_create"),
 
     path("<str:username>/dashboard/", views.OrganizationDashboard.as_view(), name="org_dashboard"),
+    path("<str:username>/import/", views.ImportHubView.as_view(), name="import_hub"),
+    path("<str:username>/import/combine/", views.CombineProjectsView.as_view(), name="import_combine"),
     path("<str:username>/<str:method>/import/", views.ImportDashboardView.as_view(), name="import_dashboard"),
     path("<str:username>/events/", views.EventListView.as_view(), name="event_list"),
     path("<str:username>/events/add/", views.EventCreateView.as_view(), name="event_create"),

@@ -598,7 +598,7 @@ def import_events(org_user, request, file_path, delimiter=";"):
 ATTENDANCE_MAP = {
     "+":1,
     "-":2,
-    "o":3,
+    "o":4,
 }
 
 def import_attendance(org_user, request, file_path, delimiter=";"):
@@ -644,8 +644,8 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
         try:
             ATTENDANCE_MAP_DIRECT = {
                 "+": AttendanceType.objects.get(id=AttendanceType.PRESENT),
-                "-": AttendanceType.objects.get(id=AttendanceType.ABSENT),
-                "o": AttendanceType.objects.get(id=AttendanceType.MISSING),
+                "-": AttendanceType.objects.get(id=AttendanceType.WORK_SCHOOL),
+                "o": AttendanceType.objects.get(id=AttendanceType.PRIVATE_VACATION),
             }
         except AttendanceType.DoesNotExist as e:
             messages.error(request, f"Missing AttendanceType configuration: {str(e)}")
@@ -681,13 +681,6 @@ def import_attendance(org_user, request, file_path, delimiter=";"):
                         name=event_name,
                         event_type=event_type,
                     )
-                else:
-                    # Update existing event with current details (optional)
-                    if event.name != event_name or event.event_type_id != event_type.id:
-                        event.name = event_name
-                        event.event_type = event_type
-                        event.save(update_fields=['name', 'event_type'])
-
                 events[raw_date] = event
             except Exception as e:
                 error_details.append(f"Error creating/fetching event for {raw_date}: {str(e)}")
@@ -937,3 +930,73 @@ def import_event_songs(org_user, request, file_path, delimiter=";"):
         'errors': len(error_details),
         'error_details': error_details
     }
+
+
+def combine_event_projects(org_user, request):
+    """
+    Assign rehearsals to projects based on event timeline.
+
+    For each project: find its last concert/performance/recording.
+    Then: assign all rehearsals before that date to that project.
+    """
+    error_details = []
+
+    # Check permissions
+    if request.user != org_user:
+        has_permission = AccessControl.can_edit_event(request.user, org_user).exists()
+        if not has_permission:
+            messages.error(request, "You don't have permission to combine events.")
+            return {'success': False, 'count': 0, 'error': 'Permission denied'}
+
+    try:
+        with transaction.atomic():
+            # Get all events, sorted by date
+            all_events = Event.objects.filter(user=org_user).order_by('started_at')
+
+            # Find each project's last ending event (concert/performance/recording)
+            project_ends_at = {}  # project_id -> datetime of last ending event
+            for event in all_events:
+                if event.project_id and event.event_type_id in {EventType.CONCERT, EventType.PERFORMANCE, EventType.RECORDING}:
+                    project_ends_at[event.project_id] = event.started_at
+
+            # Build a sorted list of project end dates
+            projects_by_end_date = sorted(project_ends_at.items(), key=lambda x: x[1])
+
+            # For each unassigned rehearsal, find which project it belongs to
+            updates = []
+            for event in all_events:
+                if event.event_type_id != EventType.REHEARSAL:
+                    continue
+                if event.project_id is not None:
+                    continue  # already assigned
+
+                # Find the project whose end date is >= this rehearsal
+                for project_id, end_date in projects_by_end_date:
+                    if event.started_at <= end_date:
+                        event.project_id = project_id
+                        updates.append(event)
+                        break
+
+
+            # Save all updated rehearsals
+            if updates:
+                Event.objects.bulk_update(updates, ['project'])
+
+            messages.success(request, f"Combining complete: {len(updates)} rehearsals assigned to projects")
+
+            return {
+                'success': True,
+                'count': len(updates),
+                'errors': len(error_details),
+                'error_details': error_details
+            }
+
+    except Exception as e:
+        error_details.append(str(e))
+        messages.error(request, f"Combining failed: {str(e)}")
+        return {
+            'success': False,
+            'count': 0,
+            'errors': len(error_details),
+            'error_details': error_details
+        }
