@@ -1120,10 +1120,10 @@ class EventCreateView(CreateView):
         # Initialize attendance records for all active performers at the event date
         event = self.object
         event_date = event.started_at or timezone.now()
-        absent_type = AttendanceType.objects.get(name="Absent")
+        unknown_type = AttendanceType.objects.get(pk=AttendanceType.UNKNOWN)
         members = Person.objects.active_performers(user_to_assign, event_date)
         Attendance.objects.bulk_create(
-            [Attendance(event=event, person=m, attendance_type=absent_type) for m in members],
+            [Attendance(event=event, person=m, attendance_type=unknown_type) for m in members],
             ignore_conflicts=True,
         )
         return response
@@ -1166,6 +1166,11 @@ class EventUpdateView(UpdateView):
             self.is_admin = True
 
         return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.customuser
+        return kwargs
 
     def post(self, request, *args, **kwargs):
         """Handle reorder actions before form validation."""
@@ -1717,11 +1722,12 @@ class AttendanceDashboardView(View):
     def _fetch_events(self, event_limit, start_date, end_date, include_prefetch=True):
         """
         Fetch and organize events for display.
-        Returns (events list, most_recent_past_event, grayed_out_event_ids)
+        Returns (events list, editable_event_id, grayed_out_event_ids)
 
-        Filter logic (mutually exclusive):
+        Filter logic:
         - If start_date AND end_date: use date range, return all events in range
-        - Otherwise: use event_limit (default 8, split 50/50 past/future)
+        - Otherwise: show one future event (if available), one present event (current or most recent past), and all other past events
+        - Only one event is editable (either current event or most recent past)
         """
         now = timezone.now()
 
@@ -1747,38 +1753,45 @@ class AttendanceDashboardView(View):
         past_qs = base_query.filter(started_at__lt=now).order_by('-started_at')
         future_qs = base_query.filter(started_at__gte=now).order_by('started_at')
 
-        # Fetch events: date range takes all, otherwise apply event_limit
+        # Fetch events: date range takes all, otherwise show simplified view
         if start_date and end_date:
             # Date range mode: fetch all events in range
             past_events = list(past_qs)
             future_events = list(future_qs)
         else:
-            # Event limit mode: split 50% past, 50% future
-            past_count = math.ceil(event_limit / 2)
-            future_count = event_limit - past_count
-            past_events = list(past_qs[:past_count])
-            future_events = list(future_qs[:future_count])
+            # Simplified mode: one future event, all past events
+            future_events = list(future_qs[:1])
+            past_events = list(past_qs)
 
-        # Final list: oldest past → recent past → soonest future → …
+        # Final list: oldest past → most recent past → soonest future
         events = list(reversed(past_events)) + future_events
 
-        # Most recent past event (before reversal, it's at index 0 of past_events)
-        most_recent_past_event = past_events[0] if past_events else None
+        # Determine which event is editable: current event or most recent past
+        editable_event = None
 
-        # Mark events as grayed out (all past except most recent, and all future)
+        # First, check if there's a current event (started but not finished)
+        current_event = base_query.filter(
+            started_at__lte=now,
+            ended_at__gt=now
+        ).first()
+
+        if current_event:
+            editable_event = current_event
+        elif past_events:
+            editable_event = past_events[0]  # Most recent past event
+
+        editable_event_id = editable_event.id if editable_event else None
+
+        # Mark non-editable past events as grayed out (for POST skip logic)
+        grayed_out_event_ids = set()
         for event in events:
-            if event == most_recent_past_event:
-                event.is_grayed_out = False
-            else:
+            if event.started_at < now and event.id != editable_event_id:
+                grayed_out_event_ids.add(event.id)
                 event.is_grayed_out = True
+            else:
+                event.is_grayed_out = False
 
-        # Create set of grayed out event IDs for quick lookup in POST
-        grayed_out_event_ids = {
-            event.id for event in events
-            if event != most_recent_past_event
-        }
-
-        return events, most_recent_past_event, grayed_out_event_ids
+        return events, editable_event_id, grayed_out_event_ids
 
     def get(self, request, username):
         # Get date range from query params or default to last 8 events
@@ -1787,7 +1800,7 @@ class AttendanceDashboardView(View):
         end_date = request.GET.get('end_date')
 
         # Fetch and organize events
-        events, most_recent_past_event, grayed_out_event_ids = self._fetch_events(
+        events, editable_event_id, grayed_out_event_ids = self._fetch_events(
             event_limit, start_date, end_date, include_prefetch=True
         )
 
@@ -1798,11 +1811,10 @@ class AttendanceDashboardView(View):
         ).distinct().order_by('last_name')
 
         # Get attendance types
-        present_type = AttendanceType.objects.get(name='Present')
-        absent_type = AttendanceType.objects.get(name="Absent")
+        present_type = AttendanceType.objects.get(pk=AttendanceType.PRESENT)
 
         # Build attendance matrix
-        dashboard_data = self._build_attendance_matrix(members, events, present_type, absent_type)
+        dashboard_data = self._build_attendance_matrix(members, events, present_type)
 
         # Calculate totals per event
         event_totals = self._calculate_event_totals(events, members, present_type)
@@ -1827,7 +1839,7 @@ class AttendanceDashboardView(View):
             end_date = request.GET.get('end_date')
 
             # Fetch and organize events (no prefetch needed for POST)
-            events, most_recent_past_event, grayed_out_event_ids = self._fetch_events(
+            events, editable_event_id, grayed_out_event_ids = self._fetch_events(
                 event_limit, start_date, end_date, include_prefetch=False
             )
 
@@ -1836,17 +1848,23 @@ class AttendanceDashboardView(View):
                 memberships__person__roles__id=Role.MEMBER
             ).distinct()
 
-            # Get attendance types
-            present_type = AttendanceType.objects.get(name='Present')
-            absent_type = AttendanceType.objects.get(name='Absent')
-
-            # Track which checkboxes were checked
-            checked_attendances = set()
+            # Read submitted type IDs per cell
+            VALID_TYPE_IDS = {
+                AttendanceType.PRESENT,
+                AttendanceType.WORK_SCHOOL,
+                AttendanceType.ILLNESS,
+                AttendanceType.PRIVATE_VACATION,
+                AttendanceType.UNKNOWN,
+            }
+            submitted_types = {}
             for key, value in request.POST.items():
-                if key.startswith('attendance_') and value == 'present':
-                    # Format: attendance_<event_id>_<person_id>
-                    _, event_id, person_id = key.split('_')
-                    checked_attendances.add((int(event_id), int(person_id)))
+                if key.startswith('attendance_'):
+                    parts = key.split('_')
+                    if len(parts) == 3:
+                        try:
+                            submitted_types[(int(parts[1]), int(parts[2]))] = int(value)
+                        except (ValueError, TypeError):
+                            pass
 
             skipped_count = 0
 
@@ -1863,25 +1881,23 @@ class AttendanceDashboardView(View):
                     continue
 
                 for member in members:
-                    is_present = (event.id, member.id) in checked_attendances
+                    type_id = submitted_types.get((event.id, member.id), AttendanceType.UNKNOWN)
+                    if type_id not in VALID_TYPE_IDS:
+                        type_id = AttendanceType.UNKNOWN
 
                     # Get existing attendance if it exists
                     try:
                         attendance = Attendance.objects.get(event=event, person=member)
-                        current_is_present = attendance.attendance_type == present_type
-
-                        # Only update if state changed
-                        if is_present != current_is_present:
-                            attendance.attendance_type = present_type if is_present else absent_type
+                        if attendance.attendance_type_id != type_id:
+                            attendance.attendance_type_id = type_id
                             attendance.save()
 
                     except Attendance.DoesNotExist:
                         # Create new record
-                        attendance_type = present_type if is_present else absent_type
                         Attendance.objects.create(
                             event=event,
                             person=member,
-                            attendance_type=attendance_type
+                            attendance_type_id=type_id
                         )
 
                 # NEW: Show appropriate success message
@@ -1900,7 +1916,7 @@ class AttendanceDashboardView(View):
             redirect_url += f'?{query_params}'
         return redirect(redirect_url)
 
-    def _build_attendance_matrix(self, members, events, present_type, absent_type):
+    def _build_attendance_matrix(self, members, events, present_type):
         """Build efficient attendance lookup matrix."""
         # Create lookup dict: {event_id: {person_id: attendance_type_id}}
         attendance_lookup = {}
@@ -1935,14 +1951,8 @@ class AttendanceDashboardView(View):
                 # Check if this event is grayed out
                 is_grayed_out = getattr(event, 'is_grayed_out', False)
 
-                # Also gray out if attendance type is not Present or Absent
-                if attendance_type_id is not None:
-                    if attendance_type_id not in [present_type.id, absent_type.id]:
-                        is_grayed_out = True
-
                 row['attendance_cells'].append({
                     'event_id': event.id,
-                    'is_present': attendance_type_id == present_type.id,
                     'attendance_type_id': attendance_type_id,
                     'is_grayed_out': is_grayed_out,
                 })
@@ -2146,7 +2156,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
-        return Project.objects.filter(user=org_user).order_by('-id')
+        return Project.objects.filter(user=org_user).order_by('-end_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -2376,15 +2386,15 @@ def quick_add_rehearsal(request, username):
             memberships__person__roles__id=Role.MEMBER
         ).distinct()
 
-        # Get the "Absent" attendance type
-        absent_type = AttendanceType.objects.get(name='Absent')
+        # Get the "Unknown" attendance type
+        unknown_type = AttendanceType.objects.get(pk=AttendanceType.UNKNOWN)
 
-        # Create attendance records for all members (default: absent)
+        # Create attendance records for all members (default: unknown)
         attendance_records = [
             Attendance(
                 event=event,
                 person=member,
-                attendance_type=absent_type
+                attendance_type=unknown_type
             )
             for member in members
         ]

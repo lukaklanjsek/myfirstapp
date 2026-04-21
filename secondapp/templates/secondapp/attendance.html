@@ -9,19 +9,32 @@
 .attendance-cell {
     width: 40px;
     text-align: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    transition: background-color 0.15s ease;
 }
+
+.attendance-cell:hover {
+    opacity: 0.8;
+}
+
+.attendance-cell.grayed-out:hover {
+    opacity: 1;
+}
+
+.att-type-1 { background-color: #c8f7c5; }
+.att-type-2 { background-color: #ffeaa7; }
+.att-type-3 { background-color: #fab1a0; }
+.att-type-4 { background-color: #a29bfe; }
+.att-type-5 { background-color: #dfe6e9; }
+
 .grayed-out {
-    background-color: #f0f0f0;
-    opacity: 0.6;
-}
-
-.grayed-out-checkbox {
-    cursor: not-allowed;
-}
-
-.grayed-out input[type="checkbox"]:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    background-color: #ffffff !important;
+    color: #333333;
+    pointer-events: none;
+    cursor: default;
 }
 
 </style>
@@ -52,6 +65,16 @@
             {% csrf_token %}
             <button type="submit" class="btn-primary">+ Add Rehearsal Now</button>
         </form>
+    </div>
+
+    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <strong>Legend:</strong>
+        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;">✓ Present</span>
+        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;">💼 Work/School</span>
+        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;">🤒 Illness</span>
+        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;">🏖 Private/Vacation</span>
+        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;">? Unknown</span>
+        <em>(Click a cell to cycle)</em>
     </div>
 
     {# Main Form with Attendance Table #}
@@ -86,15 +109,13 @@
                         <tr>
                             <td class="sticky-col member-name">{{ row.member }}</td>
                             {% for cell in row.attendance_cells %}
-                                <td class="{% if cell.is_grayed_out %}grayed-out{% endif %}">
-                                    <input
-                                        type="checkbox"
-                                        name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                        value="present"
-                                        {% if cell.is_present %}checked{% endif %}
-                                        {% if cell.is_grayed_out %}disabled{% endif %}
-                                        class="{% if cell.is_grayed_out %}grayed-out-checkbox{% endif %}"
-                                    >
+                                <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
+                                    data-type-id="{{ cell.attendance_type_id|default:5 }}"
+                                    {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
+                                    <input type="hidden"
+                                           name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
+                                           value="{{ cell.attendance_type_id|default:5 }}">
+                                    <span class="att-icon"></span>
                                 </td>
                             {% endfor %}
                             <td>{{ row.total_present }}/{{ row.total_events }}</td>
@@ -118,5 +139,34 @@
     </form>
 </div>
 
+<script>
+const CYCLE_ORDER = [5, 1, 2, 3, 4];
+const TYPE_META = {
+    1: { label: 'Present',           icon: '✓',  cls: 'att-type-1' },
+    2: { label: 'Work/School',       icon: '💼', cls: 'att-type-2' },
+    3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
+    4: { label: 'Private/Vacation',  icon: '🏖', cls: 'att-type-4' },
+    5: { label: 'Unknown',           icon: '?',  cls: 'att-type-5' },
+};
+
+function cycleAttendance(cell) {
+    const cur = parseInt(cell.dataset.typeId, 10);
+    const next = CYCLE_ORDER[(CYCLE_ORDER.indexOf(cur) + 1) % CYCLE_ORDER.length];
+    cell.dataset.typeId = next;
+    cell.querySelector('input[type="hidden"]').value = next;
+    Object.values(TYPE_META).forEach(m => cell.classList.remove(m.cls));
+    cell.classList.add(TYPE_META[next].cls);
+    cell.querySelector('.att-icon').textContent = TYPE_META[next].icon;
+    cell.title = TYPE_META[next].label;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
+        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[5];
+        cell.querySelector('.att-icon').textContent = meta.icon;
+        cell.title = meta.label;
+    });
+});
+</script>
 
 {% endblock %}

@@ -956,7 +956,7 @@ def combine_event_projects(org_user, request):
             # Find each project's last ending event (concert/performance/recording)
             project_ends_at = {}  # project_id -> datetime of last ending event
             for event in all_events:
-                if event.project_id and event.event_type_id in {EventType.CONCERT, EventType.PERFORMANCE, EventType.RECORDING}:
+                if event.project_id and event.event_type_id in {EventType.CONCERT,  EventType.RECORDING}: # EventType.PERFORMANCE,
                     project_ends_at[event.project_id] = event.started_at
 
             # Build a sorted list of project end dates

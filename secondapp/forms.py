@@ -241,11 +241,12 @@ class EventForm(forms.ModelForm):
             'location': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Order projects by start date (most recent first)
-        self.fields['project'].queryset = Project.objects.all().order_by('-start_date')
+        qs = Project.objects.all() if user is None else Project.objects.filter(user=user)
+        self.fields['project'].queryset = qs.order_by('-start_date').distinct()
 
         # Pre-select "rehearsal" event type and remove empty option
         rehearsal_event_type = EventType.objects.get(pk=EventType.REHEARSAL)
