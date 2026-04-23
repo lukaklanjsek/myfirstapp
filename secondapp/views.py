@@ -21,7 +21,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView, TemplateView
 from django.views.generic.edit import DeleteView
-from django.db.models import Q, Prefetch
+from django.db.models import Count, Q, Prefetch
 from django.apps import apps
 from django.conf import settings
 import os
@@ -303,28 +303,62 @@ class OrgMemberListView(ListView):
 
     def get_queryset(self):
         url_username = self.kwargs["username"]
-        # print(f"=== OrgMemberListView get_queryset ===")
-        # print(f"Logged in user: {self.request.user.username}")
-        # print(f"URL username: {url_username}")
-        queryset = AccessControl.get_visible_members(
+
+        # Get all memberships for this organization
+        visible_memberships = AccessControl.get_visible_members(
             self.request.user,
             url_username
-        ).select_related('person').prefetch_related('person__skills', "person__roles")
+        )
 
-        print(f"Final queryset count: {queryset.count()}")
-        return queryset
+        queryset = visible_memberships.select_related('person').prefetch_related(
+            'person__skills', 'person__roles',
+            'person__singer_set__voice', 'person__instrumentalist_set__instrument',
+        )
+
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            # When searching, include all matching results regardless of visibility filtering
+            # but still respect the base membership access
+            queryset = queryset.filter(
+                Q(person__first_name__icontains=q) |
+                Q(person__last_name__icontains=q) |
+                Q(person__skills__title__icontains=q) |
+                Q(person__singer__voice__name__icontains=q) |
+                Q(person__instrumentalist__instrument__name__icontains=q)
+            ).distinct()
+
+        role_id = self.request.GET.get('role', '').strip()
+        if role_id:
+            queryset = queryset.filter(person__roles__id=int(role_id))
+
+        sort_field_map = {
+            'name': ('person__last_name', 'person__first_name'),
+        }
+        sort_key = self.request.GET.get('sort', 'name')
+        reverse = self.request.GET.get('reverse', 'false') == 'true'
+        fields = sort_field_map.get(sort_key, sort_field_map['name'])
+        if reverse:
+            fields = tuple(f'-{f}' for f in fields)
+        return queryset.order_by(*fields)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["organization"] = self.organization
+        context["url_username"] = self.kwargs["username"]
+        context["q"] = self.request.GET.get('q', '')
+        context["current_sort"] = self.request.GET.get('sort', 'name')
+        context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
+        context["selected_role"] = self.request.GET.get('role', '')
 
-        # Add memberships to context for easier template access
         url_username = self.kwargs["username"]
-        # context["org_memberships"] = AccessControl.get_visible_members(
-        #     self.request.user,
-        #     url_username
-        # )
-
+        visible_members = AccessControl.get_visible_members(
+            self.request.user,
+            url_username
+        )
+        available_roles = Role.objects.filter(
+            persons__in=visible_members.values_list('person', flat=True)
+        ).distinct().order_by('title')
+        context["available_roles"] = available_roles
         return context
 
 @method_decorator(login_required, name="dispatch")
@@ -1759,9 +1793,9 @@ class AttendanceDashboardView(View):
             past_events = list(past_qs)
             future_events = list(future_qs)
         else:
-            # Simplified mode: one future event, all past events
+            # Simplified mode: one future event, limited past events
             future_events = list(future_qs[:1])
-            past_events = list(past_qs)
+            past_events = list(past_qs[:event_limit])
 
         # Final list: oldest past → most recent past → soonest future
         events = list(reversed(past_events)) + future_events
@@ -2156,7 +2190,25 @@ class ProjectListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         url_username = self.kwargs.get('username')
         org_user = get_object_or_404(CustomUser, username=url_username)
-        return Project.objects.filter(user=org_user).order_by('-end_date')
+        return (
+            Project.objects
+            .filter(user=org_user)
+            .annotate(
+                num_main_events=Count(
+                    'events',
+                    filter=Q(events__event_type_id__in=[
+                        EventType.CONCERT,
+                        EventType.PERFORMANCE,
+                        EventType.RECORDING,
+                    ])
+                ),
+                num_rehearsals=Count(
+                    'events',
+                    filter=Q(events__event_type_id=EventType.REHEARSAL)
+                ),
+            )
+            .order_by('-end_date')
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -48,7 +48,11 @@
                     <small>{{ song.keywords|default:"|" }}</small>
                 {% endif %}
             </td>
-            <td>{{ song.composer.last_name }}</td>
+            <td>
+                <a href="{% url 'secondapp:org_member_detail' url_username song.composer.pk %}">
+                    {{ song.composer.last_name }}
+                </a>
+            </td>
 <!--            <td>{{ song.keywords|default:"-" }}</td>-->
             <td>{{ song.number_of_copies|default:"-" }}</td>
             <td><a href="{% url 'secondapp:song_update' url_username song.pk %}">Edit</a></td>

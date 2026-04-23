@@ -9,6 +9,7 @@
     <tr>
         <th>Date</th>
         <th>Type</th>
+        <th>Project</th>
     </tr>
     {% for event in events %}
         <tr>
@@ -16,7 +17,8 @@
                 {{ event.started_at }}
                 </a>
             </td>
-            <td> {{ event.event_type }}</td>
+            <td>{{ event.event_type }}</td>
+            <td>{% if event.project %}<a href="{% url 'secondapp:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
         </tr>
     {% endfor %}
 </table>

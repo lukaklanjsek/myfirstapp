@@ -12,8 +12,20 @@
 
 <table>
     <tr><th>Song ID</th><td>{{ song.internal_id|default:"-" }}</td></tr>
-    <tr><th>Composer</th><td>{{ song.composer }}</td></tr>
-    <tr><th>Poet</th><td>{{ song.poet }}</td></tr>
+    <tr><th>Composer</th><td>
+        {% if song.composer %}
+            <a href="{% url 'secondapp:org_member_detail' url_username song.composer.pk %}">{{ song.composer }}</a>
+        {% else %}
+            -
+        {% endif %}
+    </td></tr>
+    <tr><th>Poet</th><td>
+        {% if song.poet %}
+            <a href="{% url 'secondapp:org_member_detail' url_username song.poet.pk %}">{{ song.poet }}</a>
+        {% else %}
+            -
+        {% endif %}
+    </td></tr>
     <tr><th>Type</th><td>{{ song.group }}</td></tr>
     <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
     <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>

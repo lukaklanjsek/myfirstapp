@@ -420,7 +420,12 @@ ALLOWED_EVENT_KEYS = [
 
 
 def import_events(org_user, request, file_path, delimiter=";"):
-    """Import events from CSV file."""
+    """
+    Import events from CSV file.
+    duration_rid:  "KCME5Y5W"="Performance"
+                   "GYTTXWT0"="Rehearsal"
+                    else="Concert"
+    """
     imported_count = 0
     skipped_count = 0
     error_details = []
@@ -521,8 +526,10 @@ def import_events(org_user, request, file_path, delimiter=";"):
                     else:
                         ended_at = None
 
-                    if event_typo == "Krajši nastop do 20 minut":
+                    if event_typo == "KCME5Y5W":
                         event_type = EventType.objects.get(name="Performance")
+                    elif event_typo == "GYTTXWT0":
+                        event_type = EventType.objects.get(name="Rehearsal")
                     else:
                         event_type = EventType.objects.get(name="Concert")
 
