@@ -113,6 +113,20 @@ class AttendanceType(models.Model):
         return self.name
 
 
+class ApproximateDate(models.Model):
+    """Flag of date approximations."""
+    EXACT_DATE = 0
+    YEAR_APPROX = 1
+    MONTH_DAY_APPROX = 2
+
+    approximation = models.CharField()
+    additional_notes = models.CharField("short description of approx", max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.approximation
+
+
 class UserManager(BaseUserManager):
     """Custom user model manager for authentication."""
     def create_user(self, email, password, **extra_fields):
@@ -236,6 +250,11 @@ class Person(models.Model):
     address = models.TextField(blank=True, null=True)
     phone =  models.CharField(max_length=23, blank=True, null=True)
     birth_date = models.DateField("birthday", blank=True, null=True)
+    birth_approximate = models.ForeignKey(ApproximateDate, on_delete=models.PROTECT, blank=True, null=True,
+                                          related_name="birth_approximate")
+    death_date = models.DateField("deathday", blank=True, null=True)
+    death_approximate = models.ForeignKey(ApproximateDate, on_delete=models.PROTECT, blank=True, null=True,
+                                          related_name="death_approximate")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

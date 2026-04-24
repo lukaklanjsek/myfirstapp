@@ -82,7 +82,11 @@
                     {% if songs %}
                         <ul style="margin: 0; padding-left: 20px;">
                             {% for event_song in songs %}
-                                <li>{{ event_song.song.title }}</li>
+                                <li>
+                                    <a href="{% url 'secondapp:song_page' url_username event_song.song.pk %}">
+                                        {{ event_song.song.title }}
+                                    </a>
+                                </li>
                             {% endfor %}
                         </ul>
                     {% else %}

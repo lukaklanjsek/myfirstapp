@@ -1,8 +1,32 @@
 {% extends "secondapp/base.html" %}
-{% block title %}Details2{% endblock %}
+{% block title %}{{ person }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'secondapp:org_member_edit' url_username person.pk %}">EDIT person</a></p>
 
-<p>{{ person }}</p>
-<p>PLACEHOLDER</p>
+<h2>{{ person }}</h2>
+
+{% if person_data %}
+  {% if person_data.email %}<p>Email: {{ person_data.email }}</p>{% endif %}
+  {% if person_data.phone %}<p>Phone: {{ person_data.phone }}</p>{% endif %}
+  {% if person_data.address %}<p>Address: {{ person_data.address }}</p>{% endif %}
+  {% if person_data.birth_date %}<p>Birth date: {{ person_data.birth_date }}</p>{% endif %}
+  {% if person_data.skills %}
+  <p>Skills:
+    {% for skill in person_data.skills %}{{ skill }}{% if not forloop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+{% endif %}
+
+{% if singer_projects %}
+<h3>Projects</h3>
+<ul>
+  {% for entry in singer_projects %}
+  <li>
+    <a href="{% url 'secondapp:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
+    {{ entry.performances_attended }}({{ entry.rehearsals_present }}/{{ entry.rehearsals_total }})
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
 {% endblock %}

@@ -56,4 +56,26 @@
 <div>{{ song.lyrics|linebreaks }}</div>
 {% endif %}
 
+{% if events %}
+<h3>Events</h3>
+<ul>
+    {% for event in events %}
+        <li>
+            {% if event.event_type.id != 1 %}
+                <strong>
+                    <a href="{% url 'secondapp:event_detail' url_username event.pk %}">
+                        {{ event.name }}
+                    </a>
+                </strong>
+            {% else %}
+                <a href="{% url 'secondapp:event_detail' url_username event.pk %}">
+                    {{ event.name }}
+                </a>
+            {% endif %}
+            <span class="date">({{ event.started_at|date:"Y-m-d" }})</span>
+        </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 {% endblock %}

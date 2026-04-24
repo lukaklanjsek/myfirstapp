@@ -411,11 +411,45 @@ class OrgMemberDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         url_username = self.kwargs["username"]
 
+        context["url_username"] = url_username
         context["person_data"] = AccessControl.filter_person_details(
             self.request.user,
             self.object,
             url_username,
         )
+
+        person = self.object
+        if person.skills.filter(id=Skill.SINGER).exists():
+            projects = Project.objects.filter(
+                events__attendance__person=person
+            ).distinct()
+
+            singer_projects = []
+            for project in projects:
+                perf_attended = Attendance.objects.filter(
+                    person=person,
+                    event__project=project,
+                    event__event_type_id__in=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING],
+                    attendance_type_id=AttendanceType.PRESENT,
+                ).count()
+                rehearsals_present = Attendance.objects.filter(
+                    person=person,
+                    event__project=project,
+                    event__event_type_id=EventType.REHEARSAL,
+                    attendance_type_id=AttendanceType.PRESENT,
+                ).count()
+                rehearsals_total = Event.objects.filter(
+                    project=project,
+                    event_type_id=EventType.REHEARSAL,
+                ).count()
+                singer_projects.append({
+                    "project": project,
+                    "performances_attended": perf_attended,
+                    "rehearsals_present": rehearsals_present,
+                    "rehearsals_total": rehearsals_total,
+                })
+
+            context["singer_projects"] = singer_projects
 
         return context
 
@@ -990,6 +1024,13 @@ class SongDetailView(SongOwnerMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
+
+        song = self.get_object()
+        events = Event.objects.filter(
+            eventsong__song=song
+        ).order_by('-started_at').distinct()
+        context['events'] = events
+
         return context
 
 
