@@ -26,6 +26,13 @@
             -
         {% endif %}
     </td></tr>
+    <tr><th>Translator</th><td>
+        {% if song.translator %}
+            <a href="{% url 'secondapp:org_member_detail' url_username song.translator.pk %}">{{ song.translator }}</a>
+        {% else %}
+            -
+        {% endif %}
+    </td></tr>
     <tr><th>Type</th><td>{{ song.group }}</td></tr>
     <tr><th>Year</th><td>{{ song.year|default:"-" }}</td></tr>
     <tr><th>Voices</th><td>{{ song.number_of_voices|default:"-" }}</td></tr>

@@ -24,6 +24,17 @@
             </small>
         </div>
 
+        {% if import_method == 'members' %}
+        <div class="mb-3">
+            <label for="person_mode">Person Skill:</label>
+            <select class="form-control" id="person_mode" name="person_mode" required>
+                {% for skill in skills %}
+                <option value="{{ skill.id }}">{{ skill.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
         <button type="submit" class="btn btn-primary">Upload {{ import_method|title }}</button>
     </form>
 

@@ -14,6 +14,10 @@
         <a href="{% url 'secondapp:org_member_add_poet' user.username %}">
             + Add Poet
         </a>
+
+        <a href="{% url 'secondapp:org_member_add_translator' user.username %}">
+            + Add Translator
+        </a>
     </p>
 {% else %}
     <p>This is organization: {{ url_username }}</p>

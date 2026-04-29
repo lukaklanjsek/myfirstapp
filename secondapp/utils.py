@@ -1,7 +1,7 @@
 # utils.py
 from .models import (Song, Membership, CustomUser, Attendance, AttendanceType,
                      Person, PersonRole, PersonSkill,
-                     MembershipPeriod, Role, Skill,
+                     MembershipPeriod, Role, Skill, ApproximateDate,
                      Singer, Voice, Event, Project, EventType, EventSong)
 import csv, datetime
 from datetime import datetime, date
@@ -190,6 +190,9 @@ LAST_NAME_KEY = "last_name"
 EMAIL_KEY = "email"
 ADDRESS_KEY = "address"
 BIRTH_DATE_KEY = "birth_date"
+BIRTH_APPROX_KEY = "birth_date_approximation"
+DEATH_DATE_KEY = "death_date"
+DEATH_APPROX_KEY = "death_date_approximation"
 LANDLINE_PHONE_KEY = "landline_phone"
 MOBILE_PHONE_KEY = "mobile_phone"
 VOICE_KEY = "voice"
@@ -201,6 +204,9 @@ ALLOWED_PERSON_KEYS = [
     EMAIL_KEY,
     ADDRESS_KEY,
     BIRTH_DATE_KEY,
+    BIRTH_APPROX_KEY,
+    DEATH_DATE_KEY,
+    DEATH_APPROX_KEY,
     LANDLINE_PHONE_KEY,
     MOBILE_PHONE_KEY,
     VOICE_KEY,
@@ -214,11 +220,13 @@ VOICE_TYPES = {
     'Bass': {"Bass", "BASS", "bass", "Basso", "BASSO", "basso", "Bas", "BAS", "bas", "B", "b"}
 }
 
+
+
 # Reverse mapping for O(1) lookup
 VOICE_LOOKUP = {variant: voice for voice, variants in VOICE_TYPES.items() for variant in variants}
 
 
-def import_persons(org_user, request, file_path, delimiter=";"):
+def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
     """Import persons from CSV file."""
     imported_count = 0
     skipped_count = 0
@@ -265,14 +273,7 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                     intervals.append({'start': start, 'end': end})
                 else:
                     print("wrong date format:", item)
-                # parts = item.split('-')
-                # if len(parts) == 6:
-                #     start = parse_date(f"{parts[0]}-{parts[1]}-{parts[2]}")
-                #     end = parse_date(f"{parts[3]}-{parts[4]}-{parts[5]}")
-                #     if start and end:
-                #         intervals.append({'start': start, 'end': end})
-                # else:
-                #     print("wrong date format:", item)
+
         return intervals
 
     # Process CSV
@@ -281,9 +282,9 @@ def import_persons(org_user, request, file_path, delimiter=";"):
         headers = reader.fieldnames
         print(headers)
 
-        for h in headers:
-            if h not in ALLOWED_PERSON_KEYS:
-                return None
+        # for h in headers:
+        #     if h not in ALLOWED_PERSON_KEYS:
+        #         return None
 
         for row in reader:
             try:
@@ -293,33 +294,81 @@ def import_persons(org_user, request, file_path, delimiter=";"):
                 email = (row.get(EMAIL_KEY) or '').strip() or None
                 address = (row.get(ADDRESS_KEY) or '').strip() or None
                 birth_date = parse_bday(row.get(BIRTH_DATE_KEY) or '')
+                birth_approx = (row.get(BIRTH_APPROX_KEY) or '')
+                death_date = parse_bday(row.get(DEATH_DATE_KEY) or '')
+                death_approx = (row.get(DEATH_APPROX_KEY) or '')
                 phone = (row.get(MOBILE_PHONE_KEY) or row.get(LANDLINE_PHONE_KEY) or '').strip() or None
                 voice = (row.get(VOICE_KEY) or '').strip()
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '')
 
-                person = Person.objects.create(     # Create person
+                # check if person already exists within the org
+
+                # write the extracted details of the person:
+                person = Person.objects.create(     # Create person  # needs fixing
                     first_name=first_name,
                     last_name=last_name,
                     email=email,
                     address=address,
                     birth_date=birth_date,
+                    birth_approximate=birth_approx,
+                    death_date=death_date,
+                    death_approximate=death_approx,
                     phone=phone,
                     user=None,
                     owner=None
                 )
+                #                                                                                                                                                                                              │
+                # │ Inside
+                # the
+                # for row in reader: loop, replace
+                # the
+                # unconditional
+                # Person.objects.create(...)
+                # block
+                # with a lookup-first pattern:                                                                                                      │
+                # │                                                                                                                                                                                                                                  │
+                # │  # 1. Try to find an existing person under this org_user with matching name                                                                                                                                                       │
+                # │ existing = Person.objects.filter(                                                                                                                                                                                                │
+                # │     memberships__user = org_user,                                                                                                                                                                                                  │
+                # │     first_name = first_name,                                                                                                                                                                                                       │
+                # │     last_name = last_name                                                                                                                                                                                                          │
+                # │ ).first()                                                                                                                                                                                                                        │
+                # │                                                                                                                                                                                                                                  │
+                # │ if existing:                                                                                                                                                                                                                     │
+                # │  # Person already belongs to this org — only add the new skill if missing                                                                                                                                                     │
+                # │     PersonSkill.objects.get_or_create(person=existing,
+                #                                         skill_id=person_mode)                                                                                                                                                     │
+                # │     imported_count += 1                                                                                                                                                                                                          │
+                # │     continue  # skip re-creating membership, periods, role, etc.                                                                                                                                                                │
+                # │                                                                                                                                                                                                                                  │
+                # │  # 2. Otherwise create a new person as before                                                                                                                                                                                     │
+                # │ person = Person.objects.create(                                                                                                                                                                                                  │
+                # │     first_name = first_name,                                                                                                                                                                                                       │
+                # │     last_name = last_name,                                                                                                                                                                                                         │
+                # │     email = email,                                                                                                                                                                                                                 │
+                # │     address = address,                                                                                                                                                                                                             │
+                # │     birth_date = birth_date,                                                                                                                                                                                                       │
+                # │     birth_approximate = birth_approx,                                                                                                                                                                                              │
+                # │     death_date = death_date,                                                                                                                                                                                                       │
+                # │     death_approximate = death_approx,                                                                                                                                                                                              │
+                # │     phone = phone,                                                                                                                                                                                                                 │
+                # │     user = None,                                                                                                                                                                                                                   │
+                # │     owner = None                                                                                                                                                                                                                   │
+                # │ )                                                                                                                                                                                                                                │
+                # │ PersonSkill.objects.create(person=person,
+                #                              skill_id=person_mode)                                                                                                                                                                  │
+                # │  # ... rest of voice / membership / period / role creation unchanged
+
+
+
+                PersonSkill.objects.create(person=person, skill_id=person_mode)
 
                 try:    # PersonSkill and Voice
                     voice_type = VOICE_LOOKUP.get(voice)
                     if voice_type:
-                        PersonSkill.objects.create(person=person, skill_id=Skill.SINGER)
                         voice_instance = Voice.objects.get(name=voice_type)
                         Singer.objects.create(person=person, voice=voice_instance)
-                        # print(f"Successfully assigned voice {voice_type} to {first_name}")
-                    # else:
-                        # PersonSkill.objects.create(person=person, skill_id=Skill.CONDUCTOR)
-                        # print(f"Assigned skill conductor to {first_name}")
                 except Exception as e:
-                    # print(f"Warning: Failed to assign voice/skill to {first_name}: {str(e)}")
                     error_details.append(f"Row {reader.line_num} - Voice assignment failed for {first_name}: {str(e)}")
 
                 has_active = bool(activity_ranges and any(period['end'] is None for period in activity_ranges))

@@ -116,15 +116,24 @@ class AttendanceType(models.Model):
 class ApproximateDate(models.Model):
     """Flag of date approximations."""
     EXACT_DATE = 0
-    YEAR_APPROX = 1
-    MONTH_DAY_APPROX = 2
+    MONTH_DAY_APPROX = 1
+    YEAR_APPROX = 2
 
-    approximation = models.CharField()
+    approximation = models.CharField(max_length=2)
     additional_notes = models.CharField("short description of approx", max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.approximation
+
+
+class LanguageCode(models.Model):
+    """
+    CHOICES = 'en-US', 'es-ES', 'fr-FR',...
+    """
+    language_code = models.CharField("example: en-US", max_length=7)
+    additional_notes = models.CharField("language code in english", max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class UserManager(BaseUserManager):
@@ -403,6 +412,14 @@ class Song(models.Model):
         on_delete=PROTECT,
         related_name="written_songs",
         limit_choices_to={'person_skill__skill_id': Skill.POET}
+    )
+    translator = models.ForeignKey(
+        Person,
+        on_delete=PROTECT,
+        related_name="translated_songs",
+        limit_choices_to={'person_skill__skill_id': Skill.TRANSLATOR},
+        null=True,
+        blank=True
     )
 
     year = models.IntegerField("year of creation", blank=True, null=True)

@@ -139,11 +139,11 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
                 self.initial["skills"] = [poet_skill.id]
 
         elif preset == 'translator':
-            poet_skill = Skill.objects.filter(title__iexact="poet").first()
+            translator_skill = Skill.objects.filter(title__iexact="translator").first()
             external_role = Role.objects.filter(title__iexact="external").first()
-            if poet_skill and external_role:
+            if translator_skill and external_role:
                 self.initial['roles'] = [external_role.id]
-                self.initial["skills"] = [poet_skill.id]
+                self.initial["skills"] = [translator_skill.id]
 
         # For edit mode: pre-populate voice
         # if person:
@@ -174,6 +174,7 @@ class SongForm(forms.ModelForm):
             "title",
             "composer",
             "poet",
+            "translator",
             "number_of_pages",
             "number_of_copies",
             "year",
@@ -193,6 +194,7 @@ class SongForm(forms.ModelForm):
         if user:
             self.fields['composer'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.COMPOSER)
             self.fields['poet'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.POET)
+            self.fields['translator'].queryset = Person.objects.for_user_with_skill(user=user, skill_id=Skill.TRANSLATOR)
 
 
 class ProjectForm(forms.ModelForm):

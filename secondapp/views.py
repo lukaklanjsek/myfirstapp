@@ -2080,6 +2080,7 @@ class ImportDashboardView(View):
 
     VALID_METHODS = ["songs", "members", "events", "attendance", "event_songs"]
 
+
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking before processing the request."""
         url_username = self.kwargs.get("username")
@@ -2107,6 +2108,8 @@ class ImportDashboardView(View):
             'org_user': self.org_user,
             'url_username': username,
         }
+        if self.import_method == 'members':
+            context['skills'] = Skill.objects.all()
         return render(request, self.template_name, context)
 
     def post(self, request, username, method):
@@ -2119,6 +2122,7 @@ class ImportDashboardView(View):
         delimiter = request.POST.get('delimiter', ';')
         if delimiter == '\\t':  # Convert literal '\t' string to actual tab character
             delimiter = '\t'
+        person_mode = request.POST.get('person_mode')
 
         try:
             # Save uploaded file temporarily
@@ -2137,7 +2141,7 @@ class ImportDashboardView(View):
                 if self.import_method == 'songs':
                     result = import_songs(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'members':
-                    result = import_persons(self.org_user, request, tmp_file_path, delimiter)
+                    result = import_persons(self.org_user, person_mode, request, tmp_file_path, delimiter)
                 elif self.import_method == 'events':
                     result = import_events(self.org_user, request, tmp_file_path, delimiter)
                 elif self.import_method == 'attendance':
