@@ -386,26 +386,7 @@ class OrgMemberDetailView(DetailView):
             self.customuser = request.user
 
         return super().dispatch(request, *args, **kwargs)
-    #
-    # def get_queryset(self):
-    #     url_username = self.kwargs["username"]
-    #     organization = get_object_or_404(CustomUser, username=url_username)
-    #     # check user role
-    #     viewer_role = AccessControl.get_org_roles(
-    #         self.request.user,
-    #         organization
-    #     )
-    #     if not viewer_role.exists():
-    #         raise PermissionDenied("No access to this organization")
-    #     # get memberships
-    #     visible_memberships = AccessControl.get_visible_members(
-    #         self.request.user,
-    #         organization
-    #     )
-    #     # get only persons from this membership
-    #     return Person.objects.filter(
-    #         memberships__in=visible_memberships
-    #     ).distinct()
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -878,94 +859,6 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                     person=self.person,
                     skill=instrumentalist_skill
                 ).delete()
-
-#
-# @method_decorator(login_required, name="dispatch")
-# class OrgMemberDetailView(DetailView):
-#     model = Person
-#     template_name = "secondapp/org_person.html"
-#     permission_check_method = AccessControl.can_view_song
-
-
-
-# @method_decorator(login_required, name="dispatch")
-# class SingerFormView(FormView):
-#     template_name = "secondapp/singer_form.html"
-#     form_class = SingerForm
-#     success_url = reverse_lazy('secondapp:org_person')
-#
-#     def dispatch(self, request, *args, **kwargs):
-#         url_username = self.kwargs["username"]
-#         self.customuser = get_object_or_404(
-#             CustomUser,
-#             username=url_username
-#         )
-#         self.person = get_object_or_404(Person, pk=self.kwargs["pk"])
-#         viewer_role = AccessControl.get_org_roles(
-#             request.user,
-#             url_username
-#         )
-#         is_admin = viewer_role.filter(id=Role.ADMIN).exists()
-#         is_owner = self.person.user == request.user
-#
-#         if not (is_admin or is_owner):
-#             raise PermissionDenied("No permission to edit")
-#
-#         return super().dispatch(request, *args, **kwargs)
-#
-#     def get_form(self, form_class=None):
-#         # pre-fill form with existing data
-#         form = super().get_form(form_class)
-#
-#         if self.request.method == "GET":
-#             current_voice_ids = self.person.person_skill.values_list(
-#                 "voice_id", flat=True
-#             )
-#             form.initial = {
-#                 # person info
-#                 "voice": current_voice_ids,
-#             }
-#         return form
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["organization"] = self.customuser
-#         return context
-#
-#
-#     # def form_valid(self, form):
-#     #     selected = form.cleaned_data['options']
-#     #     singer = Singer.objects.get_or_create(
-#     #         person=self.person,
-#     #         defaults={'voice': selected}
-#     #     )
-#     #
-#     #
-#     #     return super().form_valid(form)
-#     def form_valid(self, form):
-#         self._update_voice(form.cleaned_data["roles"])
-#         return redirect("secondapp:org_member_list",username=self.kwargs["username"])
-#
-#     def _update_voice(self, new_voices):
-#         """sync skills - add new, remove old"""
-#         # current skills
-#         current_voice = Singer.objects.filter(person=self.person)
-#         current_voice_ids = set(current_voice.values_list("voice_id"))
-#
-#         # new skills
-#         new_voice_ids = {voice.id for voice in new_voices}
-#
-#         # do the magic
-#         for voice_id in (new_voice_ids - current_voice_ids):
-#             Voice.objects.create(
-#                 person=self.person,
-#                 voice_id=voice_id
-#             )
-#
-#         # remove old skills
-#         removed_voice_ids = current_voice_ids - new_voice_ids
-#         if removed_voice_ids:
-#             current_voice.filter(voice_id__in=removed_voice_ids).delete()
 
 
 
@@ -2417,39 +2310,6 @@ class ProjectDeleteView(LoginRequiredMixin, DeleteView):
         return context
 
 
-
-# @method_decorator(login_required, name='dispatch')
-# class ToggleEventLockView(View):
-#     """Admin-only view to lock/unlock event attendance."""
-#
-#     def post(self, request, username, pk):
-#         org_user = get_object_or_404(CustomUser, username=username)
-#         event = get_object_or_404(Event, pk=pk, user=org_user)
-#
-#         # Check if user is admin
-#         is_admin = AccessControl.can_add_event(
-#             request.user,
-#             org_user
-#         ).filter(person__roles__id=Role.ADMIN).exists()
-#
-#         if not is_admin:
-#             return HttpResponseForbidden("Only admins can lock/unlock events.")
-#
-#         # Toggle lock
-#         event.attendance_locked = not event.attendance_locked
-#
-#         if event.attendance_locked:
-#             event.locked_by = request.user
-#             event.locked_at = timezone.now()
-#             messages.success(request, f" Event '{event.name}' attendance is now LOCKED.")
-#         else:
-#             event.locked_by = None
-#             event.locked_at = None
-#             messages.success(request, f" Event '{event.name}' attendance is now UNLOCKED.")
-#
-#         event.save()
-#
-#         return redirect('secondapp:event_detail', username=username, pk=pk)
 
 
 def quick_add_rehearsal(request, username):
