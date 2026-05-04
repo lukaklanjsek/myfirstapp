@@ -42,6 +42,10 @@
         <th>Keywords</th>
         <td>{{ song.keywords|default:"-" }}</td>
     </tr>
+    <tr>
+        <th>Original Language</th>
+        <td>{{ song.languagecode|default:"-" }}</td>
+    </tr>
 </table>
 
 {% if song.quotes.all %}
@@ -61,6 +65,14 @@
 {% if song.lyrics %}
 <h3>Lyrics</h3>
 <div>{{ song.lyrics|linebreaks }}</div>
+{% endif %}
+
+{% if song.lyricstranslation_set.all %}
+<h3>Lyrics Translations</h3>
+{% for t in song.lyricstranslation_set.all %}
+    <h4>{{ t.languagecode }}{% if t.translator %} — {{ t.translator }}{% endif %}</h4>
+    <div>{{ t.translation|linebreaks }}</div>
+{% endfor %}
 {% endif %}
 
 {% if events %}

@@ -129,11 +129,12 @@ class ApproximateDate(models.Model):
 
 class LanguageCode(models.Model):
     """
-    CHOICES = 'en-US', 'es-ES', 'fr-FR',...
+    CHOICES = 'en', 'es', 'fr',...
     """
-    language_code = models.CharField("example: en-US", max_length=7)
-    additional_notes = models.CharField("language code in english", max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    language_code = models.CharField("en", max_length=7, primary_key=True)
+
+    def __str__(self):
+        return self.language_code
 
 
 class UserManager(BaseUserManager):
@@ -438,7 +439,9 @@ class Song(models.Model):
     )
 
     internal_id = models.PositiveIntegerField("ID", blank=True, null=True)
-    lyrics = models.TextField("song text", blank=True, null=True)
+
+    lyrics = models.TextField("lyrics", blank=True, null=True)
+    languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT, blank=True, null=True)
 
     class Meta:
         constraints = [
@@ -584,6 +587,20 @@ class Instrumentalist(models.Model):
     person = models.ForeignKey(Person, on_delete=models.PROTECT)
     instrument = models.ForeignKey(Instrument, on_delete=models.PROTECT)
 
+
+class LyricsTranslation(models.Model):
+    """
+    Place for the translation of lyrics.
+    Translator is optional, language and song are mandatory.
+    Each language has its own input.
+    """
+    translation = models.TextField()
+    song = models.ForeignKey(Song, on_delete=models.PROTECT)
+    languagecode = models.ForeignKey(LanguageCode, on_delete=models.PROTECT)
+    translator = models.ForeignKey(Person, on_delete=models.PROTECT, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 

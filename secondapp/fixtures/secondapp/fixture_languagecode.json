@@ -1,0 +1,1283 @@
+[
+  {
+    "model": "secondapp.languagecode",
+    "pk": "aa",
+    "fields": {
+      "language_code": "aa"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ab",
+    "fields": {
+      "language_code": "ab"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ae",
+    "fields": {
+      "language_code": "ae"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "af",
+    "fields": {
+      "language_code": "af"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ak",
+    "fields": {
+      "language_code": "ak"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "am",
+    "fields": {
+      "language_code": "am"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "an",
+    "fields": {
+      "language_code": "an"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ar",
+    "fields": {
+      "language_code": "ar"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "as",
+    "fields": {
+      "language_code": "as"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "av",
+    "fields": {
+      "language_code": "av"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ay",
+    "fields": {
+      "language_code": "ay"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "az",
+    "fields": {
+      "language_code": "az"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ba",
+    "fields": {
+      "language_code": "ba"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "be",
+    "fields": {
+      "language_code": "be"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bg",
+    "fields": {
+      "language_code": "bg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bi",
+    "fields": {
+      "language_code": "bi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bm",
+    "fields": {
+      "language_code": "bm"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bn",
+    "fields": {
+      "language_code": "bn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bo",
+    "fields": {
+      "language_code": "bo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "br",
+    "fields": {
+      "language_code": "br"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "bs",
+    "fields": {
+      "language_code": "bs"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ca",
+    "fields": {
+      "language_code": "ca"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ce",
+    "fields": {
+      "language_code": "ce"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ch",
+    "fields": {
+      "language_code": "ch"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "co",
+    "fields": {
+      "language_code": "co"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "cr",
+    "fields": {
+      "language_code": "cr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "cs",
+    "fields": {
+      "language_code": "cs"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "cu",
+    "fields": {
+      "language_code": "cu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "cv",
+    "fields": {
+      "language_code": "cv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "cy",
+    "fields": {
+      "language_code": "cy"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "da",
+    "fields": {
+      "language_code": "da"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "de",
+    "fields": {
+      "language_code": "de"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "dv",
+    "fields": {
+      "language_code": "dv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "dz",
+    "fields": {
+      "language_code": "dz"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ee",
+    "fields": {
+      "language_code": "ee"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "el",
+    "fields": {
+      "language_code": "el"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "en",
+    "fields": {
+      "language_code": "en"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "eo",
+    "fields": {
+      "language_code": "eo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "es",
+    "fields": {
+      "language_code": "es"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "et",
+    "fields": {
+      "language_code": "et"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "eu",
+    "fields": {
+      "language_code": "eu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fa",
+    "fields": {
+      "language_code": "fa"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ff",
+    "fields": {
+      "language_code": "ff"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fi",
+    "fields": {
+      "language_code": "fi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fj",
+    "fields": {
+      "language_code": "fj"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fo",
+    "fields": {
+      "language_code": "fo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fr",
+    "fields": {
+      "language_code": "fr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "fy",
+    "fields": {
+      "language_code": "fy"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ga",
+    "fields": {
+      "language_code": "ga"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "gd",
+    "fields": {
+      "language_code": "gd"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "gl",
+    "fields": {
+      "language_code": "gl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "gn",
+    "fields": {
+      "language_code": "gn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "gu",
+    "fields": {
+      "language_code": "gu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "gv",
+    "fields": {
+      "language_code": "gv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ha",
+    "fields": {
+      "language_code": "ha"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "he",
+    "fields": {
+      "language_code": "he"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "hi",
+    "fields": {
+      "language_code": "hi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ho",
+    "fields": {
+      "language_code": "ho"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "hr",
+    "fields": {
+      "language_code": "hr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ht",
+    "fields": {
+      "language_code": "ht"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "hu",
+    "fields": {
+      "language_code": "hu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "hy",
+    "fields": {
+      "language_code": "hy"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "hz",
+    "fields": {
+      "language_code": "hz"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ia",
+    "fields": {
+      "language_code": "ia"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "id",
+    "fields": {
+      "language_code": "id"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ie",
+    "fields": {
+      "language_code": "ie"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ig",
+    "fields": {
+      "language_code": "ig"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ii",
+    "fields": {
+      "language_code": "ii"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ik",
+    "fields": {
+      "language_code": "ik"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "io",
+    "fields": {
+      "language_code": "io"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "is",
+    "fields": {
+      "language_code": "is"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "it",
+    "fields": {
+      "language_code": "it"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "iu",
+    "fields": {
+      "language_code": "iu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ja",
+    "fields": {
+      "language_code": "ja"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "jv",
+    "fields": {
+      "language_code": "jv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ka",
+    "fields": {
+      "language_code": "ka"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kg",
+    "fields": {
+      "language_code": "kg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ki",
+    "fields": {
+      "language_code": "ki"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kj",
+    "fields": {
+      "language_code": "kj"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kk",
+    "fields": {
+      "language_code": "kk"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kl",
+    "fields": {
+      "language_code": "kl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "km",
+    "fields": {
+      "language_code": "km"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kn",
+    "fields": {
+      "language_code": "kn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ko",
+    "fields": {
+      "language_code": "ko"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kr",
+    "fields": {
+      "language_code": "kr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ks",
+    "fields": {
+      "language_code": "ks"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ku",
+    "fields": {
+      "language_code": "ku"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kv",
+    "fields": {
+      "language_code": "kv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "kw",
+    "fields": {
+      "language_code": "kw"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ky",
+    "fields": {
+      "language_code": "ky"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "la",
+    "fields": {
+      "language_code": "la"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lb",
+    "fields": {
+      "language_code": "lb"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lg",
+    "fields": {
+      "language_code": "lg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "li",
+    "fields": {
+      "language_code": "li"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ln",
+    "fields": {
+      "language_code": "ln"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lo",
+    "fields": {
+      "language_code": "lo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lt",
+    "fields": {
+      "language_code": "lt"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lu",
+    "fields": {
+      "language_code": "lu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "lv",
+    "fields": {
+      "language_code": "lv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mg",
+    "fields": {
+      "language_code": "mg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mh",
+    "fields": {
+      "language_code": "mh"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mi",
+    "fields": {
+      "language_code": "mi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mk",
+    "fields": {
+      "language_code": "mk"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ml",
+    "fields": {
+      "language_code": "ml"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mn",
+    "fields": {
+      "language_code": "mn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mr",
+    "fields": {
+      "language_code": "mr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ms",
+    "fields": {
+      "language_code": "ms"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "mt",
+    "fields": {
+      "language_code": "mt"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "my",
+    "fields": {
+      "language_code": "my"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "na",
+    "fields": {
+      "language_code": "na"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nb",
+    "fields": {
+      "language_code": "nb"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nd",
+    "fields": {
+      "language_code": "nd"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ne",
+    "fields": {
+      "language_code": "ne"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ng",
+    "fields": {
+      "language_code": "ng"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nl",
+    "fields": {
+      "language_code": "nl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nn",
+    "fields": {
+      "language_code": "nn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "no",
+    "fields": {
+      "language_code": "no"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nr",
+    "fields": {
+      "language_code": "nr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "nv",
+    "fields": {
+      "language_code": "nv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ny",
+    "fields": {
+      "language_code": "ny"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "oc",
+    "fields": {
+      "language_code": "oc"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "oj",
+    "fields": {
+      "language_code": "oj"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "om",
+    "fields": {
+      "language_code": "om"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "or",
+    "fields": {
+      "language_code": "or"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "os",
+    "fields": {
+      "language_code": "os"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "pa",
+    "fields": {
+      "language_code": "pa"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "pi",
+    "fields": {
+      "language_code": "pi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "pl",
+    "fields": {
+      "language_code": "pl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ps",
+    "fields": {
+      "language_code": "ps"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "pt",
+    "fields": {
+      "language_code": "pt"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "qu",
+    "fields": {
+      "language_code": "qu"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "rm",
+    "fields": {
+      "language_code": "rm"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "rn",
+    "fields": {
+      "language_code": "rn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ro",
+    "fields": {
+      "language_code": "ro"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ru",
+    "fields": {
+      "language_code": "ru"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "rw",
+    "fields": {
+      "language_code": "rw"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sa",
+    "fields": {
+      "language_code": "sa"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sc",
+    "fields": {
+      "language_code": "sc"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sd",
+    "fields": {
+      "language_code": "sd"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "se",
+    "fields": {
+      "language_code": "se"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sg",
+    "fields": {
+      "language_code": "sg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "si",
+    "fields": {
+      "language_code": "si"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sk",
+    "fields": {
+      "language_code": "sk"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sl",
+    "fields": {
+      "language_code": "sl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sm",
+    "fields": {
+      "language_code": "sm"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sn",
+    "fields": {
+      "language_code": "sn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "so",
+    "fields": {
+      "language_code": "so"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sq",
+    "fields": {
+      "language_code": "sq"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sr",
+    "fields": {
+      "language_code": "sr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ss",
+    "fields": {
+      "language_code": "ss"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "st",
+    "fields": {
+      "language_code": "st"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "su",
+    "fields": {
+      "language_code": "su"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sv",
+    "fields": {
+      "language_code": "sv"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "sw",
+    "fields": {
+      "language_code": "sw"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ta",
+    "fields": {
+      "language_code": "ta"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "te",
+    "fields": {
+      "language_code": "te"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tg",
+    "fields": {
+      "language_code": "tg"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "th",
+    "fields": {
+      "language_code": "th"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ti",
+    "fields": {
+      "language_code": "ti"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tk",
+    "fields": {
+      "language_code": "tk"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tl",
+    "fields": {
+      "language_code": "tl"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tn",
+    "fields": {
+      "language_code": "tn"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "to",
+    "fields": {
+      "language_code": "to"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tr",
+    "fields": {
+      "language_code": "tr"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ts",
+    "fields": {
+      "language_code": "ts"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tt",
+    "fields": {
+      "language_code": "tt"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "tw",
+    "fields": {
+      "language_code": "tw"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ty",
+    "fields": {
+      "language_code": "ty"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ug",
+    "fields": {
+      "language_code": "ug"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "uk",
+    "fields": {
+      "language_code": "uk"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ur",
+    "fields": {
+      "language_code": "ur"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "uz",
+    "fields": {
+      "language_code": "uz"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "ve",
+    "fields": {
+      "language_code": "ve"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "vi",
+    "fields": {
+      "language_code": "vi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "vo",
+    "fields": {
+      "language_code": "vo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "wa",
+    "fields": {
+      "language_code": "wa"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "wo",
+    "fields": {
+      "language_code": "wo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "xh",
+    "fields": {
+      "language_code": "xh"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "yi",
+    "fields": {
+      "language_code": "yi"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "yo",
+    "fields": {
+      "language_code": "yo"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "za",
+    "fields": {
+      "language_code": "za"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "zh",
+    "fields": {
+      "language_code": "zh"
+    }
+  },
+  {
+    "model": "secondapp.languagecode",
+    "pk": "zu",
+    "fields": {
+      "language_code": "zu"
+    }
+  }
+]

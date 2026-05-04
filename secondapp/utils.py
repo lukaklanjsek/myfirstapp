@@ -319,6 +319,7 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         if (MOBILE_PHONE_KEY in present_optional or LANDLINE_PHONE_KEY in present_optional) else None
                 voice = (row.get(VOICE_KEY) or '').strip() if VOICE_KEY in present_optional else ''
                 activity_ranges = parse_activity(row.get(ACTIVITY_KEY) or '') if ACTIVITY_KEY in present_optional else []
+                has_active = bool(activity_ranges and any(p['end'] is None for p in activity_ranges))
 
                 if not first_name or not last_name:
                     raise ValueError(f"first_name and last_name are required (got: '{first_name}', '{last_name}')")
@@ -330,7 +331,32 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                 ).first()
 
                 if existing:
+                    updates = {k: v for k, v in {
+                        'email': email, 'address': address, 'phone': phone,
+                        'birth_date': birth_date, 'birth_approximate': birth_approx,
+                        'death_date': death_date, 'death_approximate': death_approx,
+                    }.items() if v is not None}
+                    if updates:
+                        Person.objects.filter(pk=existing.pk).update(**updates)
+
                     PersonSkill.objects.get_or_create(person=existing, skill_id=person_mode)
+                    Membership.objects.get_or_create(user=org_user, person=existing)
+
+                    voice_type = VOICE_LOOKUP.get(voice)
+                    if voice and voice_type:
+                        voice_instance = Voice.objects.filter(name=voice_type).first()
+                        if voice_instance:
+                            Singer.objects.get_or_create(person=existing, defaults={'voice': voice_instance})
+
+                    for period in activity_ranges:
+                        MembershipPeriod.objects.get_or_create(
+                            user=org_user, person=existing, started_at=period['start'],
+                            defaults={'role_id': Role.MEMBER, 'ended_at': period['end']}
+                        )
+
+                    if has_active:
+                        PersonRole.objects.get_or_create(person=existing, role_id=Role.MEMBER)
+
                     imported_count += 1
                     continue
 
@@ -357,8 +383,6 @@ def import_persons(org_user, person_mode, request, file_path, delimiter=";"):
                         Singer.objects.create(person=person, voice=voice_instance)
                 except Exception as e:
                     error_details.append(f"Row {reader.line_num} - Voice assignment failed for {first_name}: {str(e)}")
-
-                has_active = bool(activity_ranges and any(period['end'] is None for period in activity_ranges))
 
                 try: # Check if membership already exists to prevent duplicates
                     membership, created = Membership.objects.get_or_create(

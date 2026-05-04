@@ -20,6 +20,19 @@
     <p>{{ form.phone.label_tag }} {{ form.phone }}</p>
     <p>{{ form.address.label_tag }} {{ form.address }}</p>
 
+    <!-- Date fields -->
+    <fieldset>
+        <legend>Birth Information</legend>
+        <p>{{ form.birth_date.label_tag }} {{ form.birth_date }}</p>
+        <p>{{ form.birth_approximate.label_tag }} {{ form.birth_approximate }}</p>
+    </fieldset>
+
+    <fieldset>
+        <legend>Death Information</legend>
+        <p>{{ form.death_date.label_tag }} {{ form.death_date }}</p>
+        <p>{{ form.death_approximate.label_tag }} {{ form.death_approximate }}</p>
+    </fieldset>
+
     <!-- Roles -->
     {{ form.roles.label_tag }}
     {{ form.roles }}

@@ -21,7 +21,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View, FormView, TemplateView
 from django.views.generic.edit import DeleteView
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Q, Prefetch, Max
 from django.apps import apps
 from django.conf import settings
 import os
@@ -43,10 +43,10 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import OrgMemberForm
 from .models import Organization, Person, Membership, MembershipPeriod, Role, PersonSkill, PersonQuerySet, PersonRole
 from .models import CustomUser, Organization, Person, Membership, Role, Song, Skill, Singer, Instrumentalist
-from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote, Project
+from .models import Event, EventSong, Attendance, AttendanceType, EventType, Voice, Instrument, Quote, Project, LyricsTranslation
 from .forms import RegisterForm, OrganizationForm, PersonForm, SongForm, SkillForm, ProjectForm # SingerForm, InstrumentalistForm
 from .forms import CustomUserCreationForm, EventForm, EventSongFormSet, AttendanceFormSet, AddAttendanceForm
-from .forms import AddSongToEventForm, AddEventToProjectForm, QuoteForm, QuoteFormSet
+from .forms import AddSongToEventForm, AddEventToProjectForm, QuoteForm, QuoteFormSet, LyricsTranslationFormSet
 from .forms import AddSongToProjectForm, AddGuestToProjectForm
 from .mixins import  SkillListAndCreateMixin, SongOwnerMixin
 from .permissions import AccessControl
@@ -330,6 +330,8 @@ class OrgMemberListView(ListView):
         role_id = self.request.GET.get('role', '').strip()
         if role_id:
             queryset = queryset.filter(person__roles__id=int(role_id))
+        elif 'role' not in self.request.GET:
+            queryset = queryset.filter(person__roles__id=Role.MEMBER)
 
         sort_field_map = {
             'name': ('person__last_name', 'person__first_name'),
@@ -348,7 +350,10 @@ class OrgMemberListView(ListView):
         context["q"] = self.request.GET.get('q', '')
         context["current_sort"] = self.request.GET.get('sort', 'name')
         context["reverse"] = self.request.GET.get('reverse', 'false') == 'true'
-        context["selected_role"] = self.request.GET.get('role', '')
+        if 'role' in self.request.GET:
+            context["selected_role"] = self.request.GET.get('role', '')
+        else:
+            context["selected_role"] = str(Role.MEMBER)
 
         url_username = self.kwargs["username"]
         visible_members = AccessControl.get_visible_members(
@@ -400,10 +405,44 @@ class OrgMemberDetailView(DetailView):
         )
 
         person = self.object
+
+        # Composed songs
+        composed_songs = person.composed_songs.all()
+        if composed_songs.exists():
+            context["composed_songs"] = composed_songs
+
+        # Written songs
+        written_songs = person.written_songs.all()
+        if written_songs.exists():
+            context["written_songs"] = written_songs
+
+        # Translation pairs with song counts
+        translations = LyricsTranslation.objects.filter(
+            translator=person
+        ).select_related('song__languagecode', 'languagecode')
+        if translations.exists():
+            translation_pairs = []
+            # Group by (original language, translation language) pair
+            pair_dict = {}
+            for trans in translations:
+                original_lang = trans.song.languagecode.language_code if trans.song.languagecode else "Unknown"
+                translation_lang = trans.languagecode.language_code if trans.languagecode else "Unknown"
+                key = (original_lang, translation_lang)
+                if key not in pair_dict:
+                    pair_dict[key] = {"original_lang": original_lang, "translation_lang": translation_lang, "count": 0}
+                pair_dict[key]["count"] += 1
+
+            translation_pairs = list(pair_dict.values())
+            if translation_pairs:
+                context["translation_pairs"] = translation_pairs
+
+        # Singer projects (reordered by latest event date)
         if person.skills.filter(id=Skill.SINGER).exists():
             projects = Project.objects.filter(
                 events__attendance__person=person
-            ).distinct()
+            ).annotate(
+                latest_event=Max('events__started_at')
+            ).distinct().order_by('-latest_event')
 
             singer_projects = []
             for project in projects:
@@ -431,6 +470,51 @@ class OrgMemberDetailView(DetailView):
                 })
 
             context["singer_projects"] = singer_projects
+
+            # Singer voices
+            singer_voices = person.singer_set.all()
+            if singer_voices.exists():
+                context["singer_voices"] = singer_voices
+
+        # Instrumentalist projects (similar to singer projects)
+        if person.skills.filter(id=Skill.INSTRUMENTALIST).exists():
+            projects = Project.objects.filter(
+                events__attendance__person=person
+            ).annotate(
+                latest_event=Max('events__started_at')
+            ).distinct().order_by('-latest_event')
+
+            instrumentalist_projects = []
+            for project in projects:
+                perf_attended = Attendance.objects.filter(
+                    person=person,
+                    event__project=project,
+                    event__event_type_id__in=[EventType.PERFORMANCE, EventType.CONCERT, EventType.RECORDING],
+                    attendance_type_id=AttendanceType.PRESENT,
+                ).count()
+                rehearsals_present = Attendance.objects.filter(
+                    person=person,
+                    event__project=project,
+                    event__event_type_id=EventType.REHEARSAL,
+                    attendance_type_id=AttendanceType.PRESENT,
+                ).count()
+                rehearsals_total = Event.objects.filter(
+                    project=project,
+                    event_type_id=EventType.REHEARSAL,
+                ).count()
+                instrumentalist_projects.append({
+                    "project": project,
+                    "performances_attended": perf_attended,
+                    "rehearsals_present": rehearsals_present,
+                    "rehearsals_total": rehearsals_total,
+                })
+
+            context["instrumentalist_projects"] = instrumentalist_projects
+
+            # Instrumentalist instruments
+            instrumentalist_instruments = person.instrumentalist_set.all()
+            if instrumentalist_instruments.exists():
+                context["instrumentalist_instruments"] = instrumentalist_instruments
 
         return context
 
@@ -491,6 +575,9 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
 
             # 5. add instruments
             self._add_instruments(person, form.cleaned_data["instruments"])
+
+            # 6. add date fields
+            self._add_dates(person, form)
 
         next_url = self.request.GET.get('next', '')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
@@ -606,6 +693,18 @@ class OrgMemberAddView( FormView):  # OrgMemberMixin,
                 skill=instrumentalist_skill
             )
 
+    def _add_dates(self, person, form):
+        """Update person with date fields."""
+        if form.cleaned_data.get('birth_date'):
+            person.birth_date = form.cleaned_data['birth_date']
+        if form.cleaned_data.get('birth_approximate'):
+            person.birth_approximate = form.cleaned_data['birth_approximate']
+        if form.cleaned_data.get('death_date'):
+            person.death_date = form.cleaned_data['death_date']
+        if form.cleaned_data.get('death_approximate'):
+            person.death_approximate = form.cleaned_data['death_approximate']
+        person.save()
+
 
 
 
@@ -677,6 +776,11 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                 "email": self.person.email,
                 "phone": self.person.phone,
                 "address": self.person.address,
+                # date fields
+                "birth_date": self.person.birth_date,
+                "birth_approximate": self.person.birth_approximate_id,
+                "death_date": self.person.death_date,
+                "death_approximate": self.person.death_approximate_id,
                 # m2m relationships
                 "roles": current_role_ids,
                 "skills": current_skill_ids,
@@ -707,6 +811,9 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
 
             # 5. update instruments
             self._update_instruments(form.cleaned_data["instruments"])
+
+            # 6. update date fields
+            self._update_dates(form)
 
         return redirect("secondapp:org_member_list",username=self.kwargs["username"])
 
@@ -860,6 +967,25 @@ class OrgMemberEditView( FormView):  # OrgMemberMixin,
                     skill=instrumentalist_skill
                 ).delete()
 
+    def _update_dates(self, form):
+        """Update person with date fields."""
+        if form.cleaned_data.get('birth_date'):
+            self.person.birth_date = form.cleaned_data['birth_date']
+        else:
+            self.person.birth_date = None
+        if form.cleaned_data.get('birth_approximate'):
+            self.person.birth_approximate = form.cleaned_data['birth_approximate']
+        else:
+            self.person.birth_approximate = None
+        if form.cleaned_data.get('death_date'):
+            self.person.death_date = form.cleaned_data['death_date']
+        else:
+            self.person.death_date = None
+        if form.cleaned_data.get('death_approximate'):
+            self.person.death_approximate = form.cleaned_data['death_approximate']
+        else:
+            self.person.death_approximate = None
+        self.person.save()
 
 
 @method_decorator(login_required, name='dispatch')
@@ -938,7 +1064,7 @@ class SongCreateView(SongOwnerMixin, CreateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, quote_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, translation_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         if quote_formset is not None:
@@ -947,6 +1073,16 @@ class SongCreateView(SongOwnerMixin, CreateView):
             context['quote_formset'] = QuoteFormSet(self.request.POST, prefix='quotes')
         else:
             context['quote_formset'] = QuoteFormSet(prefix='quotes')
+        if translation_formset is not None:
+            context['translation_formset'] = translation_formset
+        elif self.request.POST:
+            context['translation_formset'] = LyricsTranslationFormSet(
+                self.request.POST, prefix='translations', user=self.owner_user
+            )
+        else:
+            context['translation_formset'] = LyricsTranslationFormSet(
+                prefix='translations', user=self.owner_user
+            )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -958,6 +1094,14 @@ class SongCreateView(SongOwnerMixin, CreateView):
             post_data['quotes-TOTAL_FORMS'] = total + 1
             kf = QuoteFormSet(post_data, prefix='quotes')
             return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
+        if request.POST.get('action') == 'add_translation_row':
+            self.object = None
+            form = self.get_form()
+            post_data = request.POST.copy()
+            total = int(post_data.get('translations-TOTAL_FORMS', 0))
+            post_data['translations-TOTAL_FORMS'] = total + 1
+            tf = LyricsTranslationFormSet(post_data, prefix='translations', user=self.owner_user)
+            return self.render_to_response(self.get_context_data(form=form, translation_formset=tf))
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -966,6 +1110,11 @@ class SongCreateView(SongOwnerMixin, CreateView):
         kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         if kf.is_valid():
             kf.save()
+        tf = LyricsTranslationFormSet(
+            self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
+        )
+        if tf.is_valid():
+            tf.save()
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -992,7 +1141,7 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         kwargs["user"] = self.owner_user
         return kwargs
 
-    def get_context_data(self, quote_formset=None, **kwargs):
+    def get_context_data(self, quote_formset=None, translation_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['url_username'] = self.owner_user.username
         if quote_formset is not None:
@@ -1001,6 +1150,16 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
             context['quote_formset'] = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         else:
             context['quote_formset'] = QuoteFormSet(instance=self.object, prefix='quotes')
+        if translation_formset is not None:
+            context['translation_formset'] = translation_formset
+        elif self.request.POST:
+            context['translation_formset'] = LyricsTranslationFormSet(
+                self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
+            )
+        else:
+            context['translation_formset'] = LyricsTranslationFormSet(
+                instance=self.object, prefix='translations', user=self.owner_user
+            )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -1012,6 +1171,14 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
             post_data['quotes-TOTAL_FORMS'] = total + 1
             kf = QuoteFormSet(post_data, instance=self.object, prefix='quotes')
             return self.render_to_response(self.get_context_data(form=form, quote_formset=kf))
+        if request.POST.get('action') == 'add_translation_row':
+            self.object = self.get_object()
+            form = self.get_form()
+            post_data = request.POST.copy()
+            total = int(post_data.get('translations-TOTAL_FORMS', 0))
+            post_data['translations-TOTAL_FORMS'] = total + 1
+            tf = LyricsTranslationFormSet(post_data, instance=self.object, prefix='translations', user=self.owner_user)
+            return self.render_to_response(self.get_context_data(form=form, translation_formset=tf))
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -1020,6 +1187,11 @@ class SongUpdateView(SongOwnerMixin, UpdateView):
         kf = QuoteFormSet(self.request.POST, instance=self.object, prefix='quotes')
         if kf.is_valid():
             kf.save()
+        tf = LyricsTranslationFormSet(
+            self.request.POST, instance=self.object, prefix='translations', user=self.owner_user
+        )
+        if tf.is_valid():
+            tf.save()
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):

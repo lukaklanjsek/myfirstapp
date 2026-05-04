@@ -8,6 +8,7 @@ import datetime
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, Organization, Person, Song, Skill, Role, Quote, Project
 from .models import Event, EventSong, Attendance, AttendanceType, Singer, Voice, Instrument, EventType
+from .models import LyricsTranslation, LanguageCode, ApproximateDate
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.db.models import Q
 from django.utils import timezone
@@ -85,6 +86,27 @@ class OrgMemberForm(forms.Form):  # Person + Membership + MembershipPeriod
     email = forms.EmailField(required=False)
     phone = forms.CharField(max_length=23, required=False)
     address = forms.CharField(required=False, widget=forms.Textarea)
+    # Date fields
+    birth_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    birth_approximate = forms.ModelChoiceField(
+        queryset=ApproximateDate.objects.all(),
+        required=False,
+        empty_label="Exact date",
+        label="Birth date approximation"
+    )
+    death_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    death_approximate = forms.ModelChoiceField(
+        queryset=ApproximateDate.objects.all(),
+        required=False,
+        empty_label="Exact date",
+        label="Death date approximation"
+    )
     # Role checkboxes
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
@@ -182,6 +204,7 @@ class SongForm(forms.ModelForm):
             "number_of_voices",
             "additional_notes",
             "lyrics",
+            "languagecode",
             "keywords",
         ]
         widgets = {
@@ -488,6 +511,44 @@ QuoteFormSet = inlineformset_factory(
     Song,
     Quote,
     form=QuoteForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class LyricsTranslationForm(forms.ModelForm):
+    class Meta:
+        model = LyricsTranslation
+        fields = ['languagecode', 'translation', 'translator']
+        widgets = {'translation': forms.Textarea(attrs={'rows': 5})}
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['languagecode'].queryset = LanguageCode.objects.all()
+        if user:
+            self.fields['translator'].queryset = Person.objects.for_user_with_skill(
+                user=user, skill_id=Skill.TRANSLATOR
+            )
+        else:
+            self.fields['translator'].queryset = Person.objects.none()
+
+
+class BaseLyricsTranslationFormSet(BaseInlineFormSet):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        return kwargs
+
+
+LyricsTranslationFormSet = inlineformset_factory(
+    Song,
+    LyricsTranslation,
+    form=LyricsTranslationForm,
+    formset=BaseLyricsTranslationFormSet,
     extra=1,
     can_delete=True,
 )
