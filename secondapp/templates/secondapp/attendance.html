@@ -69,11 +69,11 @@
 
     <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
         <strong>Legend:</strong>
-        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;">✓ Present</span>
-        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;">💼 Work/School</span>
-        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;">🤒 Illness</span>
-        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;">🏖 Private/Vacation</span>
-        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;">? Unknown</span>
+        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;" title="present at the event">✓ Present</span>
+        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work/School</span>
+        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;" title="unplanned medical issues">🤒 Illness</span>
+        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private/Vacation</span>
+        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;" title="to be determined">TBD</span>
         <em>(Click a cell to cycle)</em>
     </div>
 
@@ -94,7 +94,7 @@
                                         style="
                                         {% if event.event_type.id != 1 %}font-weight: bold; {% endif %}
                                         color: inherit; text-decoration: underline; font-size: inherit;"
-                                        title="Type ID: {{ event.event_type.id }}">
+                                        title="{% if event.event_type.id == 1 %}{{ event.name }}{% else %}{{ event.event_type }}&#10;{{ event.name }}{% endif %}">
                                         {{ event.started_at|date:"d M" }}
                                     </a>
                                 </div>
@@ -146,7 +146,7 @@ const TYPE_META = {
     2: { label: 'Work/School',       icon: '💼', cls: 'att-type-2' },
     3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
     4: { label: 'Private/Vacation',  icon: '🏖', cls: 'att-type-4' },
-    5: { label: 'Unknown',           icon: '?',  cls: 'att-type-5' },
+    5: { label: 'TBD',               icon: '',   cls: 'att-type-5' },
 };
 
 function cycleAttendance(cell) {

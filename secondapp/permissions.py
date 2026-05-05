@@ -67,10 +67,6 @@ class AccessControl:
         Returns:
             QuerySet of Role objects
         """
-        # print(f"=== get_org_roles ===")
-        # print(f"user: {user.username}")
-        # print(f"url_username: {url_username}")
-        # print(f"url_username type: {type(url_username)}")
 
         if not user.is_authenticated:
             print("User not authenticated")
@@ -96,78 +92,6 @@ class AccessControl:
             return Role.objects.none()
 
         return membership.person.roles.all()
-#
-#         org_username = url_username
-#
-#         auth_person = cls.get_auth_person(user)
-#         print(f"viewer_person: {auth_person}")
-#
-#         if not auth_person:
-#             print("No viewer person found")
-#             return Role.objects.none()
-# ####################################################
-#         org_person = Person.objects.filter(
-#             memberships__user__username=org_username,  # Has membership in this org
-#             owner=auth_person  # Owned by the viewer
-#         ).first()
-#         print(f"org_person (owned by viewer): {org_person}")
-#         if not org_person:  # Allow editing and viewing ones own memberships
-#             print(f"Using auth_person directly: {org_person}")
-#             own_membership = Membership.objects.filter(
-#                 user__username=org_username,
-#                 person=auth_person
-#             ).exists()
-#
-#             if own_membership:
-#                 org_person = auth_person
-#                 print(f"Using auth_person directly: {org_person}")
-#
-#         if not org_person:
-#             print("No org person found for viewer")
-#             return Role.objects.none()
-#         # Get roles via PersonRole
-#         person_roles = PersonRole.objects.filter(
-#             person=org_person
-#         ).select_related('role')
-#
-#         print(f"PersonRole entries: {person_roles.count()}")
-#         for pr in person_roles:
-#             print(f"  - {pr.person} has role {pr.role}")
-#
-#         # Extract Role objects
-#         role_ids = person_roles.values_list('role_id', flat=True)
-#         roles = Role.objects.filter(id__in=role_ids)
-#
-#         print(f"Final roles: {list(roles.values_list('title', flat=True))}")
-#
-# ###########################################333
-#         membership = Membership.objects.filter(
-#             user__username=url_username,
-#             person__owner=auth_person
-#         ).select_related('person').first()
-#         print(f"membership found: {membership}")
-#         #################################################
-#         all_memberships = Membership.objects.filter(
-#             user__username=org_username
-#         ).select_related('person')
-#
-#         print(f"All memberships for {org_username}:")
-#         for m in all_memberships:
-#             print(f"  Person: {m.person}, Owner: {m.person.owner}, Owner type: {type(m.person.owner)}")
-#         print(f"Looking for person.owner = {auth_person} (type: {type(auth_person)})")
-#
-#         print(f"membership found: {membership}")
-#         ###############################################
-#
-#         # return membership.person.roles.all() if membership else Role.objects.none()
-#         if membership:
-#             roles = membership.person.roles.all()
-#             print(f"Membership roles: {list(roles.values_list('id', 'title'))}")
-#             return roles
-#         else:
-#             print("returning 'roles'", roles)
-#             return roles
-
 
 
 
@@ -207,36 +131,6 @@ class AccessControl:
         ).select_related('person').first()
         return membership.person if membership else None
 
-
-    # @classmethod
-    # def get_user_role_in_org(cls, auth_user, url_username):
-    #     """Get user's role in a specific membership."""
-    #     try:
-    #         user_url = CustomUser.objects.get(username=url_username)
-    #     except CustomUser.DoesNotExist:
-    #         return None
-    #
-    #     membership = cls._user_memberships(auth_user).filter(
-    #         user=user_url  # Memberships hanging on the URL user
-    #     ).first()
-    #
-    #     return membership.person.roles.all() if membership else None
-
-
-    # @classmethod
-    # def filter_queryset_by_org(cls, auth_user, queryset):
-    #     """
-    #     Filter a queryset to only include items from organizations the user has access to.
-    #     Args:
-    #         auth_user: CustomUser instance
-    #         queryset: QuerySet with an 'organization_id' field
-    #     Returns: Filtered QuerySet containing only items from user's organizations
-    #     """
-    #     org_user_ids = cls._user_memberships(auth_user).values_list('user_id', flat=True)
-    #
-    #     return queryset.filter(
-    #         user_id__in=org_user_ids
-    #     ).distinct()
 
     @classmethod
     def has_permission(cls, auth_user, action, url_username):
@@ -311,22 +205,6 @@ class AccessControl:
             owner__isnull=False  # Exclude personal profiles
         ).distinct()
 
-    # @classmethod
-    # def can_access(cls, auth_user, action, url_username, queryset=None):
-    #     """
-    #     Check permission and filter queryset if provided.
-    #     Args:
-    #         auth_user: The viewer
-    #         action: Permission type
-    #         url_username: Username from URL
-    #         queryset: Optional queryset to filter
-    #     """
-    #     if not cls.has_permission(auth_user, action, url_username):
-    #         return False, queryset.none() if queryset is not None else None
-    #
-    #     if queryset is not None:
-    #         return True, cls.filter_queryset_by_org(auth_user, queryset)
-    #     return True, None
 
     @classmethod
     def filter_person_details(cls, auth_user, person, url_username):
@@ -398,10 +276,6 @@ class AccessControl:
             - SUPPORTER: Can see only ADMIN roles
             - EXTERNAL: Cannot see any members
         """
-        # print(f"=== DEBUG get_visible_members ===")
-        # print(f"auth_user: {auth_user.username}")
-        # print(f"url_username (input): {url_username}")
-        # print(f"url_username type: {type(url_username)}")
 
         # Normalize url_username to a string
         if isinstance(url_username, CustomUser):
@@ -415,32 +289,24 @@ class AccessControl:
                 print("No url_user found - returning empty queryset")
                 return Membership.objects.none()
 
-        # print(f"url_user object: {url_user}")
-        # print(f"org_username_str: {org_username_str}")
 
         # Get memberships for this organization
         memberships = Membership.objects.filter(
             user=url_user
         ).select_related("person").prefetch_related("person__roles")
 
-        # print(f"Total memberships for {org_username_str}: {memberships.count()}")
-        # for m in memberships:
-        #     print(f"  - Member: {m.person}, Roles: {list(m.person.roles.values_list('id', flat=True))}")
 
         # PASS THE STRING to get_org_roles
         viewer_roles = cls.get_org_roles(auth_user, org_username_str)
-        # print(f"Viewer roles: {list(viewer_roles.values_list('id', flat=True))}")
 
         if not viewer_roles.exists():
             print("Viewer has no roles - returning empty queryset")
             return Membership.objects.none()
 
         viewer_role_ids = set(viewer_roles.values_list('id', flat=True))
-        # print(f"Viewer role IDs: {viewer_role_ids}")
 
         # ADMIN sees everyone
         if Role.ADMIN in viewer_role_ids:
-            # print("Viewer is ADMIN - returning all memberships")
             return memberships
 
         # MEMBER sees ADMIN and MEMBER roles only
@@ -448,7 +314,6 @@ class AccessControl:
             filtered = memberships.filter(
                 person__roles__id__in=[Role.ADMIN, Role.MEMBER]
             ).distinct()
-            # print(f"Viewer is MEMBER - returning {filtered.count()} filtered memberships")
             return filtered
 
         # SUPPORTER sees ADMIN roles only
@@ -456,7 +321,6 @@ class AccessControl:
             filtered = memberships.filter(
                 person__roles__id=Role.ADMIN
             ).distinct()
-            # print(f"Viewer is SUPPORTER - returning {filtered.count()} filtered memberships")
             return filtered
 
         print("No matching role - returning empty queryset")

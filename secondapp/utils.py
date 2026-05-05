@@ -8,38 +8,8 @@ from datetime import datetime, date
 from django.contrib import messages
 from .permissions import AccessControl
 from django.db import transaction
-from django.http import HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Min, Max
-
-# class SongQueryHelper:
-#     @staticmethod
-#     def get_personal_songs(user):
-#         return Song.objects.filter(user = user)
-#
-#     @staticmethod
-#     def get_organization_songs(organization):
-#         return Song.objects.filter(user = organization.user)
-#
-#     @staticmethod
-#     def get_user_accessible_songs(user):
-#         personal = Song.objects.filter(user=user)
-#
-#         person = user.persons.first()
-#         if not person:
-#             return personal
-#
-#         owned_persons = person.owned_persons.all()
-#         memberships = Membership.objects.filter(
-#             person in owned_persons,
-#             # is_active = True
-#         ).select_related("organization__user")
-#
-#         org_user = [m.organization.user for m in memberships]
-#         org_songs = Song.objects.filter(user__in=org_user)
-#
-#         return personal | org_songs
-
 
 
 INTERNAL_ID_KEY = "internal_id"
