@@ -4,70 +4,36 @@ from import_export.admin import ImportExportModelAdmin
 
 # Register your models here.
 
-from .models import Tag
-from .models import Song
-from .models import Rehearsal
-from .models import Member, Composer, Arranger, Poet, Musician, Conductor, Ensemble, Activity
+from django.contrib.auth.admin import UserAdmin
 
-# classes
-
-class SongInline(admin.StackedInline):
-    model = Song
-    pass
-
-class ActivityInLine(admin.StackedInline):
-    model = Activity
-    pass
-
-class EnsembleAdmin(admin.ModelAdmin):
-    model = Ensemble
-    pass
-
-class TagAdmin(ImportExportModelAdmin):
-    pass
-
-class MemberAdmin(ImportExportModelAdmin):
-    model = Member
-    inlines = [ActivityInLine]
-    pass
-
-class ComposerAdmin(ImportExportModelAdmin):
-    pass
-
-class ArrangerAdmin(ImportExportModelAdmin):
-    pass
-
-class PoetAdmin(ImportExportModelAdmin):
-    pass
-
-class MusicianAdmin(ImportExportModelAdmin):
-    pass
-
-class ConductorAdmin(ImportExportModelAdmin):
-    inlines = [ActivityInLine]
-    pass
-
-class RehearsalAdmin(ImportExportModelAdmin):
-    model = Rehearsal
-    filter_horizontal = ["songs", "members"]
-    pass
-
-class SongAdmin(ImportExportModelAdmin):
-    pass
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser
+from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 
 
+class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
+    list_display = ("email", "is_staff",) #"is_active",)
+    list_filter = ("email", "is_staff",)# "is_active",)
+    fieldsets = (
+        (None, {"fields": ("email", "password")}),
+        ("Permissions", {"fields": ("is_staff",  "groups", "user_permissions")}),#"is_active",
+    )
+    add_fieldsets = (
+        (None, {
+            "classes": ("wide",),
+            "fields": (
+                "email", "password1", "password2", "is_staff",
+                "groups", "user_permissions"#, "is_active",
+            )}
+        ),
+    )
+    search_fields = ("email",)
+    ordering = ("email",)
 
 
-
-
-admin.site.register(Tag, TagAdmin)
-admin.site.register(Ensemble, EnsembleAdmin)
-admin.site.register(Song)#, SongAdmin)
-admin.site.register(Rehearsal, RehearsalAdmin)
-admin.site.register(Member, MemberAdmin)
-admin.site.register(Composer, ComposerAdmin)
-admin.site.register(Arranger, ArrangerAdmin)
-admin.site.register(Poet, PoetAdmin)
-admin.site.register(Musician, MusicianAdmin)
-admin.site.register(Conductor, ConductorAdmin)
+admin.site.register(CustomUser, CustomUserAdmin)

@@ -16,53 +16,72 @@
 
     <script src="{% static 'django_select2/django_select2.js' %}"></script>
 
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="grid-container">
 
     <!-- toggle button -->
         <nav class="sidebar" id="sidebar">
+            {% if user.is_authenticated %}
+                <p>{{ user.username }}</p>
+                <ul class="menu-links">
+                    <li><a href="{% url 'secondapp:person_update' user.username %}">Update profile</a></li>
+                    <li><a href="{% url 'secondapp:home' %}">Home</a></li>
+                    <li><a href="{% url 'secondapp:song_dashboard' user.username %}">Songs</a></li>
 
-            <ul class="menu-links">
-                <li><a href="{% url 'secondapp:index' %}">Home</a></li>
-                <li><a href="{% url 'secondapp:rehearsal_list' %}">Rehearsals</a></li>
-                <li><a href="{% url 'secondapp:song_list' %}">Songs</a></li>
-                <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='composer' %}">Composers</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='poet' %}">Poets</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='arranger' %}">Arrangers</a></li>
-                </ul>
-                <li><a href="{% url 'secondapp:person_list' role='member' %}">Members</a></li>
-                <ul>
-                    <li><a href="{% url 'secondapp:person_list' role='conductor' %}">Conductors</a></li>
-                    <li><a href="{% url 'secondapp:person_list' role='musician' %}">Musicians</a></li>
-                    <li><a href="{% url 'secondapp:ensemble_list' %}">Ensembles</a></li>
-                </ul>
-                Settings
-                <ul>
-                    <li><a href="{% url 'secondapp:import_list' %}">Import</a></li>
-                </ul>
+                    <li>
+                        <p>Groups:</p>
+                        <ul>
+                            {% for membership in memberships %}
+                                {% with org=membership.user.organizations.first %}
+                                    {% if org %}
+                                        <li class="org-item {% if url_username == org.user.username %}active{% endif %}">
+                                            <a href="{% url 'secondapp:org_dashboard' org.user.username %}">
+                                                {{ org.name }} ({{ membership.person.first_name }} - {{ membership.person.roles.all|join:", " }})
+                                            </a>
+                                            <ul class="org-submenu">
+                                                <!-- Songs visible to ADMIN and MEMBER -->
+                                                {% if ADMIN_ROLE in membership.person.roles.all or MEMBER_ROLE in membership.person.roles.all %}
+                                                    <li><a href="{% url 'secondapp:song_dashboard' org.user.username %}">Songs</a></li>
+                                                    <li><a href="{% url 'secondapp:org_member_list' org.user.username %}">Members</a></li>
+                                                    <li><a href="{% url 'secondapp:event_list' org.user.username %}">Events</a></li>
+                                                    <li><a href="{% url 'secondapp:project_list' org.user.username %}">Projects</a></li>
+                                                {% endif %}
 
-                <li>
-                    <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
-                        {% csrf_token %}
-                        <button type="submit">Logout</button>
-                    </form>
-                </li>
-            </ul>
+                                                {% if ADMIN_ROLE in membership.person.roles.all %}
+                                                    <li><a href="{% url 'secondapp:attendance' org.user.username %}">ATTENDANCE</a></li>
+                                                    <li><a href="{% url 'secondapp:song_form2' org.user.username %}">Add song</a></li>
+                                                    <li><a href="{% url 'secondapp:org_member_add' org.user.username %}">Add member</a></li>
+                                                    <li><a href="{% url 'secondapp:import_hub' username=org.user.username %}">Import Data</a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </li>
+                                    {% endif %}
+                                {% endwith %}
+                            {% empty %}
+                                <li>No groups yet</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" onclick="return confirm('You want to log out?')">
+                            {% csrf_token %}
+                            <button type="submit">Logout</button>
+                        </form>
+                    </li>
+                </ul>
+            {% else %}
+                <a href="{% url 'secondapp:signup' %}">Sign Up</a>
+                <a href="{% url 'secondapp:login' %}">Login</a>
+            {% endif %}
         </nav>
-<!-- Breadcrumbs Block -->
 
-
-    <!--main -->
+<!--    main -->
         <main class="main">
 
             <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
-            <div class="breadcrumb">
-                {% if breadcrumbs %}
-                    {{ breadcrumbs|safe }}
-                {% endif %}
-            </div>
             <div class="main-content">
                 {% block content %}
                 <!-- content goes here -->
@@ -77,12 +96,14 @@
                     {% if object.created_at %}
                         | Created: {{ object.created_at|date:"d M, Y" }}
                     {% endif %}
-                    <p>© 2025 My Django App</p>
+                    <p>© 2025-2026 My Django App</p>
                 </div>
             </footer>
          </main>
 
     </div>
+
+    {% block extra_js %}{% endblock %}
 
     <script>
         function toggleMenu(){

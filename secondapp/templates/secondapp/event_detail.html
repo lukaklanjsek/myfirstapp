@@ -1,0 +1,100 @@
+{% extends "secondapp/base.html" %}
+{% block title %}{{ event.name }}{% endblock %}
+
+{% block content %}
+
+<h2>{{ event.name }}</h2>
+<p>Location: {{ event.location }}</p>
+<p>Starts: {{ event.started_at }}</p>
+<p>Ends: {{ event.ended_at }}</p>
+
+{% if event.project %}
+<p>Project: <a href="{% url 'secondapp:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></p>
+{% if event.project.description %}
+    <p>{{ event.project.description }}</p>
+{% endif %}
+{% endif %}
+
+{% if is_admin %}
+    <p><a href="{% url 'secondapp:event_update' url_username event.pk %}">Edit event</a></p>
+{% endif %}
+
+<h3>Songs</h3>
+{% if event.eventsong_set.all %}
+    <table>
+        <thead>
+            <tr>
+                <th>Song</th>
+                <th>Encore</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for eventsong in event.eventsong_set.all|dictsort:"order" %}
+            <tr>
+                <td>
+                    <a href="{% url 'secondapp:song_page' url_username eventsong.song.pk %}">{{ eventsong.song.title }}</a>- {{ eventsong.song.composer.last_name }}
+                    {% if eventsong.song.keywords %}
+                        <br><small>{{ eventsong.song.keywords }}</small>
+                    {% endif %}
+                </td>
+                <td>{% if eventsong.encore %}Yes{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No songs added yet.</p>
+{% endif %}
+
+<h3>Attendance</h3>
+{% if attendances %}
+    <table>
+        <thead>
+            <tr>
+                <th>Person</th>
+
+                <th>Attendance</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for attendance in attendances %}
+            <tr>
+                <td>{{ attendance.person.first_name }} {{ attendance.person.last_name }}</td>
+                {% comment %}
+                <td>
+
+                    {% for singer in attendance.person.singer_set.all %}
+                        {{ singer.voice.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% for inst in attendance.person.instrumentalist_set.all %}
+                        {{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+
+                </td>
+                {% endcomment %}
+                {% if attendance.person == my_person %}
+                    <td>
+                        <form method="post" action="{% url 'secondapp:self_attendance_update' url_username event.pk %}">
+                            {% csrf_token %}
+                            {% for at in attendance_types %}
+                                <label>
+                                    <input type="radio" name="attendance_type" value="{{ at.pk }}"
+                                        {% if attendance.attendance_type == at %}checked{% endif %}>
+                                    {{ at.name }}
+                                </label>
+                            {% endfor %}
+                            <button type="submit">Save</button>
+                        </form>
+                    </td>
+                {% else %}
+                    <td>{{ attendance.attendance_type }}</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No attendance records yet.</p>
+{% endif %}
+
+{% endblock %}

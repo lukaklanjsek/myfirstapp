@@ -63,8 +63,11 @@ th > * {
 {% for song in song_list %}
     <tr>
         <td> {{ song.pk }} </td>
-        <td><a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a></td>
-        <td> <a href="{{ song.composer.get_absolute_url }}">{{ song.composer.last_name }} {{song.composer.first_name }}</a> </td>
+        <td>
+            <a href="{% url 'secondapp:song_detail' song.pk %}"> {{ song.title }} </a>
+            {% if song.keywords %}<br><small>{{ song.keywords }}</small>{% endif %}
+        </td>
+        <td> <a href="{{ song.composer.get_absolute_url }}" title="{{ song.composer.first_name }} {{ song.composer.last_name }}">{{ song.composer.last_name }} {{song.composer.first_name }}</a> </td>
         <td>{{ song.number_of_copies }}</td>
     </tr>
 {% endfor %}

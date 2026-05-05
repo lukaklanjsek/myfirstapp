@@ -25,8 +25,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    "secondapp.apps.SecondappConfig",
     "polls.apps.PollsConfig",
-    "secondapp",
+
     "django_select2",
     "import_export",
 ]
@@ -37,20 +39,14 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/home/"
+LOGOUT_REDIRECT_URL = "/login/"
 
-LOGIN_REQUIRED_IGNORE_PATHS = [
-    "/accounts/login/",
-    "/accounts/logout/",
-    "/accounts/password_reset/",
-]
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -64,7 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                "secondapp.context_processors.roles_context",
+                "secondapp.context_processors.user_person",
             ],
         },
     },
@@ -96,6 +92,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "secondapp.CustomUser"
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Europe/Ljubljana'
@@ -121,3 +118,4 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
