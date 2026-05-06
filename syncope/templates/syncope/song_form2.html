@@ -1,0 +1,84 @@
+{% extends "syncope/base.html" %}
+{% block title %}{% if object %}Edit Song{% else %}Add Song{% endif %}{% endblock %}
+{% block content %}
+
+<h1>{% if object %}Edit{% else %}Add{% endif %} Song</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+
+    {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <ul class="errorlist">
+                    {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <h3>Quotes</h3>
+    {{ quote_formset.management_form }}
+    <table>
+        <thead>
+            <tr>
+                <th>Quote</th>
+                <th>Bar Number</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for kw_form in quote_formset %}
+            <tr>
+                {% for hidden in kw_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>{{ kw_form.word }}</td>
+                <td>{{ kw_form.bar_number }}</td>
+                <td>{{ kw_form.DELETE }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" name="action" value="add_kw_row">+ Add Another Quote</button>
+
+    <h3>Lyrics Translations</h3>
+    {{ translation_formset.management_form }}
+    <table>
+        <thead>
+            <tr>
+                <th>Language</th>
+                <th>Translation</th>
+                <th>Translator</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t_form in translation_formset %}
+            <tr>
+                {% for hidden in t_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>{{ t_form.languagecode }}</td>
+                <td>{{ t_form.translation }}</td>
+                <td>{{ t_form.translator }}</td>
+                <td>{{ t_form.DELETE }}</td>
+            </tr>
+            {% if t_form.errors %}
+            <tr><td colspan="4">{{ t_form.errors }}</td></tr>
+            {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" name="action" value="add_translation_row">+ Add Translation</button>
+
+    <br><br>
+    <button type="submit" name="action" value="">Save</button>
+</form>
+
+{% if object %}
+    <a href="{%  url 'syncope:song_page' url_username object.pk %}">Cancel Edit</a>
+{% else %}
+    <a href="{%  url 'syncope:song_dashboard' url_username %}">Cancel &amp; Return to List</a>
+{% endif %}
+
+{% endblock %}

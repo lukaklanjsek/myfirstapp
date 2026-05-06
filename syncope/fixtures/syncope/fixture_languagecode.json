@@ -1,0 +1,1283 @@
+[
+  {
+    "model": "syncope.languagecode",
+    "pk": "aa",
+    "fields": {
+      "language_code": "aa"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ab",
+    "fields": {
+      "language_code": "ab"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ae",
+    "fields": {
+      "language_code": "ae"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "af",
+    "fields": {
+      "language_code": "af"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ak",
+    "fields": {
+      "language_code": "ak"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "am",
+    "fields": {
+      "language_code": "am"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "an",
+    "fields": {
+      "language_code": "an"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ar",
+    "fields": {
+      "language_code": "ar"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "as",
+    "fields": {
+      "language_code": "as"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "av",
+    "fields": {
+      "language_code": "av"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ay",
+    "fields": {
+      "language_code": "ay"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "az",
+    "fields": {
+      "language_code": "az"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ba",
+    "fields": {
+      "language_code": "ba"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "be",
+    "fields": {
+      "language_code": "be"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bg",
+    "fields": {
+      "language_code": "bg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bi",
+    "fields": {
+      "language_code": "bi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bm",
+    "fields": {
+      "language_code": "bm"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bn",
+    "fields": {
+      "language_code": "bn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bo",
+    "fields": {
+      "language_code": "bo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "br",
+    "fields": {
+      "language_code": "br"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "bs",
+    "fields": {
+      "language_code": "bs"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ca",
+    "fields": {
+      "language_code": "ca"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ce",
+    "fields": {
+      "language_code": "ce"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ch",
+    "fields": {
+      "language_code": "ch"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "co",
+    "fields": {
+      "language_code": "co"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "cr",
+    "fields": {
+      "language_code": "cr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "cs",
+    "fields": {
+      "language_code": "cs"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "cu",
+    "fields": {
+      "language_code": "cu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "cv",
+    "fields": {
+      "language_code": "cv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "cy",
+    "fields": {
+      "language_code": "cy"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "da",
+    "fields": {
+      "language_code": "da"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "de",
+    "fields": {
+      "language_code": "de"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "dv",
+    "fields": {
+      "language_code": "dv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "dz",
+    "fields": {
+      "language_code": "dz"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ee",
+    "fields": {
+      "language_code": "ee"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "el",
+    "fields": {
+      "language_code": "el"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "en",
+    "fields": {
+      "language_code": "en"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "eo",
+    "fields": {
+      "language_code": "eo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "es",
+    "fields": {
+      "language_code": "es"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "et",
+    "fields": {
+      "language_code": "et"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "eu",
+    "fields": {
+      "language_code": "eu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fa",
+    "fields": {
+      "language_code": "fa"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ff",
+    "fields": {
+      "language_code": "ff"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fi",
+    "fields": {
+      "language_code": "fi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fj",
+    "fields": {
+      "language_code": "fj"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fo",
+    "fields": {
+      "language_code": "fo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fr",
+    "fields": {
+      "language_code": "fr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "fy",
+    "fields": {
+      "language_code": "fy"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ga",
+    "fields": {
+      "language_code": "ga"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "gd",
+    "fields": {
+      "language_code": "gd"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "gl",
+    "fields": {
+      "language_code": "gl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "gn",
+    "fields": {
+      "language_code": "gn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "gu",
+    "fields": {
+      "language_code": "gu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "gv",
+    "fields": {
+      "language_code": "gv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ha",
+    "fields": {
+      "language_code": "ha"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "he",
+    "fields": {
+      "language_code": "he"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "hi",
+    "fields": {
+      "language_code": "hi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ho",
+    "fields": {
+      "language_code": "ho"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "hr",
+    "fields": {
+      "language_code": "hr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ht",
+    "fields": {
+      "language_code": "ht"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "hu",
+    "fields": {
+      "language_code": "hu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "hy",
+    "fields": {
+      "language_code": "hy"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "hz",
+    "fields": {
+      "language_code": "hz"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ia",
+    "fields": {
+      "language_code": "ia"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "id",
+    "fields": {
+      "language_code": "id"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ie",
+    "fields": {
+      "language_code": "ie"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ig",
+    "fields": {
+      "language_code": "ig"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ii",
+    "fields": {
+      "language_code": "ii"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ik",
+    "fields": {
+      "language_code": "ik"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "io",
+    "fields": {
+      "language_code": "io"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "is",
+    "fields": {
+      "language_code": "is"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "it",
+    "fields": {
+      "language_code": "it"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "iu",
+    "fields": {
+      "language_code": "iu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ja",
+    "fields": {
+      "language_code": "ja"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "jv",
+    "fields": {
+      "language_code": "jv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ka",
+    "fields": {
+      "language_code": "ka"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kg",
+    "fields": {
+      "language_code": "kg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ki",
+    "fields": {
+      "language_code": "ki"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kj",
+    "fields": {
+      "language_code": "kj"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kk",
+    "fields": {
+      "language_code": "kk"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kl",
+    "fields": {
+      "language_code": "kl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "km",
+    "fields": {
+      "language_code": "km"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kn",
+    "fields": {
+      "language_code": "kn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ko",
+    "fields": {
+      "language_code": "ko"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kr",
+    "fields": {
+      "language_code": "kr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ks",
+    "fields": {
+      "language_code": "ks"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ku",
+    "fields": {
+      "language_code": "ku"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kv",
+    "fields": {
+      "language_code": "kv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "kw",
+    "fields": {
+      "language_code": "kw"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ky",
+    "fields": {
+      "language_code": "ky"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "la",
+    "fields": {
+      "language_code": "la"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lb",
+    "fields": {
+      "language_code": "lb"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lg",
+    "fields": {
+      "language_code": "lg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "li",
+    "fields": {
+      "language_code": "li"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ln",
+    "fields": {
+      "language_code": "ln"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lo",
+    "fields": {
+      "language_code": "lo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lt",
+    "fields": {
+      "language_code": "lt"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lu",
+    "fields": {
+      "language_code": "lu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "lv",
+    "fields": {
+      "language_code": "lv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mg",
+    "fields": {
+      "language_code": "mg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mh",
+    "fields": {
+      "language_code": "mh"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mi",
+    "fields": {
+      "language_code": "mi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mk",
+    "fields": {
+      "language_code": "mk"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ml",
+    "fields": {
+      "language_code": "ml"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mn",
+    "fields": {
+      "language_code": "mn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mr",
+    "fields": {
+      "language_code": "mr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ms",
+    "fields": {
+      "language_code": "ms"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "mt",
+    "fields": {
+      "language_code": "mt"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "my",
+    "fields": {
+      "language_code": "my"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "na",
+    "fields": {
+      "language_code": "na"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nb",
+    "fields": {
+      "language_code": "nb"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nd",
+    "fields": {
+      "language_code": "nd"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ne",
+    "fields": {
+      "language_code": "ne"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ng",
+    "fields": {
+      "language_code": "ng"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nl",
+    "fields": {
+      "language_code": "nl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nn",
+    "fields": {
+      "language_code": "nn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "no",
+    "fields": {
+      "language_code": "no"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nr",
+    "fields": {
+      "language_code": "nr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "nv",
+    "fields": {
+      "language_code": "nv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ny",
+    "fields": {
+      "language_code": "ny"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "oc",
+    "fields": {
+      "language_code": "oc"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "oj",
+    "fields": {
+      "language_code": "oj"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "om",
+    "fields": {
+      "language_code": "om"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "or",
+    "fields": {
+      "language_code": "or"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "os",
+    "fields": {
+      "language_code": "os"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "pa",
+    "fields": {
+      "language_code": "pa"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "pi",
+    "fields": {
+      "language_code": "pi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "pl",
+    "fields": {
+      "language_code": "pl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ps",
+    "fields": {
+      "language_code": "ps"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "pt",
+    "fields": {
+      "language_code": "pt"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "qu",
+    "fields": {
+      "language_code": "qu"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "rm",
+    "fields": {
+      "language_code": "rm"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "rn",
+    "fields": {
+      "language_code": "rn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ro",
+    "fields": {
+      "language_code": "ro"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ru",
+    "fields": {
+      "language_code": "ru"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "rw",
+    "fields": {
+      "language_code": "rw"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sa",
+    "fields": {
+      "language_code": "sa"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sc",
+    "fields": {
+      "language_code": "sc"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sd",
+    "fields": {
+      "language_code": "sd"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "se",
+    "fields": {
+      "language_code": "se"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sg",
+    "fields": {
+      "language_code": "sg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "si",
+    "fields": {
+      "language_code": "si"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sk",
+    "fields": {
+      "language_code": "sk"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sl",
+    "fields": {
+      "language_code": "sl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sm",
+    "fields": {
+      "language_code": "sm"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sn",
+    "fields": {
+      "language_code": "sn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "so",
+    "fields": {
+      "language_code": "so"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sq",
+    "fields": {
+      "language_code": "sq"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sr",
+    "fields": {
+      "language_code": "sr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ss",
+    "fields": {
+      "language_code": "ss"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "st",
+    "fields": {
+      "language_code": "st"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "su",
+    "fields": {
+      "language_code": "su"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sv",
+    "fields": {
+      "language_code": "sv"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "sw",
+    "fields": {
+      "language_code": "sw"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ta",
+    "fields": {
+      "language_code": "ta"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "te",
+    "fields": {
+      "language_code": "te"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tg",
+    "fields": {
+      "language_code": "tg"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "th",
+    "fields": {
+      "language_code": "th"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ti",
+    "fields": {
+      "language_code": "ti"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tk",
+    "fields": {
+      "language_code": "tk"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tl",
+    "fields": {
+      "language_code": "tl"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tn",
+    "fields": {
+      "language_code": "tn"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "to",
+    "fields": {
+      "language_code": "to"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tr",
+    "fields": {
+      "language_code": "tr"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ts",
+    "fields": {
+      "language_code": "ts"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tt",
+    "fields": {
+      "language_code": "tt"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "tw",
+    "fields": {
+      "language_code": "tw"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ty",
+    "fields": {
+      "language_code": "ty"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ug",
+    "fields": {
+      "language_code": "ug"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "uk",
+    "fields": {
+      "language_code": "uk"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ur",
+    "fields": {
+      "language_code": "ur"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "uz",
+    "fields": {
+      "language_code": "uz"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "ve",
+    "fields": {
+      "language_code": "ve"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "vi",
+    "fields": {
+      "language_code": "vi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "vo",
+    "fields": {
+      "language_code": "vo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "wa",
+    "fields": {
+      "language_code": "wa"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "wo",
+    "fields": {
+      "language_code": "wo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "xh",
+    "fields": {
+      "language_code": "xh"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "yi",
+    "fields": {
+      "language_code": "yi"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "yo",
+    "fields": {
+      "language_code": "yo"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "za",
+    "fields": {
+      "language_code": "za"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "zh",
+    "fields": {
+      "language_code": "zh"
+    }
+  },
+  {
+    "model": "syncope.languagecode",
+    "pk": "zu",
+    "fields": {
+      "language_code": "zu"
+    }
+  }
+]

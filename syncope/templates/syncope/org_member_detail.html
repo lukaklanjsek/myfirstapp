@@ -1,0 +1,84 @@
+{% extends "syncope/base.html" %}
+{% block title %}{{ person }}{% endblock %}
+{% block content %}
+<p><a href="{%  url 'syncope:org_member_edit' url_username person.pk %}">EDIT person</a></p>
+
+<h2>{{ person }}</h2>
+
+{% if person_data %}
+  {% if person_data.email %}<p>Email: {{ person_data.email }}</p>{% endif %}
+  {% if person_data.phone %}<p>Phone: {{ person_data.phone }}</p>{% endif %}
+  {% if person_data.address %}<p>Address: {{ person_data.address }}</p>{% endif %}
+  {% if person_data.birth_date %}<p>Birth date: {{ person_data.birth_date }}</p>{% endif %}
+  {% if person_data.skills %}
+  <p>Skills:
+    {% for skill in person_data.skills %}{{ skill }}{% if not forloop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+{% endif %}
+
+<!-- Composers -->
+{% if composed_songs %}
+<h3>Composed Songs</h3>
+<ul>
+  {% for song in composed_songs %}
+  <li><a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Poets -->
+{% if written_songs %}
+<h3>Written Songs</h3>
+<ul>
+  {% for song in written_songs %}
+  <li><a href="{%  url 'syncope:song_page' url_username song.pk %}">{{ song.title }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Translators -->
+{% if translation_pairs %}
+<h3>Translations</h3>
+<ul>
+  {% for pair in translation_pairs %}
+  <li>{{ pair.original_lang }} → {{ pair.translation_lang }} ({{ pair.count }} {% if pair.count == 1 %}song{% else %}songs{% endif %})</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Singer Projects -->
+{% if singer_projects %}
+<h3>Singer - Projects</h3>
+    {% if singer_voices %}
+<p>Voices: {% for voice in singer_voices %}{{ voice.voice.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+<ul>
+  {% for entry in singer_projects %}
+  <li>
+    <a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
+    {{ entry.performances_attended }} ({{ entry.rehearsals_present }}/{{ entry.rehearsals_total }})
+  </li>
+  {% endfor %}
+</ul>
+
+{% endif %}
+
+<!-- Instrumentalist Projects -->
+{% if instrumentalist_projects %}
+<h3>Instrumentalist - Projects</h3>
+    {% if instrumentalist_instruments %}
+<p>Instruments: {% for inst in instrumentalist_instruments %}{{ inst.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+<ul>
+  {% for entry in instrumentalist_projects %}
+  <li>
+    <a href="{%  url 'syncope:project_detail' url_username entry.project.pk %}">{{ entry.project.title }}</a>
+    {{ entry.performances_attended }} ({{ entry.rehearsals_present }}/{{ entry.rehearsals_total }})
+  </li>
+  {% endfor %}
+</ul>
+
+{% endif %}
+
+{% endblock %}
