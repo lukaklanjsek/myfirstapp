@@ -1,0 +1,281 @@
+[
+    {
+        "model": "syncope.instrument",
+        "pk": 1,
+        "fields": {
+            "name": "Solo singing",
+            "additional_notes": "professional solo singer",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 2,
+        "fields": {
+            "name": "Piano",
+            "additional_notes": "Keyboard instrument, often featured in orchestral works",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 3,
+        "fields": {
+            "name": "Violin",
+            "additional_notes": "String instrument, highest pitch in the string family",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 4,
+        "fields": {
+            "name": "Viola",
+            "additional_notes": "String instrument, slightly larger than violin with deeper tone",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 5,
+        "fields": {
+            "name": "Cello",
+            "additional_notes": "String instrument, played seated with endpin",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 6,
+        "fields": {
+            "name": "Double Bass",
+            "additional_notes": "Largest and lowest-pitched string instrument",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 7,
+        "fields": {
+            "name": "Flute",
+            "additional_notes": "Woodwind instrument, high-pitched",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 8,
+        "fields": {
+            "name": "Piccolo",
+            "additional_notes": "Small flute, highest-pitched woodwind",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 9,
+        "fields": {
+            "name": "Oboe",
+            "additional_notes": "Double-reed woodwind instrument",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 10,
+        "fields": {
+            "name": "English Horn",
+            "additional_notes": "Alto oboe, slightly larger with mellower tone",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 11,
+        "fields": {
+            "name": "Clarinet",
+            "additional_notes": "Single-reed woodwind instrument",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 12,
+        "fields": {
+            "name": "Bass Clarinet",
+            "additional_notes": "Larger clarinet with lower range",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 13,
+        "fields": {
+            "name": "Bassoon",
+            "additional_notes": "Double-reed woodwind, bass register",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 14,
+        "fields": {
+            "name": "Contrabassoon",
+            "additional_notes": "Largest woodwind, lowest-pitched",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 15,
+        "fields": {
+            "name": "French Horn",
+            "additional_notes": "Brass instrument with circular shape",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 16,
+        "fields": {
+            "name": "Trumpet",
+            "additional_notes": "Brass instrument, highest-pitched in brass family",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 17,
+        "fields": {
+            "name": "Trombone",
+            "additional_notes": "Brass instrument with slide mechanism",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 18,
+        "fields": {
+            "name": "Bass Trombone",
+            "additional_notes": "Larger trombone with lower range",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 19,
+        "fields": {
+            "name": "Tuba",
+            "additional_notes": "Largest and lowest-pitched brass instrument",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 20,
+        "fields": {
+            "name": "Timpani",
+            "additional_notes": "Tuned kettle drums, typically set of 4",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 21,
+        "fields": {
+            "name": "Snare Drum",
+            "additional_notes": "Percussion instrument with rattling snares",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 22,
+        "fields": {
+            "name": "Bass Drum",
+            "additional_notes": "Large percussion drum for deep sounds",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 23,
+        "fields": {
+            "name": "Cymbals",
+            "additional_notes": "Percussion instrument, metallic crash sound",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 24,
+        "fields": {
+            "name": "Triangle",
+            "additional_notes": "Small percussion instrument, bright metallic ring",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 25,
+        "fields": {
+            "name": "Tambourine",
+            "additional_notes": "Hand percussion with jingles",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 26,
+        "fields": {
+            "name": "Xylophone",
+            "additional_notes": "Percussion instrument with wooden bars",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 27,
+        "fields": {
+            "name": "Glockenspiel",
+            "additional_notes": "Percussion instrument with metal bars, bright sound",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 28,
+        "fields": {
+            "name": "Marimba",
+            "additional_notes": "Large wooden percussion instrument with resonators",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 29,
+        "fields": {
+            "name": "Vibraphone",
+            "additional_notes": "Metal percussion with motor-driven resonators",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 30,
+        "fields": {
+            "name": "Harp",
+            "additional_notes": "Plucked string instrument with pedals",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    },
+    {
+        "model": "syncope.instrument",
+        "pk": 31,
+        "fields": {
+            "name": "Celesta",
+            "additional_notes": "Keyboard instrument with bell-like sound",
+            "created_at": "2024-01-01T10:00:00Z"
+        }
+    }
+]

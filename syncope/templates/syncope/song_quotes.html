@@ -1,0 +1,50 @@
+{% extends "syncope/base.html" %}
+{% block title %}Quotes: {{ song.title }}{% endblock %}
+{% block content %}
+
+<h2>Quotes for "{{ song.title }}"</h2>
+
+<p><small>Quotes are specific phrases or sections from the song with their bar numbers for reference.</small></p>
+
+<p>
+    <a href="{%  url 'syncope:song_page' url_username song.pk %}">Back to Song</a>
+    &nbsp;|&nbsp;
+    <a href="{%  url 'syncope:song_update' url_username song.pk %}">Edit Song</a>
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+    {{ formset.management_form }}
+    <table>
+        <thead>
+            <tr>
+                <th>Quote</th>
+                <th>Bar Number</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for form in formset %}
+            <tr>
+                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>
+                    {{ form.word }}
+                    {% if form.word.errors %}
+                        <ul class="errorlist">{% for e in form.word.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </td>
+                <td>{{ form.bar_number }}</td>
+                <td>{{ form.DELETE }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <button type="submit" name="action" value="add_kw_row">+ Add Another Quote</button>
+    &nbsp;
+    <button type="submit" name="action" value="">Save Quotes</button>
+</form>
+
+{% endblock %}

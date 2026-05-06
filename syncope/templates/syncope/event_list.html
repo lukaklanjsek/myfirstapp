@@ -1,0 +1,25 @@
+{% extends "syncope/base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<a href="{%  url 'syncope:event_create' url_username %}">
+    +</a>
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Project</th>
+    </tr>
+    {% for event in events %}
+        <tr>
+            <td> <a href="{%  url 'syncope:event_detail' url_username event.id %}">
+                {{ event.started_at }}
+                </a>
+            </td>
+            <td>{{ event.event_type }}</td>
+            <td>{% if event.project %}<a href="{%  url 'syncope:project_detail' url_username event.project.id %}">{{ event.project }}</a>{% else %}—{% endif %}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}
