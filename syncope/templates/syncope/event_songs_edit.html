@@ -3,47 +3,109 @@
 
 {% block extra_css %}
 <style>
-    .reorder-buttons {
+    .songs-table { table-layout: fixed; width: 100%; }
+    .songs-table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1;
+    }
+    .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
+    .drag-handle-cell { width: 1.1rem; text-align: center; padding-left: 0; padding-right: 0; }
+    .drag-handle {
+        cursor: grab;
+        touch-action: none;
+        color: #888;
         display: flex;
-        justify-content: space-between;
-        width: 3rem;
+        flex-direction: column;
+        align-items: center;
+        line-height: 0.7;
+        padding: 0.3rem 0.1rem;
+        font-weight: bold;
+        font-size: 1.1rem;
     }
-
-    .reorder-buttons button {
-        padding: 0.2rem 0.25rem;
-        font-size: 0.8rem;
-        border: 1px solid #ccc;
-        background-color: #f5f5f5;
-        border-radius: 2px;
-        cursor: pointer;
-        min-width: 1rem;
-        height: 1rem;
-        line-height: 1;
-    }
-
-    .song-extra summary {
+    .drag-handle:active { cursor: grabbing; }
+    tr.song-row.dragging { opacity: 0.6; background-color: #eef; }
+    .song-index { text-align: center; font-weight: bold; width: 1.3rem; padding-left: 0; padding-right: 0; }
+    .song-cell { width: auto; }
+    .song-title { font-weight: 500; overflow-wrap: break-word; }
+    .song-subline { font-size: 0.85rem; color: #666; overflow-wrap: break-word; }
+    .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
+    .song-actions { white-space: nowrap; text-align: right; width: 3.4rem; padding-left: 0; }
+    .btn-edit {
         display: inline-block;
-        padding: 0.2rem 0.5rem;
-        font-size: 0.8rem;
+        width: 1.4rem;
+        text-align: center;
+        padding: 0.2rem 0;
+        font-size: 0.9rem;
+        border: 1px solid #ccc;
+        background-color: #f5f5f5;
+        border-radius: 2px;
+        text-decoration: none;
+        color: inherit;
+        margin-right: 0.2rem;
+    }
+    .remove-song-btn {
+        border: none;
+        background: none;
+        color: #999;
+        font-size: 1.1rem;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.25rem 0.2rem;
+    }
+    .remove-song-btn:hover { color: #c0392b; }
+    tr.staged-add,
+    tr.pending-remove {
+        background-color: #fff3cd;
+    }
+    tr.row-moved { background-color: #eaf3ff; }
+    tr.pending-remove td {
+        text-decoration: line-through;
+        opacity: 0.55;
+    }
+    .search-result-row { padding: 0.15rem 0; }
+    .add-item-btn {
         border: 1px solid #ccc;
         background-color: #f5f5f5;
         border-radius: 2px;
         cursor: pointer;
-        list-style: none;
-        width: fit-content;
+        min-width: 1.4rem;
+        line-height: 1;
+        padding: 0.15rem 0.4rem;
     }
 
-    .song-extra summary::-webkit-details-marker {
-        display: none;
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #f5f5f5;
+        border-top: 1px solid #ccc;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .save-bar.dirty {
+        background-color: #fff3cd;
+        border-top-color: #ffc107;
+    }
+    .save-bar .dirty-note {
+        font-size: 0.85rem;
+        color: #856404;
     }
 
-    .song-extra[open] summary {
-        margin-bottom: 0.5rem;
-    }
-
-    .song-extra label {
-        display: block;
-        margin: 0.3rem 0;
+    @media (max-width: 768px) {
+        .save-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        #songs-content {
+            padding-bottom: 4rem;
+        }
+        .btn-edit { padding: 0.2rem 0.35rem; font-size: 0.75rem; }
     }
 </style>
 {% endblock %}
@@ -60,47 +122,73 @@
 
 {% include "syncope/_breadcrumbs.html" %}
 <h2>Songs &mdash; {{ event.name }}</h2>
-<p><small>Changes here save instantly &mdash; no Save button needed, except for recordings &amp; links.</small></p>
-<p><button type="button" onclick="window.location.href='{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}'">Return</button></p>
 
-<div style="display:none;">{% csrf_token %}</div>
+<div id="songs-content">
+    <form method="post" id="songs-form">
+        {% csrf_token %}
+        <input type="hidden" id="song-order-input" name="song_order" value="">
+        <div class="table-container">
+            <table class="songs-table">
+                <thead>
+                    <tr>
+                        <th class="drag-handle-cell"></th>
+                        <th class="song-index">#</th>
+                        <th>Song</th>
+                        <th class="song-resources" title="Resources">&#128206;</th>
+                        {% if is_admin %}<th class="song-actions"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody id="songs-tbody">
+                    {% for eventsong in eventsongs %}
+                        {% include "syncope/_song_row.html" %}
+                    {% empty %}
+                    <tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.{% if is_admin %} Use the section below to add songs.{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
 
-<table>
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Song</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody id="songs-tbody">
-        {% for index, eventsong, resource_formset in eventsongs_with_resources %}
-            {% include "syncope/_song_row.html" %}
-        {% empty %}
-        <tr id="no-songs-row"><td colspan="3">No songs added yet.{% if is_admin %} Use the section below to add songs.{% endif %}</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+    {% if is_admin %}
+    <div id="add-songs" style="max-width:42rem;">
+        <p><strong>Add songs</strong></p>
+        <p>
+            <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
+        </p>
+        <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" id="song-search-clear">Clear search</button>
+            <button type="submit" form="songs-form" name="action" value="new_song" title="Save current changes and create a new song">+ New Song</button>
+        </p>
+        <div id="song-search-results">
+            {% include "syncope/song_search_results.html" %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 
 {% if is_admin %}
-<p><strong>Select from existing songs</strong></p>
-<p>
-    <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords">
-    <button type="button" id="song-search-clear">Clear</button>
-</p>
-<div id="song-search-results">
-    {% include "syncope/song_search_results.html" %}
+<div class="save-bar" id="save-bar">
+    <span id="clean-actions">
+        <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Return</a>
+    </span>
+    <span id="dirty-actions" style="display:none;">
+        <button type="submit" form="songs-form" id="save-submit-btn">Save and return</button>
+        <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Discard</a>
+    </span>
+    <span class="dirty-note"></span>
 </div>
-<p><a href="{% url 'syncope:song_list' url_username %}">Browse full song archive</a></p>
-<form method="post" action="{% url 'syncope:save_draft_and_go' %}?goto={% url 'syncope:song_new' url_username %}?auto_add_event={{ event.pk }}&next={% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">
-    {% csrf_token %}
-    <button type="submit" title="Create new song">+ Add new song to archive</button>
-</form>
 {% endif %}
 
 <script>
-    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const songsTbody = document.getElementById('songs-tbody');
+    const saveBar = document.getElementById('save-bar');
+    const songOrderInput = document.getElementById('song-order-input');
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : str;
+        return div.innerHTML;
+    }
 
     function suppressEnterSubmit(input) {
         if (!input) return;
@@ -109,30 +197,190 @@
         });
     }
 
-    function renumberSongs() {
-        songsTbody.querySelectorAll('tr[data-eventsong-id] .song-index').forEach((cell, i) => {
-            cell.textContent = i + 1;
-        });
-        const rows = songsTbody.querySelectorAll('tr[data-eventsong-id]');
-        rows.forEach((row, i) => {
-            const upBtn = row.querySelector('.reorder-btn[data-direction="up_one"]');
-            const downBtn = row.querySelector('.reorder-btn[data-direction="down_one"]');
-            if (upBtn) upBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
-            if (downBtn) downBtn.style.visibility = i === rows.length - 1 ? 'hidden' : 'visible';
-        });
-    }
-
     function removeEmptyRow() {
         document.getElementById('no-songs-row')?.remove();
     }
 
-    // --- Search ---
+    function renumberSongs() {
+        Array.from(songsTbody.querySelectorAll('tr.song-row')).forEach((row, i) => {
+            const cell = row.querySelector('.song-index');
+            if (cell) cell.textContent = i + 1;
+        });
+    }
+
+    function currentExistingOrder() {
+        return Array.from(songsTbody.querySelectorAll('tr.song-row[data-eventsong-id]'))
+            .filter(row => !row.classList.contains('pending-remove'))
+            .map(row => row.dataset.eventsongId);
+    }
+
+    let originalOrderList = [];
+    function snapshotOriginalOrder() {
+        originalOrderList = currentExistingOrder();
+    }
+
+    function orderChanged() {
+        const current = currentExistingOrder();
+        const currentSet = new Set(current);
+        const expected = originalOrderList.filter(pk => currentSet.has(pk));
+        return current.some((pk, i) => pk !== expected[i]);
+    }
+
+    function paintRowMoved() {
+        const current = currentExistingOrder();
+        const currentSet = new Set(current);
+        const expected = originalOrderList.filter(pk => currentSet.has(pk));
+        const expectedIndex = new Map(expected.map((pk, i) => [pk, i]));
+        current.forEach((pk, i) => {
+            const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
+            if (row) row.classList.toggle('row-moved', expectedIndex.get(pk) !== i);
+        });
+    }
+
+    function updateSongOrderField() {
+        const tokens = Array.from(songsTbody.querySelectorAll('tr.song-row'))
+            .filter(row => !row.classList.contains('pending-remove'))
+            .map(row => row.classList.contains('staged-add') ? `new-${row.dataset.songId}` : `es-${row.dataset.eventsongId}`);
+        songOrderInput.value = tokens.join(',');
+    }
+
+    function countUnsavedChanges() {
+        let count = songsTbody.querySelectorAll('tr.staged-add').length;
+        count += songsTbody.querySelectorAll('tr.pending-remove').length;
+        if (orderChanged()) count += 1;
+        return count;
+    }
+
+    function syncState() {
+        renumberSongs();
+        updateSongOrderField();
+        paintRowMoved();
+        if (!saveBar) return;
+        const n = countUnsavedChanges();
+        const dirty = n > 0;
+        saveBar.classList.toggle('dirty', dirty);
+        const cleanActions = document.getElementById('clean-actions');
+        const dirtyActions = document.getElementById('dirty-actions');
+        if (cleanActions) cleanActions.style.display = dirty ? 'none' : '';
+        if (dirtyActions) dirtyActions.style.display = dirty ? '' : 'none';
+        const note = saveBar.querySelector('.dirty-note');
+        if (note) note.textContent = dirty ? `${n} unsaved change${n === 1 ? '' : 's'}` : '';
+    }
+
+    // Cancel/Discard/Return are plain <a> tags (no per-click JS, so they navigate
+    // instantly) — the "discard changes?" prompt instead comes from the browser's
+    // native beforeunload dialog, skipped on an actual Save submit.
+    let formSubmitting = false;
+    document.getElementById('songs-form')?.addEventListener('submit', () => {
+        formSubmitting = true;
+    });
+    window.addEventListener('beforeunload', function(e) {
+        if (formSubmitting || !saveBar?.classList.contains('dirty')) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    // --- Drag-and-drop reorder (Pointer Events: works for mouse and touch alike) ---
+    let dragRow = null;
+    let dragPointerId = null;
+
+    songsTbody.addEventListener('pointerdown', function(e) {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        const row = handle.closest('tr.song-row');
+        if (!row) return;
+        e.preventDefault();
+        handle.setPointerCapture(e.pointerId);
+        dragRow = row;
+        dragPointerId = e.pointerId;
+        row.classList.add('dragging');
+    });
+
+    songsTbody.addEventListener('pointermove', function(e) {
+        if (!dragRow || e.pointerId !== dragPointerId) return;
+        const rows = Array.from(songsTbody.querySelectorAll('tr.song-row'));
+        let target = null;
+        for (const row of rows) {
+            if (row === dragRow) continue;
+            const rect = row.getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) { target = row; break; }
+        }
+        if (target) songsTbody.insertBefore(dragRow, target);
+        else songsTbody.appendChild(dragRow);
+    });
+
+    function endDrag(e) {
+        if (!dragRow || e.pointerId !== dragPointerId) return;
+        dragRow.classList.remove('dragging');
+        dragRow = null;
+        dragPointerId = null;
+        syncState();
+    }
+    songsTbody.addEventListener('pointerup', endDrag);
+    songsTbody.addEventListener('pointercancel', endDrag);
+
+    // --- Remove / undo ---
+    function toggleRemove(row) {
+        const pk = row.dataset.eventsongId;
+        if (!pk) return;
+        const btn = row.querySelector('.remove-song-btn');
+        const pending = row.classList.toggle('pending-remove');
+        if (pending) {
+            row.insertAdjacentHTML('beforeend', `<input type="hidden" class="pending-remove-input" name="remove_${pk}" value="1">`);
+            btn.textContent = '↺';
+            btn.title = 'Undo removal';
+        } else {
+            row.querySelector('.pending-remove-input')?.remove();
+            btn.textContent = '×';
+            btn.title = 'Remove from event';
+        }
+        syncState();
+    }
+
+    songsTbody.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-song-btn');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('tr');
+        if (row.classList.contains('staged-add')) {
+            row.remove();
+            syncState();
+            return;
+        }
+        toggleRemove(row);
+    });
+
+    // --- Search / staged add ---
+    function buildStagedSongRow(id, title, composer, arranger, resources) {
+        const tr = document.createElement('tr');
+        tr.className = 'song-row staged-add';
+        tr.dataset.songId = id;
+        const subline = composer ? escapeHtml(composer) : (arranger ? escapeHtml(arranger) : '<small>No composer</small>');
+        tr.innerHTML = `
+            <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
+            <td class="song-index"></td>
+            <td class="song-cell">
+                <div class="song-title">${escapeHtml(title)}</div>
+                <div class="song-subline">${subline}</div>
+            </td>
+            <td class="song-resources" title="Event resources for song">${escapeHtml(resources || '0')}</td>
+            <td class="song-actions"><button type="button" class="remove-song-btn" title="Remove staged addition">&times;</button></td>
+        `;
+        return tr;
+    }
+
+    function currentSongIds() {
+        return Array.from(songsTbody.querySelectorAll('tr.song-row'))
+            .map(row => row.dataset.songId)
+            .filter(Boolean);
+    }
+
     const songSearchInput = document.getElementById('song-search-input');
     const songSearchResults = document.getElementById('song-search-results');
     let songSearchTimeout;
 
     function runSongSearch(query) {
-        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&origin={{ origin_key }}`;
+        const exclude = currentSongIds().join(',');
+        const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
         fetch(url).then(r => r.text()).then(html => { songSearchResults.innerHTML = html; });
     }
 
@@ -150,69 +398,19 @@
         runSongSearch('');
     });
 
-    // Add song via search results (delegated — results div is replaced on every search)
     songSearchResults?.addEventListener('click', function(e) {
-        const btn = e.target.closest('button[formaction]');
+        const btn = e.target.closest('.add-item-btn');
         if (!btn) return;
-        e.preventDefault();
-        const select = songSearchResults.querySelector('select[name="song"]');
-        if (!select || !select.value) return;
-        const formData = new FormData();
-        formData.append('song', select.value);
-        formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
-        fetch(btn.formAction, { method: 'POST', body: formData })
-            .then(r => r.ok ? r.text() : Promise.reject())
-            .then(html => {
-                removeEmptyRow();
-                songsTbody.insertAdjacentHTML('beforeend', html);
-                renumberSongs();
-                songSearchInput.value = '';
-                runSongSearch('');
-            })
-            .catch(() => alert('Could not add that song. It may already be on this event.'));
+        const row = btn.closest('.search-result-row');
+        removeEmptyRow();
+        songsTbody.appendChild(buildStagedSongRow(
+            btn.dataset.id, btn.dataset.title, btn.dataset.composer, btn.dataset.arranger, btn.dataset.resources
+        ));
+        row?.remove();
+        syncState();
     });
 
-    // --- Row actions (remove / reorder / encore) — delegated since rows can be added dynamically ---
-    songsTbody.addEventListener('click', function(e) {
-        const removeBtn = e.target.closest('.remove-song-btn');
-        if (removeBtn) {
-            if (!confirm('Remove this song from the event?')) return;
-            const row = removeBtn.closest('tr[data-eventsong-id]');
-            fetch(row.dataset.removeUrl, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } })
-                .then(r => { if (!r.ok) throw new Error(); row.remove(); renumberSongs(); })
-                .catch(() => alert('Could not remove song.'));
-            return;
-        }
-
-        const reorderBtn = e.target.closest('.reorder-btn');
-        if (reorderBtn) {
-            const row = reorderBtn.closest('tr[data-eventsong-id]');
-            const direction = reorderBtn.dataset.direction;
-            const sibling = direction === 'up_one' ? row.previousElementSibling : row.nextElementSibling;
-            if (!sibling) return;
-            fetch(row.dataset.reorderUrl, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `direction=${direction}`,
-            }).then(r => {
-                if (!r.ok) throw new Error();
-                if (direction === 'up_one') row.parentNode.insertBefore(row, sibling);
-                else row.parentNode.insertBefore(sibling, row);
-                renumberSongs();
-            }).catch(() => alert('Could not reorder songs.'));
-        }
-    });
-
-    songsTbody.addEventListener('change', function(e) {
-        if (!e.target.classList.contains('encore-toggle')) return;
-        const row = e.target.closest('tr[data-eventsong-id]');
-        fetch(row.dataset.encoreUrl, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `encore=${e.target.checked}`,
-        }).catch(() => alert('Could not save encore change.'));
-    });
-
-    renumberSongs();
+    snapshotOriginalOrder();
+    syncState();
 </script>
 {% endblock %}

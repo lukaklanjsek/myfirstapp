@@ -1,50 +1,19 @@
-<tr data-eventsong-id="{{ eventsong.pk }}" id="song-{{ eventsong.pk }}"
-    data-remove-url="{% url 'syncope:event_song_remove' url_username eventsong.event_id eventsong.pk %}"
-    data-reorder-url="{% url 'syncope:event_song_reorder' url_username eventsong.event_id eventsong.pk %}"
-    data-encore-url="{% url 'syncope:event_song_encore_toggle' url_username eventsong.event_id eventsong.pk %}">
-    <td class="song-index" style="text-align: center; font-weight: bold;">{{ index }}</td>
-    <td>
-        <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ eventsong.event_id }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
-        {% if eventsong.song.composer %} &mdash; {{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}{% endif %}
+<tr class="song-row" data-eventsong-id="{{ eventsong.pk }}" data-song-id="{{ eventsong.song_id }}" id="song-{{ eventsong.pk }}">
+    <td class="drag-handle-cell">{% if is_admin %}<span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span>{% endif %}</td>
+    <td class="song-index">{{ eventsong.index }}</td>
+    <td class="song-cell">
+        <div class="song-title">{{ eventsong.song.title }}</div>
+        <div class="song-subline">
+            {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}
+            {% elif eventsong.song.arranger %}{{ eventsong.song.arranger.first_name }} {{ eventsong.song.arranger.last_name }}
+            {% else %}<small>No composer</small>{% endif %}
+        </div>
     </td>
-    <td>
-        <details class="song-extra">
-            <summary title="More options">⋯</summary>
-            {% if is_admin %}
-                <div class="reorder-buttons">
-                    <button type="button" class="reorder-btn" data-direction="up_one" title="Move up">↑</button>
-                    <button type="button" class="reorder-btn" data-direction="down_one" title="Move down">↓</button>
-                </div>
-                <label>
-                    <input type="checkbox" class="encore-toggle" {% if eventsong.encore %}checked{% endif %}>
-                    Encore
-                </label>
-                <button type="button" class="remove-song-btn">Remove song</button>
-            {% endif %}
-            <div class="recordings-links">
-                <small><strong>Recordings &amp; links:</strong></small>
-                {% if is_admin %}
-                <form method="post" action="{% url 'syncope:event_song_resources_save' url_username eventsong.event_id eventsong.pk %}">
-                    {% csrf_token %}
-                    {{ resource_formset.management_form }}
-                    {% for rs_form in resource_formset %}
-                        <div>
-                            {{ rs_form.url }}
-                            {{ rs_form.description }}
-                            {% if rs_form.instance.pk %}{{ rs_form.DELETE }}{% endif %}
-                            {{ rs_form.id }}
-                        </div>
-                    {% endfor %}
-                    <button type="submit">Save links</button>
-                </form>
-                {% else %}
-                    {% for rs_form in resource_formset %}
-                        {% if rs_form.instance.pk %}
-                            <div><a href="{{ rs_form.instance.resource.url }}" target="_blank" rel="noopener noreferrer">{{ rs_form.instance.resource.url }}</a></div>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </details>
+    <td class="song-resources" title="Event resources for song">{{ eventsong.resources_count }}</td>
+    {% if is_admin %}
+    <td class="song-actions">
+        <a class="btn-edit" title="Edit song" href="{% url 'syncope:song_update' url_username eventsong.song.pk %}?next={{ songs_url|urlencode }}">&#9998;</a>
+        <button type="button" class="remove-song-btn" title="Remove from event">&times;</button>
     </td>
+    {% endif %}
 </tr>

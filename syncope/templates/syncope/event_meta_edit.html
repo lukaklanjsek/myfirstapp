@@ -69,6 +69,18 @@
         </div>
     {% endfor %}
 
+    {% if eventsongs %}
+    <div>
+        <label for="id_encore_song">Encore song</label>
+        <select name="encore_song" id="id_encore_song">
+            <option value="">&mdash;</option>
+            {% for eventsong in eventsongs %}
+                <option value="{{ eventsong.pk }}" {% if eventsong.pk == encore_eventsong_id %}selected{% endif %}>{{ eventsong.song.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
     <h3>Resources</h3>
     <p><small>This event's specific resources.</small></p>
     <div id="resource-formset">

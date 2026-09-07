@@ -156,8 +156,8 @@ class AttendanceDashboardView(View):
         return events, editable_event_id, grayed_out_event_ids
 
     def get(self, request, username):
-        # Get date range from query params or default to last 8 events
-        event_limit = int(request.GET.get('event_limit') or 8)
+        # Get date range from query params or default to last 3 events
+        event_limit = int(request.GET.get('event_limit') or 3)
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
 
@@ -215,7 +215,7 @@ class AttendanceDashboardView(View):
         """Handle bulk attendance updates."""
         with transaction.atomic():
             # Get all events and members being displayed
-            event_limit = int(request.GET.get('event_limit') or 8)
+            event_limit = int(request.GET.get('event_limit') or 3)
             start_date = request.GET.get('start_date')
             end_date = request.GET.get('end_date')
 

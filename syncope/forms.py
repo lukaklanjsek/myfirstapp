@@ -8,7 +8,7 @@ from .models import Event, EventSong, AttendanceType,  Voice, Instrument, EventT
 from .models import LyricsTranslation, LanguageCode, ApproximateDate, Resource, SongResource, PersonResource, ProjectResource, \
     MembershipPeriod, PersonRole
 from django.forms import inlineformset_factory, BaseInlineFormSet
-from django.db.models import Q
+from django.db.models import Q, Count
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -365,12 +365,22 @@ class SongChoiceField(forms.ModelChoiceField):
 
 
 class AddSongToEventForm(forms.Form):
-    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, **kwargs):
+    """Admin-only form to add archive songs to an event's setlist (staged client-side; see event_songs_edit.html)."""
+    song = forms.ModelMultipleChoiceField(
+        queryset=Song.objects.none(),
+        widget=forms.CheckboxSelectMultiple(),
+        label='Song',
+    )
+
+    def __init__(self, *args, org_user=None, event=None, search_q='', limit_results=True, exclude_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.song_search_truncated = False
         if org_user and event is not None:
             already_added_ids = set(event.eventsong_set.values_list('song_id', flat=True))
-            qs = Song.objects.filter(user=org_user).order_by('title')
+            exclude_pks = already_added_ids | set(exclude_ids or [])
+            qs = Song.objects.filter(user=org_user).exclude(id__in=exclude_pks).annotate(
+                resource_count=Count('song_resource', distinct=True)
+            ).order_by('title')
             if search_q:
                 if search_q.isdigit():
                     qs = qs.filter(internal_id=int(search_q))
@@ -382,16 +392,10 @@ class AddSongToEventForm(forms.Form):
                     ).distinct()
             if limit_results:
                 total_matches = qs.count()
-                limited_ids = list(qs.values_list('pk', flat=True)[:50])
+                limited_ids = list(qs.values_list('pk', flat=True)[:25])
                 qs = qs.filter(pk__in=limited_ids)
-                self.song_search_truncated = total_matches > 50
-            self.fields['song'] = SongChoiceField(
-                queryset=qs,
-                already_added_ids=already_added_ids,
-                widget=forms.Select(attrs={'size': '8'}),
-                empty_label=None,
-                label='Song',
-            )
+                self.song_search_truncated = total_matches > 25
+            self.fields['song'].queryset = qs
 
 
 class EventChoiceField(forms.ModelChoiceField):

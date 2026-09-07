@@ -16,7 +16,16 @@
     user-select: none;
     border-radius: 4px;
     font-size: 1.1rem;
+    line-height: 1.6rem;
     transition: background-color 0.15s ease;
+}
+
+.legend-badge {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 3px;
 }
 
 .attendance-cell:hover {
@@ -27,11 +36,11 @@
     opacity: 1;
 }
 
+.att-type-0 { background-color: #dfe6e9; }
 .att-type-1 { background-color: #c8f7c5; }
 .att-type-2 { background-color: #ffeaa7; }
 .att-type-3 { background-color: #fab1a0; }
 .att-type-4 { background-color: #a29bfe; }
-.att-type-5 { background-color: #dfe6e9; }
 
 .grayed-out {
     background-color: #ffffff !important;
@@ -71,6 +80,10 @@
     display: inline;
 }
 
+.total-label-short {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .save-bar {
         position: fixed;
@@ -80,6 +93,12 @@
     }
     .table-container {
         padding-bottom: 4rem;
+    }
+    .total-label-full {
+        display: none;
+    }
+    .total-label-short {
+        display: inline;
     }
 }
 
@@ -106,7 +125,7 @@
             </div>
             <div>
                 <label>Event Limit:</label>
-                <input type="number" id="event_limit_input" name="event_limit" value="{{ request.GET.event_limit|default:8 }}" min="1" max="50" style="width: 60px;"
+                <input type="number" id="event_limit_input" name="event_limit" value="{{ request.GET.event_limit|default:3 }}" min="1" max="50" style="width: 60px;"
                        onchange="this.form.start_date.value=''; this.form.end_date.value='';">
             </div>
             <button type="submit">Filter</button>
@@ -117,11 +136,11 @@
 
     <div style="margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap;">
         <strong>Legend:</strong>
-        <span class="att-type-1" style="padding: 2px 6px; border-radius: 3px;" title="present at the event">✓ Present</span>
-        <span class="att-type-2" style="padding: 2px 6px; border-radius: 3px;" title="missing due to professional activities">💼 Work</span>
-        <span class="att-type-3" style="padding: 2px 6px; border-radius: 3px;" title="unplanned medical issues">🤒 Illness</span>
-        <span class="att-type-4" style="padding: 2px 6px; border-radius: 3px;" title="planned absence">🏖 Private</span>
-        <span class="att-type-5" style="padding: 2px 6px; border-radius: 3px;" title="to be determined">TBD</span>
+        <span class="legend-badge att-type-1" title="present at the event">✓ Present</span>
+        <span class="legend-badge att-type-2" title="missing due to professional activities">💼 Work</span>
+        <span class="legend-badge att-type-3" title="unplanned medical issues">🤒 Illness</span>
+        <span class="legend-badge att-type-4" title="planned absence">🏖 Private</span>
+        <span class="legend-badge att-type-0" title="to be determined">? TBD</span>
         <em>(Click a cell to cycle)</em>
     </div>
 
@@ -162,12 +181,12 @@
                                 {% if cell.is_ineligible %}
                                     <td class="cell-ineligible"></td>
                                 {% else %}
-                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:5 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
-                                        data-type-id="{{ cell.attendance_type_id|default:5 }}"
+                                    <td class="attendance-cell att-type-{{ cell.attendance_type_id|default:0 }} {% if cell.is_grayed_out %}grayed-out{% endif %}"
+                                        data-type-id="{{ cell.attendance_type_id|default:0 }}"
                                         {% if not cell.is_grayed_out %}onclick="cycleAttendance(this)"{% endif %}>
                                         <input type="hidden"
                                                name="attendance_{{ cell.event_id }}_{{ row.member.id }}"
-                                               value="{{ cell.attendance_type_id|default:5 }}">
+                                               value="{{ cell.attendance_type_id|default:0 }}">
                                         <span class="att-icon"></span>
                                     </td>
                                 {% endif %}
@@ -178,7 +197,7 @@
                         {% endfor %}
                     {% endfor %}
                     <tr class="totals-row" style="border-top: 3px solid #333;">
-                        <td class="col-num"><strong>Total</strong></td>
+                        <td class="col-num"><strong class="total-label-full">Total</strong><strong class="total-label-short">=</strong></td>
                         <td class="sticky-col">{{ members|length }}</td>
                         {% for total in event_totals %}
                             <td>{{ total.present }}/{{ total.total }}</td>
@@ -200,13 +219,13 @@
 
 
 <script>
-const CYCLE_ORDER = [5, 1, 2, 3, 4];
+const CYCLE_ORDER = [0, 1, 2, 3, 4];
 const TYPE_META = {
+    0: { label: 'TBD',               icon: '?',  cls: 'att-type-0' },
     1: { label: 'Present',           icon: '✓',  cls: 'att-type-1' },
     2: { label: 'Work',              icon: '💼', cls: 'att-type-2' },
     3: { label: 'Illness',           icon: '🤒', cls: 'att-type-3' },
     4: { label: 'Private',           icon: '🏖', cls: 'att-type-4' },
-    5: { label: 'TBD',               icon: '',   cls: 'att-type-5' },
 };
 
 function cycleAttendance(cell) {
@@ -223,7 +242,7 @@ function cycleAttendance(cell) {
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.attendance-cell[data-type-id]').forEach(cell => {
-        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[5];
+        const meta = TYPE_META[parseInt(cell.dataset.typeId, 10)] || TYPE_META[0];
         cell.querySelector('.att-icon').textContent = meta.icon;
         cell.title = meta.label;
     });

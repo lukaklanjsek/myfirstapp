@@ -22,6 +22,21 @@
         gap: 1rem;
     }
 
+    .dt-short { display: none; }
+
+    .event-songs-table .song-index { text-align: center; font-weight: bold; vertical-align: middle; width: 1.5rem; }
+    .event-songs-table .song-title { font-weight: 500; }
+    .event-songs-table .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+    }
+    .event-songs-table .song-meta { white-space: nowrap; color: #888; }
+    .event-songs-table .song-encore { text-align: center; }
+
     @media (max-width: 768px) {
         .bottom-bar {
             position: fixed;
@@ -32,6 +47,8 @@
         #event-detail-content {
             padding-bottom: 4rem;
         }
+        .dt-full { display: none; }
+        .dt-short { display: inline; }
     }
 </style>
 {% endblock %}
@@ -50,10 +67,10 @@
 </h2>
 <p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
 {% if event.same_date %}
-<span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
+<span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span>&ndash;<span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="time">{{ event.ended_at|date:"H:i" }}</span>
 {% else %}
-Date: <span data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime">{{ event.started_at|date:"d M, Y, H:i" }}</span><br>
-Ends: <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime">{{ event.ended_at|date:"d M, Y, H:i" }}</span>
+Date: <span class="dt-full" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.started_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.started_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.started_at|date:"D d M, Y, H:i" }}</span><br>
+Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-full">{{ event.ended_at|date:"l d F, Y, H:i" }}</span><span class="dt-short" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime-dow-short">{{ event.ended_at|date:"D d M, Y, H:i" }}</span>
 {% endif %}
 {% if event.project %}<br><span title="Project"> Project:<a href="{% url 'syncope:project_detail' url_username event.project.pk %}">{{ event.project.title }}</a></span>{% endif %}
 {% if event.description %}<br>{{ event.description }}{% endif %}
@@ -84,32 +101,40 @@ Ends: <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime">{{ ev
     {% if is_admin %}<a href="{% url 'syncope:event_songs_edit' url_username event.pk %}?origin={{ origin_key }}">Edit</a>{% endif %}
 </h3>
 {% if eventsongs %}
-    <table>
+    <table class="event-songs-table">
         <thead>
             <tr>
-                <th>#</th>
+                <th></th>
                 <th>Song</th>
-                <th>Encore</th>
+                <th title="Encore">&#8635;</th>
             </tr>
         </thead>
         <tbody>
             {% for eventsong in eventsongs %}
             <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    {% if eventsong.resource_icons %}
-                        <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
-                    {% endif %}
-                    <a href="{%  url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a> -
-                    <span title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}">
-                        {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {% endif %}</span>
-                    {% if eventsong.song.internal_id %}(#{{ eventsong.song.internal_id }}){% endif %}
-
-                    {% if eventsong.song.keywords %}
-                        <br><small>{{ eventsong.song.keywords }}</small>
-                    {% endif %}
+                <td class="song-index">{{ forloop.counter }}</td>
+                <td class="song-cell">
+                    <div class="song-title">
+                        {% if eventsong.resource_icons %}
+                            <span title="Song has its own resources available">{{ eventsong.resource_icons.0.icon }}</span>
+                        {% endif %}
+                        <a href="{% url 'syncope:song_detail' url_username eventsong.song.pk %}?from_event={{ event.pk }}&origin={{ origin_key }}">{{ eventsong.song.title }}</a>
+                    </div>
+                    <div class="song-subline">
+                        <span{% if eventsong.song.composer %} title="{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }} {{ eventsong.song.composer.birth_date|date:'Y' }}-{{ eventsong.song.composer.death_date|date:'Y' }}"{% endif %}>
+                            {% if eventsong.song.composer %}{{ eventsong.song.composer.first_name }} {{ eventsong.song.composer.last_name }}
+                            {% elif eventsong.song.arranger %}{{ eventsong.song.arranger.first_name }} {{ eventsong.song.arranger.last_name }}
+                            {% else %}<small>No composer</small>{% endif %}
+                        </span>
+                        {% if eventsong.song.internal_id or eventsong.song.keywords %}
+                        <small class="song-meta">
+                            {% if eventsong.song.internal_id %}#{{ eventsong.song.internal_id }}{% endif %}
+                            {% if eventsong.song.keywords %} &middot; {{ eventsong.song.keywords }}{% endif %}
+                        </small>
+                        {% endif %}
+                    </div>
                 </td>
-                <td>{% if eventsong.encore %}Yes{% endif %}</td>
+                <td class="song-encore">{% if eventsong.encore %}&#10003;{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -151,7 +176,7 @@ Ends: <span data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt="datetime">{{ ev
                 </td>
                 {% endcomment %}
                 <td>
-                    {% if attendance.attendance_type_id == 1 %}✓{% elif attendance.attendance_type_id == 2 %}💼{% elif attendance.attendance_type_id == 3 %}🤒{% elif attendance.attendance_type_id == 4 %}🏖{% endif %}
+                    {% if attendance.attendance_type_id == 1 %}✓{% elif attendance.attendance_type_id == 2 %}💼{% elif attendance.attendance_type_id == 3 %}🤒{% elif attendance.attendance_type_id == 4 %}🏖{% else %}?{% endif %}
                     {{ attendance.attendance_type }}
                 </td>
             </tr>

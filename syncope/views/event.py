@@ -1,5 +1,5 @@
 from functools import wraps
-from django.http import HttpResponseForbidden, HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseForbidden
 from django.shortcuts import  get_object_or_404, render
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView,  DetailView, View
 from django.views.generic.edit import DeleteView
-from django.db.models import Max, Min, Case, When, Value, IntegerField, Prefetch
+from django.db.models import Min, Case, When, Value, IntegerField, Prefetch, Count
 from django.shortcuts import redirect
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -15,7 +15,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.http import url_has_allowed_host_and_scheme
-from syncope.models import CustomUser, Person, Role
+from syncope.models import CustomUser, Person, Role, Song
 from syncope.models import Event, EventSong, Attendance, AttendanceType, EventResource, EventSongResource, Resource, SongResource
 from syncope.forms import EventForm, AddAttendanceForm
 from syncope.forms import AddSongToEventForm, EventResourceFormSet, EventSongResourceFormSet
@@ -107,43 +107,6 @@ def get_ordered_attendance_queryset(event):
         'person__last_name',
         'person__first_name',
     )
-
-
-def reorder_event_song(event, song_pk, direction):
-    """Move one EventSong up/down within `event`'s ordering. Returns True if a move happened."""
-    songs = list(event.eventsong_set.all().order_by('order'))
-    if not songs:
-        return False
-
-    song_idx = next((idx for idx, song in enumerate(songs) if song.pk == song_pk), None)
-    if song_idx is None:
-        return False
-
-    moved = False
-    if direction == 'up_one' and song_idx > 0:
-        songs[song_idx], songs[song_idx - 1] = songs[song_idx - 1], songs[song_idx]
-        moved = True
-    elif direction == 'up_all' and song_idx > 0:
-        songs.insert(0, songs.pop(song_idx))
-        moved = True
-    elif direction == 'down_one' and song_idx < len(songs) - 1:
-        songs[song_idx], songs[song_idx + 1] = songs[song_idx + 1], songs[song_idx]
-        moved = True
-    elif direction == 'down_all' and song_idx < len(songs) - 1:
-        songs.append(songs.pop(song_idx))
-        moved = True
-
-    if not moved:
-        return False
-
-    with transaction.atomic():
-        for idx, song in enumerate(songs):
-            song.order = -(idx + 1)
-            song.save(update_fields=['order'])
-        for idx, song in enumerate(songs):
-            song.order = idx + 1
-            song.save(update_fields=['order'])
-    return True
 
 
 @method_decorator(login_required, name='dispatch')
@@ -348,18 +311,11 @@ class EventDetailView(DetailView):
 
 
 
-def _add_song_from_post(event, org_user, post_data):
-    form = AddSongToEventForm(post_data, org_user=org_user, event=event, limit_results=False)
-    if not form.is_valid():
-        return None
-    next_order = (event.eventsong_set.aggregate(Max('order'))['order__max'] or 0) + 1
-    return EventSong.objects.create(event=event, song=form.cleaned_data['song'], order=next_order)
-
-
 # --- Songs subpage -----------------------------------------------------------------
 
 @method_decorator(login_required, name='dispatch')
 class EventSongsEditView(View):
+    """Staged/save-bar editor for an event's setlist (add via search, drag to reorder, remove/undo, one Save)."""
     template_name = 'syncope/event_songs_edit.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -368,6 +324,8 @@ class EventSongsEditView(View):
         if not can_view_event_content(request.user, self.customuser):
             return HttpResponseForbidden("You don't have permission to access this page.")
         self.is_admin = is_event_admin(request.user, self.customuser)
+        if request.method == 'POST' and not self.is_admin:
+            return HttpResponseForbidden("Only admins can make this change.")
         self.event = get_object_or_404(Event, pk=self.kwargs['pk'], user=self.customuser)
         return super().dispatch(request, *args, **kwargs)
 
@@ -377,109 +335,122 @@ class EventSongsEditView(View):
     def _get_context(self):
         event = self.event
         eventsongs = list(
-            event.eventsong_set.select_related('song', 'song__composer').order_by('order').prefetch_related(
-                Prefetch(
-                    'event_song_resource',
-                    queryset=EventSongResource.objects.select_related('resource').order_by('order')
-                )
+            event.eventsong_set.select_related('song', 'song__composer', 'song__arranger').order_by('order').annotate(
+                song_resource_count=Count('song__song_resource', distinct=True),
+                es_resource_count=Count('event_song_resource', distinct=True),
             )
         )
-        eventsongs_with_resources = [
-            (idx + 1, es, EventSongResourceFormSet(
-                instance=es, queryset=es.event_song_resource.all(),
-                user=self.customuser, prefix=f"esresource_{es.pk}",
-            ))
-            for idx, es in enumerate(eventsongs)
-        ]
+        for idx, es in enumerate(eventsongs):
+            es.index = idx + 1
+            es.resources_count = es.song_resource_count + es.es_resource_count
         search_q = self.request.GET.get('song_q', '')
         breadcrumbs, origin_key = event_breadcrumbs(
             self.request, self.kwargs.get('username'), event, current_label='Songs'
+        )
+        songs_url = add_query_param(
+            reverse('syncope:event_songs_edit', kwargs={'username': self.kwargs.get('username'), 'pk': event.pk}),
+            {'origin': origin_key},
         )
         return {
             'object': event,
             'event': event,
             'eventsongs': eventsongs,
-            'eventsongs_with_resources': eventsongs_with_resources,
             'url_username': self.kwargs.get('username'),
             'is_admin': self.is_admin,
             'song_search_q': search_q,
             'breadcrumbs': breadcrumbs,
             'origin_key': origin_key,
+            'songs_url': songs_url,
             'add_song_form': AddSongToEventForm(
                 org_user=self.customuser, event=event, search_q=search_q
             ) if self.is_admin else None,
-            'add_song_url': f"{reverse('syncope:event_song_add', kwargs=self.kwargs)}?origin={origin_key}",
         }
 
+    def post(self, request, *args, **kwargs):
+        event = self.event
+        order_tokens = [t for t in request.POST.get('song_order', '').split(',') if t]
 
-@require_POST
-@login_required
-@event_admin_required
-def event_song_add(request, org_user, event):
-    """AJAX add-song endpoint for the Songs subpage; returns the new row fragment."""
-    eventsong = _add_song_from_post(event, org_user, request.POST)
-    if eventsong is None:
-        return HttpResponseBadRequest("Invalid selection.")
+        remove_pks = set()
+        for key in request.POST:
+            if key.startswith('remove_') and request.POST.get(key) == '1':
+                pk = key[len('remove_'):]
+                if pk.isdigit():
+                    remove_pks.add(int(pk))
 
-    song_count = event.eventsong_set.count()
-    return render(request, 'syncope/_song_row.html', {
-        'eventsong': eventsong,
-        'index': song_count,
-        'total': song_count,
-        'url_username': org_user.username,
-        'is_admin': True,
-        'origin_key': request.GET.get('origin', DEFAULT_EVENT_ORIGIN),
-        'resource_formset': EventSongResourceFormSet(
-            instance=eventsong, user=org_user, prefix=f"esresource_{eventsong.pk}"
-        ),
-    })
+        with transaction.atomic():
+            if remove_pks:
+                # EventSongResource.event_song is on_delete=PROTECT — clear resources first.
+                EventSongResource.objects.filter(event_song_id__in=remove_pks).delete()
+                EventSong.objects.filter(event=event, pk__in=remove_pks).delete()
+
+            surviving = list(EventSong.objects.filter(event=event).order_by('order'))
+            surviving_by_pk = {str(es.pk): es for es in surviving}
+            for idx, es in enumerate(surviving):
+                es.order = -(idx + 1)
+            if surviving:
+                EventSong.objects.bulk_update(surviving, ['order'])
+
+            new_song_pks = {t[len('new-'):] for t in order_tokens if t.startswith('new-')}
+            valid_song_ids = set(
+                Song.objects.filter(pk__in=new_song_pks, user=self.customuser).values_list('pk', flat=True)
+            ) if new_song_pks else set()
+
+            final_order = 0
+            seen_new_songs = set()
+            for token in order_tokens:
+                if token.startswith('es-'):
+                    es = surviving_by_pk.get(token[len('es-'):])
+                    if es is None:
+                        continue
+                    final_order += 1
+                    es.order = final_order
+                    es.save(update_fields=['order'])
+                elif token.startswith('new-'):
+                    song_pk = token[len('new-'):]
+                    if not song_pk.isdigit() or int(song_pk) not in valid_song_ids or song_pk in seen_new_songs:
+                        continue
+                    seen_new_songs.add(song_pk)
+                    final_order += 1
+                    EventSong.objects.create(event=event, song_id=song_pk, order=final_order)
+
+            # A surviving row the client didn't mention in song_order (shouldn't normally happen) keeps a spot at the end.
+            for es in surviving:
+                if es.order < 0:
+                    final_order += 1
+                    es.order = final_order
+                    es.save(update_fields=['order'])
+
+        if request.POST.get('action') == 'new_song':
+            song_new_url = reverse('syncope:song_new', kwargs={'username': self.kwargs.get('username')})
+            next_url = reverse('syncope:event_songs_edit', kwargs={
+                'username': self.kwargs.get('username'), 'pk': event.pk,
+            })
+            song_new_url = add_query_param(song_new_url, {'auto_add_event': event.pk, 'next': next_url})
+            return HttpResponseRedirect(song_new_url)
+
+        messages.success(request, "Songs updated successfully!")
+        return HttpResponseRedirect(reverse('syncope:event_detail', kwargs={
+            'username': self.kwargs.get('username'), 'pk': event.pk,
+        }))
 
 
 @login_required
 @event_admin_required
 def event_songs_search(request, org_user, event):
-    """AJAX song search for the Songs subpage (points 'Add' at event_song_add, not the legacy endpoint)."""
+    """AJAX song search for the Songs subpage's add-song picker."""
     song_search_q = request.GET.get('song_q', '')
-    origin_key = request.GET.get('origin', DEFAULT_EVENT_ORIGIN)
-    add_song_form = AddSongToEventForm(org_user=org_user, event=event, search_q=song_search_q)
+    exclude_raw = request.GET.get('exclude', '')
+    exclude_ids = [int(x) for x in exclude_raw.split(',') if x.strip().isdigit()]
+    add_song_form = AddSongToEventForm(
+        org_user=org_user, event=event, search_q=song_search_q, exclude_ids=exclude_ids
+    )
     return render(request, 'syncope/song_search_results.html', {
         'add_song_form': add_song_form,
         'song_search_q': song_search_q,
         'object': event,
+        'event': event,
         'url_username': org_user.username,
-        'add_song_url': f"{reverse('syncope:event_song_add', kwargs={'username': org_user.username, 'pk': event.pk})}?origin={origin_key}",
     })
-
-
-@require_POST
-@login_required
-@event_admin_required
-def event_song_remove(request, org_user, event, eventsong_pk):
-    eventsong = get_object_or_404(EventSong, pk=eventsong_pk, event=event)
-    EventSongResource.objects.filter(event_song=eventsong).delete()
-    eventsong.delete()
-    return HttpResponse(status=204)
-
-
-@require_POST
-@login_required
-@event_admin_required
-def event_song_reorder(request, org_user, event, eventsong_pk):
-    direction = request.POST.get('direction', '')
-    if direction not in {'up_one', 'down_one'}:
-        return HttpResponseBadRequest("Invalid direction.")
-    reorder_event_song(event, eventsong_pk, direction)
-    return HttpResponse(status=204)
-
-
-@require_POST
-@login_required
-@event_admin_required
-def event_song_encore_toggle(request, org_user, event, eventsong_pk):
-    eventsong = get_object_or_404(EventSong, pk=eventsong_pk, event=event)
-    eventsong.encore = request.POST.get('encore') == 'true'
-    eventsong.save(update_fields=['encore'])
-    return HttpResponse(status=204)
 
 
 @require_POST
@@ -591,6 +562,15 @@ class EventAttendanceEditView(View):
                 Attendance.objects.create(event=event, person_id=person_id, attendance_type_id=type_id)
                 already_attending.add(person_id)
 
+        if request.POST.get('action') == 'new_person':
+            new_person_url = reverse('syncope:org_member_new', kwargs={'username': self.kwargs.get('username')})
+            next_url = reverse('syncope:event_attendance_edit', kwargs={
+                'username': self.kwargs.get('username'),
+                'pk': event.pk,
+            })
+            new_person_url = add_query_param(new_person_url, {'auto_add_event': event.pk, 'next': next_url})
+            return HttpResponseRedirect(new_person_url)
+
         messages.success(request, "Attendance updated successfully!")
         return HttpResponseRedirect(reverse('syncope:event_detail', kwargs={
             'username': self.kwargs.get('username'),
@@ -655,6 +635,8 @@ class EventMetaEditView(UpdateView):
             )
         context['url_username'] = self.kwargs.get('username')
         context['is_admin'] = self.is_admin
+        context['eventsongs'] = event.eventsong_set.select_related('song').order_by('order')
+        context['encore_eventsong_id'] = event.eventsong_set.filter(encore=True).values_list('pk', flat=True).first()
         context['breadcrumbs'], context['origin_key'] = event_breadcrumbs(
             self.request, self.kwargs.get('username'), event, current_label='Details'
         )
@@ -667,9 +649,18 @@ class EventMetaEditView(UpdateView):
             messages.error(self.request, "Please fix errors in the resources section.")
             return self.form_invalid(form)
 
+        encore_raw = self.request.POST.get('encore_song', '')
+        encore_pk = int(encore_raw) if encore_raw.isdigit() else None
+
         with transaction.atomic():
             self.object = form.save()
             save_event_resources(self.object, resource_formset, self.customuser)
+            eventsongs = self.object.eventsong_set.filter(encore=True) | self.object.eventsong_set.filter(pk=encore_pk)
+            for es in eventsongs.distinct():
+                new_encore = es.pk == encore_pk
+                if es.encore != new_encore:
+                    es.encore = new_encore
+                    es.save(update_fields=['encore'])
 
         messages.success(self.request, "Event updated successfully!")
         return HttpResponseRedirect(self.get_success_url())

@@ -4,8 +4,7 @@ from django.views.generic import RedirectView
 from .views.attendance import AttendanceDashboardView, quick_add_rehearsal, self_attendance_update
 from .views.event import EventCreateView, EventDetailView, EventListView, EventDeleteView
 from .views.event import EventSongsEditView, EventAttendanceEditView, EventMetaEditView
-from .views.event import event_song_add, event_songs_search, event_song_remove, event_song_reorder
-from .views.event import event_song_encore_toggle, event_song_resources_save
+from .views.event import event_songs_search, event_song_resources_save
 from .views.event import event_attendance_search
 from .views.home import HomeView, SkillListAndCreateView
 from .views.importing import ImportHubView, ImportDashboardView, CombineProjectsView
@@ -55,11 +54,7 @@ urlpatterns = [
     path("<str:username>/events/<int:event_pk>/attendance/update/", self_attendance_update, name="self_attendance_update"),
 
     path("<str:username>/events/<int:pk>/songs/edit/", EventSongsEditView.as_view(), name="event_songs_edit"),
-    path("<str:username>/events/<int:pk>/songs/add/", event_song_add, name="event_song_add"),
     path("<str:username>/events/<int:pk>/songs/edit/search/", event_songs_search, name="event_songs_search"),
-    path("<str:username>/events/<int:pk>/songs/<int:eventsong_pk>/remove/", event_song_remove, name="event_song_remove"),
-    path("<str:username>/events/<int:pk>/songs/<int:eventsong_pk>/reorder/", event_song_reorder, name="event_song_reorder"),
-    path("<str:username>/events/<int:pk>/songs/<int:eventsong_pk>/encore/", event_song_encore_toggle, name="event_song_encore_toggle"),
     path("<str:username>/events/<int:pk>/songs/<int:eventsong_pk>/resources/", event_song_resources_save, name="event_song_resources_save"),
 
     path("<str:username>/events/<int:pk>/attendance/edit/", EventAttendanceEditView.as_view(), name="event_attendance_edit"),
