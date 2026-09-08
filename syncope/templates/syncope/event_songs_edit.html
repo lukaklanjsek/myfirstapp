@@ -1,4 +1,5 @@
 {% extends "syncope/base.html" %}
+{% load static %}
 {% block title %}Songs &mdash; {{ event.name }}{% endblock %}
 
 {% block extra_css %}
@@ -11,7 +12,7 @@
         z-index: 1;
     }
     .songs-table td, .songs-table th { padding: 0.3rem 0.25rem; }
-    .drag-handle-cell { width: 1.1rem; text-align: center; padding-left: 0; padding-right: 0; }
+    .drag-handle-cell { width: 2.2rem; text-align: center; padding-left: 0; padding-right: 0; }
     .drag-handle {
         cursor: grab;
         touch-action: none;
@@ -20,7 +21,7 @@
         flex-direction: column;
         align-items: center;
         line-height: 0.7;
-        padding: 0.3rem 0.1rem;
+        padding: 0.5rem 0.4rem;
         font-weight: bold;
         font-size: 1.1rem;
     }
@@ -29,7 +30,16 @@
     .song-index { text-align: center; font-weight: bold; width: 1.3rem; padding-left: 0; padding-right: 0; }
     .song-cell { width: auto; }
     .song-title { font-weight: 500; overflow-wrap: break-word; }
-    .song-subline { font-size: 0.85rem; color: #666; overflow-wrap: break-word; }
+    .song-subline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        overflow-wrap: break-word;
+    }
+    .song-meta { white-space: nowrap; color: #888; }
     .song-resources { text-align: center; width: 1.4rem; padding-left: 0; padding-right: 0; }
     .song-actions { white-space: nowrap; text-align: right; width: 3.4rem; padding-left: 0; }
     .btn-edit {
@@ -64,7 +74,18 @@
         text-decoration: line-through;
         opacity: 0.55;
     }
-    .search-result-row { padding: 0.15rem 0; }
+    .search-result-row { padding: 0.4rem 0; display: flex; align-items: flex-start; gap: 0.6rem; }
+    .search-spinner {
+        position: absolute;
+        left: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #888;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    .search-result-info { flex: 1; min-width: 0; }
     .add-item-btn {
         border: 1px solid #ccc;
         background-color: #f5f5f5;
@@ -72,36 +93,10 @@
         cursor: pointer;
         min-width: 1.4rem;
         line-height: 1;
-        padding: 0.15rem 0.4rem;
-    }
-
-    .save-bar {
-        position: sticky;
-        bottom: 0;
-        background-color: #f5f5f5;
-        border-top: 1px solid #ccc;
-        padding: 0.75rem 1rem;
-        margin-top: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-    .save-bar.dirty {
-        background-color: #fff3cd;
-        border-top-color: #ffc107;
-    }
-    .save-bar .dirty-note {
-        font-size: 0.85rem;
-        color: #856404;
+        padding: 0.25rem 0.6rem;
     }
 
     @media (max-width: 768px) {
-        .save-bar {
-            position: fixed;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-        }
         #songs-content {
             padding-bottom: 4rem;
         }
@@ -112,22 +107,13 @@
 
 {% block content %}
 
-{% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-{% endif %}
-
-{% include "syncope/_breadcrumbs.html" %}
 <h2>Songs &mdash; {{ event.name }}</h2>
 
 <div id="songs-content">
     <form method="post" id="songs-form">
         {% csrf_token %}
         <input type="hidden" id="song-order-input" name="song_order" value="">
-        <div class="table-container">
+        <div class="table-container" style="max-width:42rem;">
             <table class="songs-table">
                 <thead>
                     <tr>
@@ -142,7 +128,7 @@
                     {% for eventsong in eventsongs %}
                         {% include "syncope/_song_row.html" %}
                     {% empty %}
-                    <tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.{% if is_admin %} Use the section below to add songs.{% endif %}</td></tr>
+                    <tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -151,9 +137,10 @@
 
     {% if is_admin %}
     <div id="add-songs" style="max-width:42rem;">
-        <p><strong>Add songs</strong></p>
-        <p>
+        <p><strong>Add song</strong></p>
+        <p style="position:relative;">
             <input type="text" id="song-search-input" value="{{ song_search_q }}" placeholder="Search by ID, title, composer, or keywords" style="max-width:100%; width:100%; box-sizing:border-box;">
+            <span class="search-spinner" id="song-search-spinner"></span>
         </p>
         <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button type="button" id="song-search-clear">Clear search</button>
@@ -166,22 +153,11 @@
     {% endif %}
 </div>
 
-{% if is_admin %}
-<div class="save-bar" id="save-bar">
-    <span id="clean-actions">
-        <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Return</a>
-    </span>
-    <span id="dirty-actions" style="display:none;">
-        <button type="submit" form="songs-form" id="save-submit-btn">Save and return</button>
-        <a href="{% url 'syncope:event_detail' url_username event.pk %}?origin={{ origin_key }}" class="btn-primary" style="text-decoration:none; display:inline-block;">Discard</a>
-    </span>
-    <span class="dirty-note"></span>
-</div>
-{% endif %}
+{% include "syncope/_save_bar.html" with form_id="songs-form" %}
 
+<script src="{% static 'syncope/save-bar.js' %}"></script>
 <script>
     const songsTbody = document.getElementById('songs-tbody');
-    const saveBar = document.getElementById('save-bar');
     const songOrderInput = document.getElementById('song-order-input');
 
     function escapeHtml(str) {
@@ -251,33 +227,27 @@
         return count;
     }
 
-    function syncState() {
-        renumberSongs();
-        updateSongOrderField();
-        paintRowMoved();
-        if (!saveBar) return;
-        const n = countUnsavedChanges();
-        const dirty = n > 0;
-        saveBar.classList.toggle('dirty', dirty);
-        const cleanActions = document.getElementById('clean-actions');
-        const dirtyActions = document.getElementById('dirty-actions');
-        if (cleanActions) cleanActions.style.display = dirty ? 'none' : '';
-        if (dirtyActions) dirtyActions.style.display = dirty ? '' : 'none';
-        const note = saveBar.querySelector('.dirty-note');
-        if (note) note.textContent = dirty ? `${n} unsaved change${n === 1 ? '' : 's'}` : '';
-    }
-
-    // Cancel/Discard/Return are plain <a> tags (no per-click JS, so they navigate
-    // instantly) — the "discard changes?" prompt instead comes from the browser's
-    // native beforeunload dialog, skipped on an actual Save submit.
-    let formSubmitting = false;
-    document.getElementById('songs-form')?.addEventListener('submit', () => {
-        formSubmitting = true;
-    });
-    window.addEventListener('beforeunload', function(e) {
-        if (formSubmitting || !saveBar?.classList.contains('dirty')) return;
-        e.preventDefault();
-        e.returnValue = '';
+    const saveBarCtl = initSaveBar({
+        formId: 'songs-form',
+        countUnsavedChanges,
+        beforeSync: () => { renumberSongs(); updateSongOrderField(); paintRowMoved(); },
+        onDiscard: () => {
+            songsTbody.querySelectorAll('tr.staged-add').forEach(row => row.remove());
+            songsTbody.querySelectorAll('tr.pending-remove').forEach(row => {
+                row.classList.remove('pending-remove');
+                row.querySelector('.pending-remove-input')?.remove();
+                const btn = row.querySelector('.remove-song-btn');
+                if (btn) { btn.textContent = '×'; btn.title = 'Remove from event'; }
+            });
+            originalOrderList.forEach(pk => {
+                const row = songsTbody.querySelector(`tr[data-eventsong-id="${pk}"]`);
+                if (row) songsTbody.appendChild(row);
+            });
+            if (!songsTbody.querySelector('tr.song-row') && !document.getElementById('no-songs-row')) {
+                songsTbody.insertAdjacentHTML('beforeend', `<tr id="no-songs-row"><td colspan="{% if is_admin %}5{% else %}4{% endif %}">No songs added yet.</td></tr>`);
+            }
+        },
+        afterDiscard: () => runSongSearch(songSearchInput ? songSearchInput.value : ''),
     });
 
     // --- Drag-and-drop reorder (Pointer Events: works for mouse and touch alike) ---
@@ -314,7 +284,7 @@
         dragRow.classList.remove('dragging');
         dragRow = null;
         dragPointerId = null;
-        syncState();
+        saveBarCtl.sync();
     }
     songsTbody.addEventListener('pointerup', endDrag);
     songsTbody.addEventListener('pointercancel', endDrag);
@@ -334,7 +304,7 @@
             btn.textContent = '×';
             btn.title = 'Remove from event';
         }
-        syncState();
+        saveBarCtl.sync();
     }
 
     songsTbody.addEventListener('click', function(e) {
@@ -343,24 +313,26 @@
         const row = removeBtn.closest('tr');
         if (row.classList.contains('staged-add')) {
             row.remove();
-            syncState();
+            saveBarCtl.sync();
+            runSongSearch(songSearchInput.value);
             return;
         }
         toggleRemove(row);
     });
 
     // --- Search / staged add ---
-    function buildStagedSongRow(id, title, composer, arranger, resources) {
+    function buildStagedSongRow(id, title, composer, arranger, resources, internalId) {
         const tr = document.createElement('tr');
         tr.className = 'song-row staged-add';
         tr.dataset.songId = id;
         const subline = composer ? escapeHtml(composer) : (arranger ? escapeHtml(arranger) : '<small>No composer</small>');
+        const meta = internalId ? `<small class="song-meta">#${escapeHtml(internalId)}</small>` : '';
         tr.innerHTML = `
             <td class="drag-handle-cell"><span class="drag-handle" title="Drag to reorder"><span>:</span><span>:</span></span></td>
             <td class="song-index"></td>
             <td class="song-cell">
                 <div class="song-title">${escapeHtml(title)}</div>
-                <div class="song-subline">${subline}</div>
+                <div class="song-subline"><span>${subline}</span>${meta}</div>
             </td>
             <td class="song-resources" title="Event resources for song">${escapeHtml(resources || '0')}</td>
             <td class="song-actions"><button type="button" class="remove-song-btn" title="Remove staged addition">&times;</button></td>
@@ -378,15 +350,52 @@
     const songSearchResults = document.getElementById('song-search-results');
     let songSearchTimeout;
 
+    const songSearchSpinner = document.getElementById('song-search-spinner');
+    const spinnerMeasureCanvas = document.createElement('canvas');
+
+    function positionSpinner(input, spinner) {
+        const style = getComputedStyle(input);
+        const ctx = spinnerMeasureCanvas.getContext('2d');
+        ctx.font = style.font;
+        const textWidth = ctx.measureText(input.value).width;
+        const paddingLeft = parseFloat(style.paddingLeft) || 0;
+        const gap = 8;
+        const maxLeft = input.clientWidth - 90;
+        spinner.style.left = `${Math.min(paddingLeft + textWidth + gap, Math.max(maxLeft, paddingLeft))}px`;
+    }
+
+    let songSpinnerStop = null;
+
+    function beginSongSpinner() {
+        positionSpinner(songSearchInput, songSearchSpinner);
+        if (songSpinnerStop) return;
+        let dots = 0;
+        const render = () => { songSearchSpinner.textContent = 'Searching' + '.'.repeat(dots); };
+        render();
+        const timer = setInterval(() => {
+            dots = (dots % 3) + 1;
+            render();
+        }, 400);
+        songSpinnerStop = () => { clearInterval(timer); songSearchSpinner.textContent = ''; songSpinnerStop = null; };
+    }
+
+    function endSongSpinner() {
+        songSpinnerStop?.();
+    }
+
     function runSongSearch(query) {
         const exclude = currentSongIds().join(',');
         const url = `{% url 'syncope:event_songs_search' url_username event.pk %}?song_q=${encodeURIComponent(query)}&exclude=${encodeURIComponent(exclude)}`;
-        fetch(url).then(r => r.text()).then(html => { songSearchResults.innerHTML = html; });
+        fetch(url).then(r => r.text()).then(html => {
+            endSongSpinner();
+            songSearchResults.innerHTML = html;
+        });
     }
 
     if (songSearchInput) {
         songSearchInput.addEventListener('input', function() {
             clearTimeout(songSearchTimeout);
+            beginSongSpinner();
             songSearchTimeout = setTimeout(() => runSongSearch(this.value), 1000);
         });
         suppressEnterSubmit(songSearchInput);
@@ -395,6 +404,7 @@
     document.getElementById('song-search-clear')?.addEventListener('click', function() {
         clearTimeout(songSearchTimeout);
         songSearchInput.value = '';
+        beginSongSpinner();
         runSongSearch('');
     });
 
@@ -404,13 +414,13 @@
         const row = btn.closest('.search-result-row');
         removeEmptyRow();
         songsTbody.appendChild(buildStagedSongRow(
-            btn.dataset.id, btn.dataset.title, btn.dataset.composer, btn.dataset.arranger, btn.dataset.resources
+            btn.dataset.id, btn.dataset.title, btn.dataset.composer, btn.dataset.arranger, btn.dataset.resources, btn.dataset.internalId
         ));
         row?.remove();
-        syncState();
+        saveBarCtl.sync();
     });
 
     snapshotOriginalOrder();
-    syncState();
+    saveBarCtl.sync();
 </script>
 {% endblock %}

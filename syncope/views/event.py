@@ -429,9 +429,13 @@ class EventSongsEditView(View):
             return HttpResponseRedirect(song_new_url)
 
         messages.success(request, "Songs updated successfully!")
-        return HttpResponseRedirect(reverse('syncope:event_detail', kwargs={
+        edit_url = reverse('syncope:event_songs_edit', kwargs={
             'username': self.kwargs.get('username'), 'pk': event.pk,
-        }))
+        })
+        origin = request.GET.get('origin')
+        if origin:
+            edit_url = add_query_param(edit_url, {'origin': origin})
+        return HttpResponseRedirect(edit_url)
 
 
 @login_required
@@ -572,10 +576,14 @@ class EventAttendanceEditView(View):
             return HttpResponseRedirect(new_person_url)
 
         messages.success(request, "Attendance updated successfully!")
-        return HttpResponseRedirect(reverse('syncope:event_detail', kwargs={
+        edit_url = reverse('syncope:event_attendance_edit', kwargs={
             'username': self.kwargs.get('username'),
             'pk': event.pk,
-        }))
+        })
+        origin = request.GET.get('origin')
+        if origin:
+            edit_url = add_query_param(edit_url, {'origin': origin})
+        return HttpResponseRedirect(edit_url)
 
 
 @login_required
@@ -671,10 +679,14 @@ class EventMetaEditView(UpdateView):
         return super().form_invalid(form)
 
     def get_success_url(self):
-        return reverse_lazy('syncope:event_detail', kwargs={
+        url = reverse('syncope:event_detail', kwargs={
             'username': self.kwargs.get('username'),
             'pk': self.object.pk,
         })
+        origin = self.request.GET.get('origin')
+        if origin:
+            url = add_query_param(url, {'origin': origin})
+        return url
 
 
 @method_decorator(login_required, name="dispatch")

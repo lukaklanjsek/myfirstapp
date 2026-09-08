@@ -49,6 +49,22 @@
         }
         .dt-full { display: none; }
         .dt-short { display: inline; }
+
+        .main-content h2.event-title {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: nowrap;
+        }
+        .event-title-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        #share-btn { flex-shrink: 0; }
     }
 </style>
 {% endblock %}
@@ -57,9 +73,7 @@
 
 <div id="event-detail-content">
 
-{% include "syncope/_breadcrumbs.html" %}
-
-<h2 class="event-title"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small>
+<h2 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
     <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
         <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
     </button>
@@ -126,11 +140,8 @@ Ends: <span class="dt-full" data-dt="{{ event.ended_at|date:'c' }}" data-dt-fmt=
                             {% elif eventsong.song.arranger %}{{ eventsong.song.arranger.first_name }} {{ eventsong.song.arranger.last_name }}
                             {% else %}<small>No composer</small>{% endif %}
                         </span>
-                        {% if eventsong.song.internal_id or eventsong.song.keywords %}
-                        <small class="song-meta">
-                            {% if eventsong.song.internal_id %}#{{ eventsong.song.internal_id }}{% endif %}
-                            {% if eventsong.song.keywords %} &middot; {{ eventsong.song.keywords }}{% endif %}
-                        </small>
+                        {% if eventsong.song.internal_id %}
+                        <small class="song-meta">#{{ eventsong.song.internal_id }}</small>
                         {% endif %}
                     </div>
                 </td>

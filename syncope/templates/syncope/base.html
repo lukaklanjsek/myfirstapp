@@ -3,7 +3,7 @@
 {% load static %}
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>{% block title %}{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'syncope/style.css' %}">
@@ -19,10 +19,6 @@
 </head>
 <body>
     <div class="grid-container">
-        <div class="mobile-topbar">
-            <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
-        </div>
-
         <nav class="sidebar" id="sidebar">
             {% if user.is_authenticated %}
                 {% load url_tags %}
@@ -83,6 +79,10 @@
         </nav>
 
         <main class="main">
+            <div class="mobile-topbar">
+                <button class="mobile-toggle" onclick="toggleMenu()">☰</button>
+                {% include "syncope/_breadcrumbs.html" %}
+            </div>
             <div class="main-content">
                 {% if messages %}
                 <div style="margin-bottom: 1rem;">
