@@ -60,9 +60,18 @@
     min-height: 44px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    list-style: none;
     -webkit-tap-highlight-color: transparent;
 }
+.filter-panel summary::-webkit-details-marker { display: none; }
 .filter-panel[open] summary { margin-bottom: 0.5rem; }
+.filter-toggle-icon { transition: transform 0.15s ease; flex-shrink: 0; }
+.filter-panel[open] .filter-toggle-icon { transform: rotate(90deg); }
+@media (min-width: 769px) {
+    .filter-panel summary { justify-content: flex-start; }
+    .filter-toggle-icon { order: -1; margin-right: 0.4rem; }
+}
 .filter-form { display: flex; flex-direction: column; gap: 0.5rem; padding-bottom: 0.5rem; }
 .filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
 .filter-dates { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -112,7 +121,13 @@
     <h2>Attendance</h2>
 
     <details class="filter-panel" {% if request.GET.start_date or request.GET.end_date or request.GET.event_limit %}open{% endif %}>
-        <summary>Filter</summary>
+        <summary>
+            Filter
+            <svg class="filter-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </summary>
         <form method="get" class="filter-form">
             <div class="filter-row">
                 <div class="filter-dates">

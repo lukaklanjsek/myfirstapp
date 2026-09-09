@@ -57,6 +57,7 @@
             display: flex;
             align-items: baseline;
             flex-wrap: nowrap;
+            justify-content: space-between;
         }
         .event-title-text {
             overflow: hidden;
@@ -64,7 +65,11 @@
             white-space: nowrap;
             min-width: 0;
         }
-        #share-btn { flex-shrink: 0; }
+        .share-controls {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
     }
 </style>
 {% endblock %}
@@ -74,10 +79,12 @@
 <div id="event-detail-content">
 
 <h2 class="event-title"><span class="event-title-text"> <span title="Title">{{ event.name }}</span> <small><span title="Type"> | {{ event.event_type }}</span></small></span>
-    <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
-        <img src="{% static 'syncope/images/copy.svg' %}" width="16" height="16" alt="Copy">
-    </button>
-    <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+    <span class="share-controls">
+        <button id="share-btn" style="width: auto; height: auto; padding: 2px 6px;" title="Copy link">
+            <img src="{% static 'syncope/images/link.svg' %}" width="16" height="16" alt="Link">
+        </button>
+        <span id="share-result" style="margin-left: 0.5rem; font-size: 0.9rem;"></span>
+    </span>
 </h2>
 <p class="event-summary">{% if event.location %}Location: {{ event.location }}<br>{% endif %}
 {% if event.same_date %}

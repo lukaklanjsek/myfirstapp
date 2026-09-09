@@ -36,13 +36,25 @@
     .search-result-row { padding: 0.4rem 0; }
     .search-spinner {
         position: absolute;
-        left: 0.6rem;
         top: 50%;
+        right: 0.6rem;
         transform: translateY(-50%);
-        color: #888;
-        font-size: 0.85rem;
-        white-space: nowrap;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #ddd;
+        border-top-color: #888;
+        animation: spin 0.7s linear infinite;
+        opacity: 0;
         pointer-events: none;
+    }
+    .search-spinner.is-active { opacity: 1; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    @media (min-width: 769px) {
+        .search-spinner {
+            right: auto;
+            left: -1.75rem;
+        }
     }
     .add-item-btn {
         border: 1px solid #ccc;
@@ -311,36 +323,13 @@
     }
 
     const participantSearchSpinner = document.getElementById('participant-search-spinner');
-    const spinnerMeasureCanvas = document.createElement('canvas');
-
-    function positionSpinner(input, spinner) {
-        const style = getComputedStyle(input);
-        const ctx = spinnerMeasureCanvas.getContext('2d');
-        ctx.font = style.font;
-        const textWidth = ctx.measureText(input.value).width;
-        const paddingLeft = parseFloat(style.paddingLeft) || 0;
-        const gap = 8;
-        const maxLeft = input.clientWidth - 90;
-        spinner.style.left = `${Math.min(paddingLeft + textWidth + gap, Math.max(maxLeft, paddingLeft))}px`;
-    }
-
-    let participantSpinnerStop = null;
 
     function beginParticipantSpinner() {
-        positionSpinner(participantSearchInput, participantSearchSpinner);
-        if (participantSpinnerStop) return;
-        let dots = 0;
-        const render = () => { participantSearchSpinner.textContent = 'Searching' + '.'.repeat(dots); };
-        render();
-        const timer = setInterval(() => {
-            dots = (dots % 3) + 1;
-            render();
-        }, 400);
-        participantSpinnerStop = () => { clearInterval(timer); participantSearchSpinner.textContent = ''; participantSpinnerStop = null; };
+        participantSearchSpinner.classList.add('is-active');
     }
 
     function endParticipantSpinner() {
-        participantSpinnerStop?.();
+        participantSearchSpinner.classList.remove('is-active');
     }
 
     function runParticipantSearch(query) {
@@ -364,7 +353,7 @@
     document.getElementById('participant-search-clear')?.addEventListener('click', function() {
         clearTimeout(participantSearchTimeout);
         participantSearchInput.value = '';
-        beginParticipantSpinner();
+        participantSearchResults.innerHTML = '';
         runParticipantSearch('');
     });
 

@@ -77,13 +77,25 @@
     .search-result-row { padding: 0.4rem 0; display: flex; align-items: flex-start; gap: 0.6rem; }
     .search-spinner {
         position: absolute;
-        left: 0.6rem;
         top: 50%;
+        right: 0.6rem;
         transform: translateY(-50%);
-        color: #888;
-        font-size: 0.85rem;
-        white-space: nowrap;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #ddd;
+        border-top-color: #888;
+        animation: spin 0.7s linear infinite;
+        opacity: 0;
         pointer-events: none;
+    }
+    .search-spinner.is-active { opacity: 1; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    @media (min-width: 769px) {
+        .search-spinner {
+            right: auto;
+            left: -1.75rem;
+        }
     }
     .search-result-info { flex: 1; min-width: 0; }
     .add-item-btn {
@@ -351,36 +363,13 @@
     let songSearchTimeout;
 
     const songSearchSpinner = document.getElementById('song-search-spinner');
-    const spinnerMeasureCanvas = document.createElement('canvas');
-
-    function positionSpinner(input, spinner) {
-        const style = getComputedStyle(input);
-        const ctx = spinnerMeasureCanvas.getContext('2d');
-        ctx.font = style.font;
-        const textWidth = ctx.measureText(input.value).width;
-        const paddingLeft = parseFloat(style.paddingLeft) || 0;
-        const gap = 8;
-        const maxLeft = input.clientWidth - 90;
-        spinner.style.left = `${Math.min(paddingLeft + textWidth + gap, Math.max(maxLeft, paddingLeft))}px`;
-    }
-
-    let songSpinnerStop = null;
 
     function beginSongSpinner() {
-        positionSpinner(songSearchInput, songSearchSpinner);
-        if (songSpinnerStop) return;
-        let dots = 0;
-        const render = () => { songSearchSpinner.textContent = 'Searching' + '.'.repeat(dots); };
-        render();
-        const timer = setInterval(() => {
-            dots = (dots % 3) + 1;
-            render();
-        }, 400);
-        songSpinnerStop = () => { clearInterval(timer); songSearchSpinner.textContent = ''; songSpinnerStop = null; };
+        songSearchSpinner.classList.add('is-active');
     }
 
     function endSongSpinner() {
-        songSpinnerStop?.();
+        songSearchSpinner.classList.remove('is-active');
     }
 
     function runSongSearch(query) {
@@ -404,7 +393,7 @@
     document.getElementById('song-search-clear')?.addEventListener('click', function() {
         clearTimeout(songSearchTimeout);
         songSearchInput.value = '';
-        beginSongSpinner();
+        songSearchResults.innerHTML = '';
         runSongSearch('');
     });
 
